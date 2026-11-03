@@ -66,6 +66,25 @@ describe('loadKakaoMaps', () => {
     await expect(loading).rejects.toThrow('LOAD_ERROR');
   });
 
+  it('스크립트는 떴지만 kakao.maps.load 콜백이 오지 않으면 TIMEOUT', async () => {
+    const loader = await freshLoader();
+    const loading = loader.loadKakaoMaps('test-key', 20);
+    vi.stubGlobal('kakao', { maps: { load: vi.fn() } });
+    sdkScripts()[0].dispatchEvent(new Event('load'));
+    await expect(loading).rejects.toThrow('TIMEOUT');
+  });
+
+  it('시간 초과 뒤에 늦게 load가 와도 kakao.maps.load를 부르지 않고 실패로 남는다', async () => {
+    const loader = await freshLoader();
+    const loading = loader.loadKakaoMaps('test-key', 10);
+    await expect(loading).rejects.toThrow('TIMEOUT');
+    const load = vi.fn((callback: () => void) => callback());
+    vi.stubGlobal('kakao', { maps: { load } });
+    sdkScripts()[0].dispatchEvent(new Event('load'));
+    expect(load).not.toHaveBeenCalled();
+    await expect(loader.loadKakaoMaps('test-key')).rejects.toThrow('TIMEOUT');
+  });
+
   it('실패도 기억해 같은 세션에서는 다시 시도하지 않는다', async () => {
     const loader = await freshLoader();
     const loading = loader.loadKakaoMaps('test-key');

@@ -70,6 +70,24 @@ describe('내 탐방 (hs-a05 · hs-s07)', () => {
     expect(screen.queryByRole('link', { name: '코스 지도 보기' })).not.toBeInTheDocument();
   });
 
+  it('코스가 확정돼도 승인 대기 신청은 지도·쿠폰 버튼 없이 승인 안내만 보인다', async () => {
+    // 체크포인트 CONFIRMED에서도 최유진의 탐방 1 신청은 승인 대기다(시드).
+    const { router } = await renderApp('/my-tours', {
+      as: 'yujin@demo.kr',
+      checkpoint: 'CONFIRMED',
+    });
+    await router.navigate(`/my-tours/${findApplicationId('yujin@demo.kr', 1)}`);
+    expect(
+      await screen.findByText('가이드가 신청을 승인하면 지도와 쿠폰이 공개돼요.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('⌛ 가이드 승인 대기 중')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '코스 지도 보기' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '쿠폰 보기' })).not.toBeInTheDocument();
+    expect(
+      screen.queryByText('가이드가 코스를 확정하면 지도와 쿠폰이 공개돼요.'),
+    ).not.toBeInTheDocument();
+  });
+
   it('빈 목록', async () => {
     await renderApp('/my-tours', { as: 'student' });
     expect(await screen.findByText('아직 신청한 탐방이 없어요.')).toBeInTheDocument();

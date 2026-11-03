@@ -8,6 +8,7 @@ import { formatTourDate } from '@/shared/lib/date';
 import { findApplicationId, renderApp } from '@/test/renderApp';
 
 const STUDENT = 'student@demo.kr';
+const PENDING_STUDENT = 'yujin@demo.kr';
 
 /** 김민지(시연 학생)의 탐방 1 신청 코스 지도를 연다. `prepare`는 화면을 열기 전에 목업 DB를 고친다. */
 async function openCourseMap(
@@ -110,8 +111,39 @@ describe('탐방 코스 지도 (hs-s08)', () => {
     expect(screen.queryByTestId('schematic-map')).not.toBeInTheDocument();
   });
 
-  it('승인 전(403)이어도 준비 중', async () => {
-    await openCourseMap('APPLIED');
+  it('승인 대기 신청은 코스가 확정돼 있어도 코스를 부르지 않고 승인 안내를 보인다', async () => {
+    let courseGets = 0;
+    server.use(
+      http.get('/api/tours/:id/course', () => {
+        courseGets += 1;
+        return undefined; // 기본 핸들러로 넘긴다
+      }),
+    );
+    // 체크포인트 CONFIRMED에서도 최유진의 탐방 1 신청은 승인 대기다(시드).
+    const { router } = await renderApp('/my-tours', {
+      as: PENDING_STUDENT,
+      checkpoint: 'CONFIRMED',
+    });
+    const id = findApplicationId(PENDING_STUDENT, 1);
+    await router.navigate(`/my-tours/${id}/course`);
+    expect(await screen.findByText('가이드 승인을 기다리고 있어요')).toBeInTheDocument();
+    expect(screen.getByText('승인되면 지도와 쿠폰이 열려요.')).toBeInTheDocument();
+    expect(screen.queryByText('가이드가 코스를 준비 중이에요')).not.toBeInTheDocument();
+    // 요청이 나갔다면 MSW에 닿을 만큼 다른 화면을 한 번 그린 뒤에 센다.
+    await router.navigate(`/my-tours/${id}`);
+    expect(
+      await screen.findByText('가이드가 신청을 승인하면 지도와 쿠폰이 공개돼요.'),
+    ).toBeInTheDocument();
+    expect(courseGets).toBe(0);
+  });
+
+  it('그 밖의 403(FORBIDDEN)은 준비 중', async () => {
+    server.use(
+      http.get('/api/tours/:id/course', () =>
+        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
+      ),
+    );
+    await openCourseMap('CONFIRMED');
     expect(await screen.findByText('가이드가 코스를 준비 중이에요')).toBeInTheDocument();
   });
 

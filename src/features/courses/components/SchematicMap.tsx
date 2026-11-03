@@ -29,7 +29,7 @@ export function SchematicMap({ stops, onSelect }: SchematicMapProps) {
   return (
     <div
       data-testid="schematic-map"
-      className="relative h-[255px] overflow-hidden rounded-lg bg-surface"
+      className="relative h-[var(--map-h)] overflow-hidden rounded-lg bg-surface"
     >
       <div aria-hidden>
         <div className="absolute inset-x-[5%] top-[30%] h-3.5 rounded-full bg-bg" />

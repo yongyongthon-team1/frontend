@@ -15,11 +15,11 @@ export interface MapViewProps {
 
 /**
  * 코스 지도(결정 0004). 카카오맵 SDK가 뜨면 실제 지도, 키가 없거나 로딩에 실패하면 도식 지도, 그 사이에는 같은
- * 높이(255px)의 자리 표시를 그린다.
+ * 높이(토큰 `--map-h`)의 자리 표시를 그린다.
  */
 export function MapView({ stops, onSelect, forceSchematic = false }: MapViewProps) {
   const status = useKakaoMaps(forceSchematic);
-  if (status === 'loading') return <Skeleton className="h-[255px] rounded-lg" />;
+  if (status === 'loading') return <Skeleton className="h-[var(--map-h)] rounded-lg" />;
   if (status === 'fallback' || stops.length === 0) {
     return <SchematicMap stops={stops} onSelect={onSelect} />;
   }
@@ -51,7 +51,7 @@ function KakaoCourseMap({ stops, onSelect }: Pick<MapViewProps, 'stops' | 'onSel
     <KakaoMap
       center={center}
       onCreate={fitBounds}
-      className="h-[255px] w-full overflow-hidden rounded-lg"
+      className="h-[var(--map-h)] w-full overflow-hidden rounded-lg"
     >
       <Polyline path={path} strokeWeight={4} strokeColor={lineColor || undefined} />
       {stops.map((stop) => (

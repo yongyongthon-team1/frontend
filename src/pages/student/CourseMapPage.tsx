@@ -19,13 +19,17 @@ import { TopBar } from '@/shared/ui/TopBar';
 const NOT_READY_CODES = new Set(['COURSE_NOT_READY', 'FORBIDDEN']);
 
 /**
- * 탐방 코스 지도(hs-s08). 서버가 승인된 신청자에게 확정 코스만 준다 — 아니면 "준비 중". 지점(핀 · 카드)을 누르면
- * 상점 시트가 열리고, 제휴 상점이면 이 신청으로 발급된 쿠폰으로 이어진다.
+ * 탐방 코스 지도(hs-s08). 서버가 승인된 신청자에게 확정 코스만 준다 — 승인 대기 신청은 코스를 부르지 않고 승인
+ * 안내를, 그 밖에 볼 수 없으면 "준비 중"을 보여 준다. 지점(핀 · 카드)을 누르면 상점 시트가 열리고, 제휴 상점이면
+ * 이 신청으로 발급된 쿠폰으로 이어진다.
  */
 export function CourseMapPage() {
   const applicationId = Number(useParams().applicationId);
   const appQuery = useMyApplication(applicationId);
-  const courseQuery = useCourse(appQuery.data?.tour.id);
+  const { data: app } = appQuery;
+  const awaitingApproval = app?.status === 'PENDING';
+  const courseQuery = useCourse(app === undefined || awaitingApproval ? undefined : app.tour.id);
+  // 쿠폰 목록 오류는 따로 보이지 않는다 — 시트는 "쿠폰 보기" 없이 그려지고, 아래 버튼으로 쿠폰 목록에 갈 수 있다.
   const { data: coupons } = useMyCoupons(applicationId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
 
@@ -37,6 +41,19 @@ export function CourseMapPage() {
         {topBar}
         <Page>
           <ErrorState error={appQuery.error} onRetry={() => void appQuery.refetch()} />
+        </Page>
+      </>
+    );
+  }
+  if (awaitingApproval) {
+    return (
+      <>
+        {topBar}
+        <Page>
+          <EmptyState
+            title="가이드 승인을 기다리고 있어요"
+            description="승인되면 지도와 쿠폰이 열려요."
+          />
         </Page>
       </>
     );
@@ -66,7 +83,7 @@ export function CourseMapPage() {
         <Page>
           <Skeleton className="h-8 w-3/4" />
           <Skeleton className="mt-4 h-12" />
-          <Skeleton className="mt-4 h-[255px] rounded-lg" />
+          <Skeleton className="mt-4 h-[var(--map-h)] rounded-lg" />
           <Skeleton className="mt-4 h-24" />
         </Page>
       </>

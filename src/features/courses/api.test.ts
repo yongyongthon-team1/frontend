@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { createSession, mutate, resetDb } from '@/mocks/db/store';
+import { resetDb } from '@/mocks/db/store';
 import { DEMO_EMAILS } from '@/shared/config/demoAccounts';
-import { configureHttp } from '@/shared/lib/http';
+import { loginAs } from '@/test/loginAs';
 import {
   deleteCourseStop,
   getCourse,
@@ -11,15 +11,6 @@ import {
   postCourseDraft,
   putStopOrder,
 } from './api';
-
-function loginAs(email: string) {
-  const token = mutate((db) => {
-    const user = db.users.find((u) => u.email === email);
-    if (!user) throw new Error(`${email} 없음`);
-    return createSession(db, user.id);
-  });
-  configureHttp({ baseUrl: '/api', getToken: () => token, onUnauthorized: () => {} });
-}
 
 describe('코스 API (MSW 목업)', () => {
   beforeEach(() => {

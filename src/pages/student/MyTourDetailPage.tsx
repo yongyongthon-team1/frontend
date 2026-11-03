@@ -59,7 +59,8 @@ export function MyTourDetailPage() {
   const { tour } = app;
   const chip = STATUS_CHIP[app.status];
   const active = app.status === 'PENDING' || app.status === 'APPROVED';
-  const confirmed = app.courseStatus === 'CONFIRMED';
+  // 지도 · 쿠폰은 승인된 신청자에게만 열린다(서버도 승인 대기 신청에는 코스를 주지 않는다 · 쿠폰은 승인자에게만 발급).
+  const courseOpen = app.status === 'APPROVED' && app.courseStatus === 'CONFIRMED';
 
   function onConfirmCancel() {
     cancel.mutate(undefined, {
@@ -114,7 +115,7 @@ export function MyTourDetailPage() {
 
           {active ? (
             <InfoCard title="캠퍼스 & 상권 코스">
-              {confirmed ? (
+              {courseOpen ? (
                 <div className="flex flex-col gap-2">
                   <Link to={`/my-tours/${app.id}/course`} className={buttonClass('primary')}>
                     코스 지도 보기
@@ -125,7 +126,9 @@ export function MyTourDetailPage() {
                 </div>
               ) : (
                 <p className="text-sm text-muted">
-                  가이드가 코스를 확정하면 지도와 쿠폰이 공개돼요.
+                  {app.status === 'PENDING'
+                    ? '가이드가 신청을 승인하면 지도와 쿠폰이 공개돼요.'
+                    : '가이드가 코스를 확정하면 지도와 쿠폰이 공개돼요.'}
                 </p>
               )}
             </InfoCard>

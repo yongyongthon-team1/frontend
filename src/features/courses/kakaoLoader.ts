@@ -29,26 +29,30 @@ export function loadKakaoMaps(
 
 function insertSdkScript(appKey: string, timeoutMs: number): Promise<void> {
   return new Promise<void>((resolve, reject) => {
-    const timer = window.setTimeout(() => reject(new Error('TIMEOUT')), timeoutMs);
-    const fail = () => {
+    // 결과는 한 번만 정한다. 시간 초과 뒤에 스크립트가 늦게 떠도 이미 실패라 무시한다.
+    let settled = false;
+    const settle = (error?: Error) => {
+      if (settled) return;
+      settled = true;
       window.clearTimeout(timer);
-      reject(new Error('LOAD_ERROR'));
+      if (error) reject(error);
+      else resolve();
     };
+    const timer = window.setTimeout(() => settle(new Error('TIMEOUT')), timeoutMs);
     const script = document.createElement('script');
     script.src = `${SDK_URL}?appkey=${encodeURIComponent(appKey)}&autoload=false&libraries=services`;
     script.async = true;
-    script.onerror = fail;
+    script.onerror = () => settle(new Error('LOAD_ERROR'));
     script.onload = () => {
+      // 이미 시간 초과면 kakao.maps.load를 부르지 않는다 — 쓰지 않을 지도 번들을 더 받지 않게.
+      if (settled) return;
       const maps = (window as Window & { kakao?: KakaoSdk }).kakao?.maps;
       if (!maps) {
-        fail();
+        settle(new Error('LOAD_ERROR'));
         return;
       }
       // autoload=false라 load 콜백이 온 뒤에야 지도 객체를 쓸 수 있다. 콜백이 오지 않으면 시간 초과로 끝난다.
-      maps.load(() => {
-        window.clearTimeout(timer);
-        resolve();
-      });
+      maps.load(() => settle());
     };
     document.head.append(script);
   });
