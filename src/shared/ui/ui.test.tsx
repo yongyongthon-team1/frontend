@@ -10,6 +10,7 @@ import { AiLoading } from './AiLoading';
 import { Badge } from './Badge';
 import { BottomSheet } from './BottomSheet';
 import { BottomTabBar } from './BottomTabBar';
+import { isTabActive } from './tabActive';
 import { Button } from './Button';
 import { CodeInput } from './CodeInput';
 import { ConfirmDialog } from './ConfirmDialog';
@@ -227,6 +228,57 @@ describe('BottomTabBar', () => {
     );
     expect(screen.getByRole('link', { name: '내 탐방' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: '탐색' })).not.toHaveAttribute('aria-current');
+  });
+
+  it('match: 하위 화면에서도 탭이 활성', () => {
+    const matchTabs = [
+      {
+        to: '/',
+        label: '탐색',
+        icon: Compass,
+        end: true,
+        match: ['/', '/recommendations', '/tours'],
+      },
+      { to: '/my-tours', label: '내 탐방', icon: ListChecks, match: ['/my-tours', '/coupons'] },
+    ];
+    render(
+      <MemoryRouter initialEntries={['/tours/3/apply']}>
+        <BottomTabBar tabs={matchTabs} />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('link', { name: '탐색' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: '내 탐방' })).not.toHaveAttribute('aria-current');
+  });
+});
+
+describe('isTabActive', () => {
+  const tab = (to: string, match?: string[], end?: boolean) => ({
+    to,
+    label: 'x',
+    icon: Compass,
+    end,
+    match,
+  });
+
+  it('to와 같으면 활성', () => {
+    expect(isTabActive('/my-tours', tab('/my-tours'))).toBe(true);
+    expect(isTabActive('/my-tours/3', tab('/my-tours'))).toBe(true);
+    expect(isTabActive('/my-toursx', tab('/my-tours'))).toBe(false);
+  });
+
+  it('match 접두사: 같거나 접두사 + /로 시작하면 활성', () => {
+    const t = tab('/', ['/', '/recommendations', '/tours'], true);
+    expect(isTabActive('/', t)).toBe(true);
+    expect(isTabActive('/recommendations', t)).toBe(true);
+    expect(isTabActive('/tours/3/apply', t)).toBe(true);
+    expect(isTabActive('/tourists', t)).toBe(false);
+    expect(isTabActive('/my-tours', t)).toBe(false);
+  });
+
+  it("접두사 '/'는 정확히 /만 맞는다", () => {
+    const t = tab('/home', ['/']);
+    expect(isTabActive('/', t)).toBe(true);
+    expect(isTabActive('/anything', t)).toBe(false);
   });
 });
 

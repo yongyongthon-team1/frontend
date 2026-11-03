@@ -1,5 +1,7 @@
 import type { RouteObject } from 'react-router';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { HomePage } from '@/pages/student/HomePage';
+import { RecommendationsPage } from '@/pages/student/RecommendationsPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
 import { ErrorPage } from './ErrorPage';
 import { RequireAuth } from './guards/RequireAuth';
@@ -50,11 +52,11 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: '/',
-                    element: <PlaceholderPage title="홈 · AI 탐방 추천" wireframe="hs-s03" />, // P0 · Task 13
+                    element: <HomePage />,
                   },
                   {
                     path: '/recommendations',
-                    element: <PlaceholderPage title="AI 추천 탐방 목록" wireframe="hs-s04" />, // P0 · Task 13
+                    element: <RecommendationsPage />,
                   },
                   {
                     path: '/tours/:tourId/apply',
