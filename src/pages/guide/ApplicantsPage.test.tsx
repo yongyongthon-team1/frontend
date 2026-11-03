@@ -76,12 +76,11 @@ describe('신청자 관리 (guide-s03)', () => {
       as: 'guide',
       checkpoint: 'APPROVED',
     });
+    // 초안 화면은 생성에 성공하면 주소에서 ?generate=1을 지우므로(Task 19) 거쳐 간 주소를 모두 모은다.
+    const visited: string[] = [];
+    router.subscribe(({ location }) => visited.push(location.pathname + location.search));
     await user.click(await screen.findByRole('button', { name: 'AI 코스 만들기' }));
-    await waitFor(() =>
-      expect(router.state.location.pathname + router.state.location.search).toBe(
-        '/guide/tours/1/course/draft?generate=1',
-      ),
-    );
+    await waitFor(() => expect(visited).toContain('/guide/tours/1/course/draft?generate=1'));
   });
 
   it('남은 자리가 없으면 승인은 비활성 + 사유, 거절은 활성', async () => {

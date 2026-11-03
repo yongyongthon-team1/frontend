@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slotTimes, studentCourseLabel } from './model';
+import { slotTimes, stopKindLabel, studentCourseLabel } from './model';
 
 describe('slotTimes', () => {
   it('슬롯 시간은 와이어프레임과 같다', () =>
@@ -21,5 +21,22 @@ describe('studentCourseLabel', () => {
   it('초안이거나 아직 없으면 준비 중', () => {
     expect(studentCourseLabel('DRAFT')).toBe('코스 준비 중');
     expect(studentCourseLabel(null)).toBe('코스 준비 중');
+  });
+});
+
+describe('stopKindLabel', () => {
+  it('캠퍼스 지점은 업종과 상관없이 캠퍼스', () =>
+    expect(stopKindLabel({ type: 'CAMPUS', category: '캠퍼스' })).toBe('캠퍼스'));
+
+  it('식사 업종은 식사', () => {
+    for (const category of ['한식', '분식', '중식', '일식', '양식', '식당']) {
+      expect(stopKindLabel({ type: 'STORE', category })).toBe('식사');
+    }
+  });
+
+  it('카페는 카페, 그 밖은 업종 그대로', () => {
+    expect(stopKindLabel({ type: 'STORE', category: '카페' })).toBe('카페');
+    expect(stopKindLabel({ type: 'STORE', category: '보드게임카페' })).toBe('보드게임카페');
+    expect(stopKindLabel({ type: 'STORE', category: '노래방' })).toBe('노래방');
   });
 });

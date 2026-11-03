@@ -1,5 +1,8 @@
 import type { RouteObject } from 'react-router';
 import { ApplicantsPage } from '@/pages/guide/ApplicantsPage';
+import { CourseConfirmedPage } from '@/pages/guide/CourseConfirmedPage';
+import { CourseDraftPage } from '@/pages/guide/CourseDraftPage';
+import { CourseEditPage } from '@/pages/guide/CourseEditPage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
@@ -135,11 +138,11 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/tours/:tourId/course/draft',
-                    element: <PlaceholderPage title="AI 코스 초안" wireframe="guide-s04" />, // P0 · Task 19
+                    element: <CourseDraftPage />,
                   },
                   {
                     path: '/guide/tours/:tourId/course/edit',
-                    element: <PlaceholderPage title="코스 편집" wireframe="guide-s05" />, // P0 · Task 19
+                    element: <CourseEditPage />,
                   },
                   {
                     path: '/guide/tours/:tourId/course/stops/pick',
@@ -147,9 +150,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/tours/:tourId/course/confirmed',
-                    element: (
-                      <PlaceholderPage title="코스 확정 · 쿠폰 발급" wireframe="guide-s06" />
-                    ), // P0 · Task 19
+                    element: <CourseConfirmedPage />,
                   },
                   {
                     path: '/guide/tours/:tourId/complete',

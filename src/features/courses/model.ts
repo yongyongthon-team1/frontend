@@ -59,6 +59,18 @@ export function slotTimes(startsAt: string, count: number): string[] {
   });
 }
 
+/** 식사로 묶는 상점 업종. */
+const MEAL_CATEGORIES = new Set(['한식', '분식', '중식', '일식', '양식', '식당']);
+
+/**
+ * 코스 확정 화면 경로 줄(`캠퍼스 → 식사 → 카페`)의 지점 분류. 캠퍼스 지점은 `캠퍼스`, 식사 업종은 `식사`이고,
+ * 그 밖(`카페` 포함)은 업종 그대로다 — `보드게임카페`는 카페가 아니다.
+ */
+export function stopKindLabel(stop: Pick<CourseStop, 'type' | 'category'>): string {
+  if (stop.type === 'CAMPUS') return '캠퍼스';
+  return MEAL_CATEGORIES.has(stop.category) ? '식사' : stop.category;
+}
+
 /** 학생에게 보이는 코스 상태. 코스가 없거나 초안이면 아직 준비 중이다. */
 export function studentCourseLabel(status: CourseStatus | null): '코스 준비 중' | '코스 확정' {
   return status === 'CONFIRMED' ? '코스 확정' : '코스 준비 중';
