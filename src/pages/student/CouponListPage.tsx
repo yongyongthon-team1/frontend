@@ -18,7 +18,7 @@ export function CouponListPage() {
     <>
       <TopBar title="내 쿠폰" back />
       <Page>
-        {query.isError ? (
+        {coupons === undefined && query.isError ? (
           <ErrorState error={query.error} onRetry={() => void query.refetch()} />
         ) : coupons === undefined ? (
           <>

@@ -2,7 +2,7 @@ import { create } from 'zustand';
 import { persist } from 'zustand/middleware';
 import { env, type ApiMode } from '@/shared/config/env';
 
-// 시연 설정(최소판). 시연 도구 켜기와 API 모드 덮어쓰기만 둔다 — Task 17 · 21이 넓힌다.
+// 시연 설정(최소판). 시연 도구 켜기, API 모드 덮어쓰기, 학생이 마지막으로 본 쿠폰(`lastCoupon`)을 둔다 — Task 21이 넓힌다.
 // localStorage에 남아 새로고침 · 원클릭 링크 뒤에도 유지된다.
 
 export const DEMO_STORE_KEY = 'ytt.demo';

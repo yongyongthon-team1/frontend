@@ -20,7 +20,7 @@ const STATE_HINT: Record<CouponState, string> = {
 };
 
 /**
- * 쿠폰 상세(hs-s09). 사장님께 보여 줄 6자리 코드를 위쪽에 크게 둔다(무대 시연에서 스크롤 없이 보여야 한다).
+ * 쿠폰 상세(hs-s09). 사장님께 보여 줄 6자리 코드를 크게 보여 준다(무대 시연에서 스크롤 없이 보여야 한다).
  * 상태는 서버가 준 값을 그리고, 아직 쓸 수 있는 쿠폰이면 훅이 5초마다 다시 불러와 사장님의 사용 처리를 반영한다.
  */
 export function CouponDetailPage() {
@@ -36,7 +36,8 @@ export function CouponDetailPage() {
     if (code !== undefined && storeId !== undefined) setLastCoupon({ code, storeId });
   }, [code, storeId, setLastCoupon]);
 
-  if (query.isError) {
+  // 다시 불러오다 실패해도 이미 받은 쿠폰은 그대로 보인다 — 시연 중 코드가 오류 화면으로 바뀌면 안 된다.
+  if (coupon === undefined && query.isError) {
     return (
       <>
         <TopBar title="내 쿠폰" back />
@@ -69,7 +70,13 @@ export function CouponDetailPage() {
         <StatusChip>탐방 당일에만 사용 가능</StatusChip>
         <h2 className="mt-4 text-xl leading-snug font-bold text-ink">오늘의 로컬 혜택</h2>
 
-        <InfoCard className="mt-4" title="쿠폰 코드" description="사장님께 아래 번호를 보여주세요.">
+        <InfoCard
+          className="mt-4"
+          muted
+          title={coupon.storeName}
+          description="탐방 코스에 포함된 제휴 상점이에요."
+        />
+        <InfoCard className="mt-3" title="쿠폰 코드" description="사장님께 아래 번호를 보여주세요.">
           <p
             data-testid="coupon-code"
             className={cn(
@@ -81,12 +88,6 @@ export function CouponDetailPage() {
           </p>
         </InfoCard>
 
-        <InfoCard
-          className="mt-3"
-          muted
-          title={coupon.storeName}
-          description="탐방 코스에 포함된 제휴 상점이에요."
-        />
         <InfoCard
           className="mt-3"
           title={coupon.discount}

@@ -1,7 +1,9 @@
-import { screen, within } from '@testing-library/react';
+import { act, screen, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useDemoStore } from '@/demo/demoStore';
 import { getDb, mutate } from '@/mocks/db/store';
+import { server } from '@/mocks/node';
 import { redeemCoupon as redeemCouponRule } from '@/mocks/rules/coupons';
 import { DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { formatMonthDay } from '@/shared/lib/date';
@@ -84,4 +86,29 @@ describe('쿠폰 목록 · 상세 (hs-s09)', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('리뷰를 남기면 가게 AI 요약에 반영돼요.')).toBeInTheDocument();
   }, 10_000);
+
+  it('다시 불러오기가 실패해도 받은 쿠폰 코드는 그대로 보인다', async () => {
+    const { router, queryClient } = await renderApp('/my-tours', {
+      as: 'student',
+      checkpoint: 'CONFIRMED',
+    });
+    const id = getDb().coupons.find((c) => c.applicationId === findApplicationId(STUDENT, 1))!.id;
+    await router.navigate(`/coupons/${id}`);
+    const shown = (await screen.findByTestId('coupon-code')).textContent;
+
+    server.use(
+      http.get('/api/me/coupons/:id', () =>
+        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
+      ),
+    );
+    // 쿼리 관찰자는 상태 변화를 한 틱 뒤에 화면에 알린다 — act 안에서 그 틱까지 기다린 뒤 확인한다.
+    await act(async () => {
+      await queryClient.refetchQueries({ queryKey: ['myCoupons', 'detail', id] });
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    expect(queryClient.getQueryState(['myCoupons', 'detail', id])?.status).toBe('error');
+    expect(screen.getByTestId('coupon-code')).toHaveTextContent(shown!);
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
 });
