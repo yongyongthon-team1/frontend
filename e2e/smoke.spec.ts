@@ -13,5 +13,8 @@ test('배포 빌드: 로그인 후 딥링크 새로고침에도 상태 유지', 
 
   // 새로고침 뒤에도 /login으로 튕기지 않고, 해당 탭이 활성 상태여야 한다.
   await expect(page).toHaveURL(/\/my-tours$/);
-  await expect(page.getByRole('link', { name: '내 탐방' })).toHaveAttribute('aria-current', 'page');
+  await expect(page.getByRole('link', { name: '내 탐방', exact: true })).toHaveAttribute(
+    'aria-current',
+    'page',
+  );
 });

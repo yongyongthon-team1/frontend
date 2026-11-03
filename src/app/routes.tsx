@@ -3,6 +3,8 @@ import { LoginPage } from '@/pages/auth/LoginPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
 import { ApplyPage } from '@/pages/student/ApplyPage';
 import { HomePage } from '@/pages/student/HomePage';
+import { MyTourDetailPage } from '@/pages/student/MyTourDetailPage';
+import { MyToursPage } from '@/pages/student/MyToursPage';
 import { RecommendationsPage } from '@/pages/student/RecommendationsPage';
 import { TourDetailPage } from '@/pages/student/TourDetailPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
@@ -71,11 +73,11 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/my-tours',
-                    element: <PlaceholderPage title="내 탐방 상태별 목록" wireframe="hs-a05" />, // P0 · Task 15
+                    element: <MyToursPage />,
                   },
                   {
                     path: '/my-tours/:applicationId',
-                    element: <PlaceholderPage title="내 탐방 상세" wireframe="hs-s07" />, // P0 · Task 15
+                    element: <MyTourDetailPage />,
                   },
                   {
                     path: '/my-tours/:applicationId/course',

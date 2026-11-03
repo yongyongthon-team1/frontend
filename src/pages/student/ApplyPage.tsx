@@ -77,7 +77,7 @@ export function ApplyPage() {
     if (problem) return;
     apply.mutate(trimmed, {
       onSuccess: () => void navigate(`/tours/${tourId}/apply/done`, { replace: true }),
-      onError: (err) => toast.error(errorMessage('code' in err ? (err.code as string) : undefined)),
+      onError: (err) => toast.error(errorMessage(err.code)),
     });
   }
 

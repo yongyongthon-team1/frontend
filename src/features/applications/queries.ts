@@ -6,6 +6,7 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { qk } from '@/shared/api/queryKeys';
+import type { ApiError } from '@/shared/lib/http';
 import {
   getApplicantsBoard,
   getGuideTours,
@@ -22,7 +23,7 @@ import type { ApplicantsBoard, GuideTourSummary, MyApplication } from './model';
  * 탐방 신청. 성공하면 탐방 상세(내 신청 · 남은 자리)와 내 신청 목록을 다시 불러온다 — 추천은 건드리지 않는다.
  * 실패해도 탐방 상세를 다시 불러와, 방금 정원이 찬 경우처럼 바뀐 신청 가능 상태를 화면에 반영한다.
  */
-export function useApplyToTour(tourId: number): UseMutationResult<MyApplication, Error, string> {
+export function useApplyToTour(tourId: number): UseMutationResult<MyApplication, ApiError, string> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: (motivation: string) => postApplication(tourId, motivation),
@@ -45,7 +46,9 @@ export function useMyApplication(id: number): UseQueryResult<MyApplication> {
 }
 
 /** 취소하면 내 신청(목록 · 상세 모두)과 그 탐방의 남은 자리를 다시 불러온다. */
-export function useCancelMyApplication(id: number): UseMutationResult<MyApplication, Error, void> {
+export function useCancelMyApplication(
+  id: number,
+): UseMutationResult<MyApplication, ApiError, void> {
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn: () => postCancelApplication(id),
@@ -80,10 +83,10 @@ function useBoardMutation(
   });
 }
 
-export function useApprove(tourId: number): UseMutationResult<ApplicantsBoard, Error, number> {
+export function useApprove(tourId: number): UseMutationResult<ApplicantsBoard, ApiError, number> {
   return useBoardMutation(tourId, postApprove);
 }
 
-export function useReject(tourId: number): UseMutationResult<ApplicantsBoard, Error, number> {
+export function useReject(tourId: number): UseMutationResult<ApplicantsBoard, ApiError, number> {
   return useBoardMutation(tourId, postReject);
 }
