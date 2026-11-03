@@ -2,6 +2,8 @@ import type { RouteObject } from 'react-router';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
 import { ApplyPage } from '@/pages/student/ApplyPage';
+import { CouponDetailPage } from '@/pages/student/CouponDetailPage';
+import { CouponListPage } from '@/pages/student/CouponListPage';
 import { CourseMapPage } from '@/pages/student/CourseMapPage';
 import { HomePage } from '@/pages/student/HomePage';
 import { MyTourDetailPage } from '@/pages/student/MyTourDetailPage';
@@ -86,11 +88,11 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/my-tours/:applicationId/coupons',
-                    element: <PlaceholderPage title="내 쿠폰" wireframe="hs-s09" />, // P0 · Task 17
+                    element: <CouponListPage />,
                   },
                   {
                     path: '/coupons/:couponId',
-                    element: <PlaceholderPage title="쿠폰 상세" wireframe="hs-s09" />, // P0 · Task 17
+                    element: <CouponDetailPage />,
                   },
                   {
                     path: '/reviews/new',

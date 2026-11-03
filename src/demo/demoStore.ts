@@ -12,8 +12,11 @@ interface DemoState {
   enabled: boolean;
   /** 시연 패널에서 고른 API 모드. 없으면 env 기본값. */
   apiModeOverride: ApiMode | null;
+  /** 학생이 마지막으로 본 쿠폰. 시연 도구가 사장님 쪽에서 같은 쿠폰을 바로 열 때 쓴다. */
+  lastCoupon: { code: string; storeId: number } | null;
   setEnabled(enabled: boolean): void;
   setApiModeOverride(mode: ApiMode | null): void;
+  setLastCoupon(coupon: { code: string; storeId: number }): void;
 }
 
 export const useDemoStore = create<DemoState>()(
@@ -21,8 +24,10 @@ export const useDemoStore = create<DemoState>()(
     (set) => ({
       enabled: false,
       apiModeOverride: null,
+      lastCoupon: null,
       setEnabled: (enabled) => set({ enabled }),
       setApiModeOverride: (apiModeOverride) => set({ apiModeOverride }),
+      setLastCoupon: (lastCoupon) => set({ lastCoupon }),
     }),
     { name: DEMO_STORE_KEY },
   ),
