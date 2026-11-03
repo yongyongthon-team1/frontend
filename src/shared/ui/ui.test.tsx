@@ -527,4 +527,17 @@ describe('ConfirmDialog', () => {
     await userEvent.click(confirm);
     expect(onConfirm).not.toHaveBeenCalled();
   });
+
+  it('pending이 아니면 Esc로 닫는다', async () => {
+    const { onOpenChange } = setup();
+    await userEvent.keyboard('{Escape}');
+    expect(onOpenChange).toHaveBeenCalledWith(false);
+  });
+
+  it('pending이면 닫히지 않는다: Esc를 무시하고 돌아가기도 비활성', async () => {
+    const { onOpenChange } = setup({ pending: true });
+    expect(screen.getByRole('button', { name: '돌아가기' })).toBeDisabled();
+    await userEvent.keyboard('{Escape}');
+    expect(onOpenChange).not.toHaveBeenCalled();
+  });
 });

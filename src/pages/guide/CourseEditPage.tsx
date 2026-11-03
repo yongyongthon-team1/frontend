@@ -6,6 +6,7 @@ import {
   useConfirmCourse,
   useDeleteStop,
   useGuideCourse,
+  useIsCreatingDraft,
   useReorderStops,
   useUpdateStop,
 } from '@/features/courses/queries';
@@ -25,8 +26,8 @@ const showError = (error: { code: string }) => toast.error(errorMessage(error.co
 
 /**
  * 코스 편집(guide-s05): 순서(위로 · 아래로) · 한줄평 · 지점 빼기와 최종 확정. 지점 추가 · 상점 교체는 2단계다.
- * 코스를 바꾸는 요청이 하나라도 진행 중이면 편집 · 확정 버튼을 모두 잠가 요청이 겹치지 않게 한다. 방문 시간은
- * 서버가 위치 슬롯으로 다시 매긴 값을 그대로 그린다.
+ * 코스를 바꾸는 요청이 하나라도 진행 중이면(초안 화면이 보낸 AI 초안 생성 포함) 편집 · 확정 버튼을 모두 잠가
+ * 요청이 겹치지 않게 한다. 방문 시간은 서버가 위치 슬롯으로 다시 매긴 값을 그대로 그린다.
  */
 export function CourseEditPage() {
   const tourId = Number(useParams().tourId);
@@ -36,6 +37,7 @@ export function CourseEditPage() {
   const updateStop = useUpdateStop(tourId);
   const deleteStop = useDeleteStop(tourId);
   const confirm = useConfirmCourse(tourId);
+  const drafting = useIsCreatingDraft(tourId);
   const [noteStopId, setNoteStopId] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [deleteStopId, setDeleteStopId] = useState<number | null>(null);
@@ -69,7 +71,11 @@ export function CourseEditPage() {
 
   const { stops } = course;
   const busy =
-    reorder.isPending || updateStop.isPending || deleteStop.isPending || confirm.isPending;
+    reorder.isPending ||
+    updateStop.isPending ||
+    deleteStop.isPending ||
+    confirm.isPending ||
+    drafting;
   const noteStop = stops.find((s) => s.id === noteStopId) ?? null;
 
   function move(index: number, offset: -1 | 1) {
@@ -143,7 +149,10 @@ export function CourseEditPage() {
             disabled={busy || stops.length === 0}
             hint={
               stops.length === 0
-                ? { reason: '지점이 하나 이상 있어야 확정할 수 있어요.' }
+                ? {
+                    reason: '지점이 하나 이상 있어야 확정할 수 있어요.',
+                    action: { label: '초안 다시 만들기', to: `${base}/course/draft` },
+                  }
                 : undefined
             }
             onClick={() => setConfirmOpen(true)}
@@ -245,10 +254,22 @@ function EditStopItem({
         >
           아래로
         </Button>
-        <Button size="sm" variant="secondary" disabled={busy} onClick={onNote}>
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-label={`${stop.name} 한줄평`}
+          disabled={busy}
+          onClick={onNote}
+        >
           한줄평
         </Button>
-        <Button size="sm" variant="secondary" disabled={busy} onClick={onDelete}>
+        <Button
+          size="sm"
+          variant="secondary"
+          aria-label={`${stop.name} 삭제`}
+          disabled={busy}
+          onClick={onDelete}
+        >
           삭제
         </Button>
       </div>

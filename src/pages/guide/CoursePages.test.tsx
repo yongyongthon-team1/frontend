@@ -45,6 +45,10 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     await user.click(screen.getByRole('button', { name: '코스 수정하기' }));
     const third = (await screen.findAllByRole('button', { name: /아래로 이동/ }))[1]; // ② → ③
     await user.click(third);
+    // 순서 변경 요청이 끝나야 확정 버튼이 풀린다(진행 중에는 편집 · 확정 버튼을 모두 잠근다).
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '최종 코스 확정' })).toBeEnabled(),
+    );
     await user.click(screen.getByRole('button', { name: '최종 코스 확정' }));
     await user.click(await screen.findByRole('button', { name: '확정하기' }));
     expect(await screen.findByText('코스를 확정했어요!')).toBeInTheDocument();
@@ -92,8 +96,8 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     expect(await screen.findByText('방학 상권 인사이트')).toBeInTheDocument();
     expect(screen.getByText('예시')).toBeInTheDocument();
     expect(screen.getByText(/^출처 · /)).toBeInTheDocument();
-    // AI 결과에는 ✦ 배지와 이유가 붙는다
-    expect(screen.getAllByRole('group', { name: 'AI 결과' })).toHaveLength(3);
+    // AI 결과에는 ✦ 배지가 붙는다: 위쪽 칩 1개 + 지점 3곳
+    expect(screen.getAllByRole('group', { name: 'AI 결과' })).toHaveLength(4);
   });
 
   it('StrictMode로 다시 마운트돼도 초안 생성 요청은 한 번이고, 성공하면 주소에서 ?generate=1을 지운다', async () => {
@@ -119,6 +123,28 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     expect(drafts).toBe(1);
   });
 
+  it('초안 생성 요청이 진행 중일 때 화면을 떠났다 돌아와도 요청은 한 번', async () => {
+    // AI 응답이 늦어야 요청이 진행 중인 채로 초안 화면을 다시 마운트할 수 있다.
+    setMockLatency({ base: 0, ai: 400 });
+    let drafts = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST' && request.url.endsWith('/course/draft')) drafts++;
+    });
+    const { user, router } = await renderApp('/guide/tours/1/applicants', {
+      as: 'guide',
+      checkpoint: 'APPROVED',
+    });
+    await user.click(await screen.findByRole('button', { name: 'AI 코스 만들기' }));
+    await waitFor(() => expect(drafts).toBe(1));
+
+    // 생성 중에 신청자 관리로 갔다가 다시 AI 코스 만들기 — 새로 마운트된 초안 화면은 진행 중인 생성을 기다린다
+    await router.navigate('/guide/tours/1/applicants');
+    await user.click(await screen.findByRole('button', { name: 'AI 코스 만들기' }));
+    expect(await screen.findByText('신청자 관심사를 모으고 있어요')).toBeInTheDocument();
+    expect(await screen.findByText('2시간 30분 추천 코스')).toBeInTheDocument();
+    expect(drafts).toBe(1);
+  });
+
   it('초안 생성이 실패하면 오류를 보여 주고, 다시 시도하면 다시 만든다', async () => {
     server.use(
       http.post(
@@ -140,7 +166,7 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
 
   it('한줄평을 저장하면 항목에 보이고, 비워서 저장하면 추천 이유로 돌아간다', async () => {
     const { user } = await openEditor();
-    await user.click(within(itemCard('서천 밥상')).getByRole('button', { name: '한줄평' }));
+    await user.click(screen.getByRole('button', { name: '서천 밥상 한줄평' }));
     let sheet = await screen.findByRole('dialog');
     const field = within(sheet).getByRole('textbox', { name: '한줄평' });
     expect(field).toHaveValue('');
@@ -150,7 +176,7 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     expect(within(itemCard('서천 밥상')).getByText('양이 많아 든든해요')).toBeInTheDocument();
 
     // 다시 열면 지금 한줄평이 채워져 있다
-    await user.click(within(itemCard('서천 밥상')).getByRole('button', { name: '한줄평' }));
+    await user.click(screen.getByRole('button', { name: '서천 밥상 한줄평' }));
     sheet = await screen.findByRole('dialog');
     expect(within(sheet).getByRole('textbox', { name: '한줄평' })).toHaveValue(
       '양이 많아 든든해요',
@@ -165,7 +191,7 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     const { user } = await openEditor();
     for (let left = 3; left > 0; left--) {
       const list = screen.getByRole('list', { name: '코스 지점' });
-      await user.click(within(list).getAllByRole('button', { name: '삭제' })[0]);
+      await user.click(within(list).getAllByRole('button', { name: / 삭제$/ })[0]);
       const dialog = await screen.findByRole('alertdialog');
       expect(within(dialog).getByText('이 지점을 뺄까요?')).toBeInTheDocument();
       expect(
@@ -177,6 +203,30 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     }
     expect(screen.getByRole('button', { name: '최종 코스 확정' })).toBeDisabled();
     expect(screen.getByText('지점이 하나 이상 있어야 확정할 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '초안 다시 만들기' })).toHaveAttribute(
+      'href',
+      '/guide/tours/1/course/draft',
+    );
+  });
+
+  it('코스가 없으면 확정 화면 주소는 신청자 관리로 보낸다', async () => {
+    const { router } = await renderApp('/guide/tours/1/course/confirmed', {
+      as: 'guide',
+      checkpoint: 'APPROVED',
+    });
+    expect(await screen.findByRole('button', { name: 'AI 코스 만들기' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/applicants');
+  });
+
+  it('초안이면 확정 화면 주소는 편집 화면으로 보낸다', async () => {
+    const { router } = await renderApp('/guide/tours/1/course/draft?generate=1', {
+      as: 'guide',
+      checkpoint: 'APPROVED',
+    });
+    await screen.findByText('2시간 30분 추천 코스');
+    await router.navigate('/guide/tours/1/course/confirmed');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours/1/course/edit'));
+    expect(await screen.findByRole('list', { name: '코스 지점' })).toBeInTheDocument();
   });
 
   it('확정된 코스는 편집 주소로 와도 확정 화면 — 탐방 정보 카드', async () => {

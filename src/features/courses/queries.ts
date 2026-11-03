@@ -1,8 +1,10 @@
 import {
   skipToken,
+  useIsMutating,
   useMutation,
   useQuery,
   useQueryClient,
+  type MutationKey,
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
@@ -36,9 +38,11 @@ export function useGuideCourse(tourId: number): UseQueryResult<Course | null> {
 function useCourseMutation<TVariables>(
   tourId: number,
   mutationFn: (variables: TVariables) => Promise<Course>,
+  mutationKey?: MutationKey,
 ): UseMutationResult<Course, ApiError, TVariables> {
   const queryClient = useQueryClient();
   return useMutation({
+    mutationKey,
     mutationFn,
     onSuccess: (course) => {
       queryClient.setQueryData(qk.guideCourse(tourId), course);
@@ -46,8 +50,14 @@ function useCourseMutation<TVariables>(
   });
 }
 
+/** AI 코스 초안 생성. 뮤테이션 키가 있어 화면을 떠났다 돌아와도 진행 중인 생성을 알아본다(`useIsCreatingDraft`). */
 export function useCreateDraft(tourId: number): UseMutationResult<Course, ApiError, void> {
-  return useCourseMutation(tourId, () => postCourseDraft(tourId));
+  return useCourseMutation(tourId, () => postCourseDraft(tourId), qk.courseDraft(tourId));
+}
+
+/** 이 탐방의 AI 초안 생성 요청이 진행 중인지 — 지금 화면이 보낸 것이든, 떠난 화면이 보낸 것이든. */
+export function useIsCreatingDraft(tourId: number): boolean {
+  return useIsMutating({ mutationKey: qk.courseDraft(tourId) }) > 0;
 }
 
 /** 변수는 바뀐 순서의 전체 지점 id. */

@@ -19,6 +19,8 @@ export const qk = {
   guideTours: ['guideTours'] as const,
   applicants: (tourId: number) => ['applicants', tourId] as const,
   guideCourse: (tourId: number) => ['guideCourse', tourId] as const,
+  /** 뮤테이션 키: AI 코스 초안 생성. 화면이 다시 마운트돼도 진행 중인 생성을 알아본다. */
+  courseDraft: (tourId: number) => ['courseDraft', tourId] as const,
   couponLookup: (code: string) => ['couponLookup', code] as const,
   health: ['health'] as const,
 };
