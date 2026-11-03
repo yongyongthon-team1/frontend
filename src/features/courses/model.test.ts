@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { slotTimes } from './model';
+import { slotTimes, studentCourseLabel } from './model';
 
 describe('slotTimes', () => {
   it('슬롯 시간은 와이어프레임과 같다', () =>
@@ -14,4 +14,12 @@ describe('slotTimes', () => {
       '17:40',
       '18:30',
     ]));
+});
+
+describe('studentCourseLabel', () => {
+  it('확정된 코스', () => expect(studentCourseLabel('CONFIRMED')).toBe('코스 확정'));
+  it('초안이거나 아직 없으면 준비 중', () => {
+    expect(studentCourseLabel('DRAFT')).toBe('코스 준비 중');
+    expect(studentCourseLabel(null)).toBe('코스 준비 중');
+  });
 });

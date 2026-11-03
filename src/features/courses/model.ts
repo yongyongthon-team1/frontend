@@ -58,3 +58,8 @@ export function slotTimes(startsAt: string, count: number): string[] {
     return formatTime(toSeoulIso(new Date(startMs + offset * 60_000)));
   });
 }
+
+/** 학생에게 보이는 코스 상태. 코스가 없거나 초안이면 아직 준비 중이다. */
+export function studentCourseLabel(status: CourseStatus | null): '코스 준비 중' | '코스 확정' {
+  return status === 'CONFIRMED' ? '코스 확정' : '코스 준비 중';
+}

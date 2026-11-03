@@ -1,4 +1,6 @@
 import type { ApplicationStatus } from '@/features/applications/model';
+import type { Me } from '@/features/auth/model';
+import type { ActionLink } from '@/shared/lib/types';
 
 export type TourStatus = 'RECRUITING' | 'CLOSED' | 'CANCELED' | 'COMPLETED';
 
@@ -69,4 +71,100 @@ export function tourTitle(
   if (campusName !== '본교') parts.push(campusName);
   parts.push(major ?? '캠퍼스', '탐방');
   return parts.join(' ');
+}
+
+export interface ApplyButtonState {
+  kind:
+    | 'APPLY'
+    | 'LOGIN'
+    | 'NOT_STUDENT'
+    | 'APPLIED'
+    | 'REJECTED'
+    | 'NOT_RECRUITING'
+    | 'CLOSED'
+    | 'NEED_VERIFICATION';
+  enabled: boolean;
+  label: string;
+  reason: string | null;
+  action: ActionLink | null;
+}
+
+/** 탐방 상세의 신청 버튼. 위에서부터 차례로 검사하고 처음 걸린 사유를 돌려준다. */
+export function applyButtonState(
+  me: Me | null,
+  tour: TourDetail,
+  recommendationsPath: string,
+): ApplyButtonState {
+  if (me === null) {
+    return {
+      kind: 'LOGIN',
+      enabled: true,
+      label: '로그인하고 신청하기',
+      reason: null,
+      action: { label: '로그인', to: `/login?next=/tours/${tour.id}` },
+    };
+  }
+  if (me.role !== 'HIGH_SCHOOL') {
+    return {
+      kind: 'NOT_STUDENT',
+      enabled: false,
+      label: '고교생만 신청할 수 있어요',
+      reason: null,
+      action: null,
+    };
+  }
+  const mine = tour.myApplication?.status;
+  if (mine === 'PENDING' || mine === 'APPROVED') {
+    return {
+      kind: 'APPLIED',
+      enabled: false,
+      label: '신청됨',
+      reason: '이미 신청한 탐방이에요.',
+      action: { label: '내 탐방에서 상태 확인', to: '/my-tours' },
+    };
+  }
+  const otherTours: ActionLink = { label: '다른 추천 보기', to: recommendationsPath };
+  if (mine === 'REJECTED') {
+    return {
+      kind: 'REJECTED',
+      enabled: false,
+      label: '신청 불가',
+      reason: '거절된 탐방에는 다시 신청할 수 없어요.',
+      action: otherTours,
+    };
+  }
+  if (tour.status === 'CANCELED' || tour.status === 'COMPLETED') {
+    return {
+      kind: 'NOT_RECRUITING',
+      enabled: false,
+      label: '모집 종료',
+      reason: '모집이 끝난 탐방이에요.',
+      action: otherTours,
+    };
+  }
+  if (tour.status === 'CLOSED' || tour.remainingSeats <= 0) {
+    return {
+      kind: 'CLOSED',
+      enabled: false,
+      label: '정원 마감',
+      reason: '남은 자리가 없어요.',
+      action: otherTours,
+    };
+  }
+  if (me.verificationStatus !== 'APPROVED' || me.guardianStatus !== 'AGREED') {
+    return {
+      kind: 'NEED_VERIFICATION',
+      enabled: false,
+      label: '탐방 신청하기',
+      reason: '학생증 승인·보호자 동의 완료 후 신청할 수 있어요.',
+      action: { label: '역할 인증 단계로 이동', to: '/verify' },
+    };
+  }
+  return {
+    kind: 'APPLY',
+    enabled: true,
+    label: '탐방 신청하기',
+    reason: null,
+    action: { label: '탐방 신청하기', to: `/tours/${tour.id}/apply` },
+  };
 }
