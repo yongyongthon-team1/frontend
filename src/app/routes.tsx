@@ -2,6 +2,7 @@ import type { RouteObject } from 'react-router';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
 import { ApplyPage } from '@/pages/student/ApplyPage';
+import { CourseMapPage } from '@/pages/student/CourseMapPage';
 import { HomePage } from '@/pages/student/HomePage';
 import { MyTourDetailPage } from '@/pages/student/MyTourDetailPage';
 import { MyToursPage } from '@/pages/student/MyToursPage';
@@ -81,7 +82,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/my-tours/:applicationId/course',
-                    element: <PlaceholderPage title="탐방 코스 지도" wireframe="hs-s08" />, // P0 · Task 16
+                    element: <CourseMapPage />,
                   },
                   {
                     path: '/my-tours/:applicationId/coupons',
