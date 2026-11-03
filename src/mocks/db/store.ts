@@ -55,12 +55,23 @@ export function getDb(): DB {
   return db;
 }
 
-/** DB를 고치고 곧바로 저장한다. */
+/**
+ * DB를 고치고 곧바로 저장한다. 트랜잭션처럼 동작한다: `fn`이 던지면 호출 전 상태로 되돌리고
+ * (저장하지 않고) 다시 던진다. 규칙이 중간에 MockApiError를 던져도 반쯤 바뀐 DB가 남지 않는다.
+ */
 export function mutate<T>(fn: (db: DB) => T): T {
   const db = getDb();
-  const result = fn(db);
-  save(db);
-  return result;
+  const snapshot = structuredClone(db);
+  try {
+    const result = fn(db);
+    save(db);
+    return result;
+  } catch (error) {
+    // 호출자가 쥔 db 참조도 유효하도록 같은 객체를 제자리에서 되돌린다.
+    for (const key of Object.keys(db)) delete (db as unknown as Record<string, unknown>)[key];
+    Object.assign(db, snapshot);
+    throw error;
+  }
 }
 
 /** 캐시와 localStorage를 시드로 덮어쓴다. 체크포인트는 Task 8에서 지원한다. */

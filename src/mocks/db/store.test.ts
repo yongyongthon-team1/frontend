@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { setMockNow } from '@/mocks/clock';
+import { mockNow, setMockNow } from '@/mocks/clock';
+import { createSeed } from './seed';
 import {
   clearDbCache,
   createSession,
@@ -19,14 +20,23 @@ beforeEach(() => {
 });
 
 describe('getDb', () => {
-  it('손상된 JSON이면 시드로 복구', () => {
+  it('손상된 JSON이면 시드로 복구하고 저장소도 유효한 DB로 덮어쓴다', () => {
     localStorage.setItem(MOCK_DB_KEY, '{oops');
     expect(getDb().universities).toHaveLength(5);
+    expect(JSON.parse(localStorage.getItem(MOCK_DB_KEY)!).version).toBe(MOCK_DB_VERSION);
   });
 
-  it('옛 버전이면 시드로 복구', () => {
-    localStorage.setItem(MOCK_DB_KEY, JSON.stringify({ version: 0 }));
-    expect(getDb().version).toBe(MOCK_DB_VERSION);
+  it('옛 버전이면(모양이 온전해도) 시드로 복구하고 저장소도 덮어쓴다', () => {
+    const old = { ...createSeed(mockNow()), version: MOCK_DB_VERSION - 1 };
+    old.users[0].name = '옛-마커';
+    localStorage.setItem(MOCK_DB_KEY, JSON.stringify(old));
+    clearDbCache();
+    const db = getDb();
+    expect(db.version).toBe(MOCK_DB_VERSION);
+    expect(db.users[0].name).not.toBe('옛-마커');
+    const stored = JSON.parse(localStorage.getItem(MOCK_DB_KEY)!);
+    expect(stored.version).toBe(MOCK_DB_VERSION);
+    expect(stored.users[0].name).not.toBe('옛-마커');
   });
 
   it('버전만 맞고 모양이 틀려도 시드로 복구', () => {
@@ -70,6 +80,23 @@ describe('mutate', () => {
       db.users[0].name = '바뀜';
     });
     expect(JSON.parse(localStorage.getItem(MOCK_DB_KEY)!).users[0].name).toBe('바뀜');
+  });
+
+  it('fn이 던지면 변경을 되돌리고 저장하지 않고 다시 던진다', () => {
+    const original = getDb().users[0].name;
+    const before = localStorage.getItem(MOCK_DB_KEY);
+    const db = getDb();
+    expect(() =>
+      mutate((d) => {
+        d.users[0].name = '반쯤-바뀜';
+        d.users.push({ ...d.users[0], id: 999 });
+        throw new Error('규칙 위반');
+      }),
+    ).toThrow('규칙 위반');
+    expect(getDb().users[0].name).toBe(original);
+    expect(getDb().users.some((u) => u.id === 999)).toBe(false);
+    expect(getDb()).toBe(db);
+    expect(localStorage.getItem(MOCK_DB_KEY)).toBe(before);
   });
 
   it('반환값을 그대로 돌려준다', () => {
