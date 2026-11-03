@@ -1,4 +1,5 @@
 import { mockNow } from '@/mocks/clock';
+import { seoulDateKey } from '@/shared/lib/date';
 import { MOCK_DB_VERSION, type DB } from './schema';
 import { createSeed, type SeedCheckpoint } from './seed';
 
@@ -39,10 +40,16 @@ function load(): DB | null {
   }
 }
 
-/** 메모리 캐시 → localStorage(버전 확인) → 오늘 기준 시드 순으로 DB를 얻는다. */
+/**
+ * 메모리 캐시 → localStorage(버전 확인) → 오늘 기준 시드 순으로 DB를 얻는다.
+ * 시드를 만든 날(`seedDay`)이 오늘이 아니면 어제 리허설의 DB이므로 버리고 다시 시드한다
+ * (시연 탐방이 "오늘 14:00"이 아니라 지난 탐방이 되는 것을 막는다).
+ */
 export function getDb(): DB {
-  if (cache) return cache;
-  const db = load() ?? createSeed(mockNow());
+  const today = seoulDateKey(mockNow());
+  if (cache && cache.seedDay === today) return cache;
+  const stored = load();
+  const db = stored && stored.seedDay === today ? stored : createSeed(mockNow());
   cache = db;
   save(db);
   return db;

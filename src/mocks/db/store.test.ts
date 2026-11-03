@@ -42,6 +42,23 @@ describe('getDb', () => {
     expect(getDb().users[0].name).toBe('저장됨');
   });
 
+  it('seedDay가 오늘이 아닌 저장 DB는 버리고 오늘 기준으로 다시 시드한다', () => {
+    expect(getDb().seedDay).toBe('2026-11-15');
+    const tomorrow = new Date('2026-11-16T01:00:00Z');
+    setMockNow(tomorrow);
+    clearDbCache();
+    expect(getDb().seedDay).toBe('2026-11-16');
+    expect(getDb().tours[0].startsAt).toBe('2026-11-16T14:00:00+09:00');
+    setMockNow(null);
+  });
+
+  it('메모리 캐시도 날짜가 바뀌면 다시 시드한다', () => {
+    expect(getDb().seedDay).toBe('2026-11-15');
+    setMockNow(new Date('2026-11-17T01:00:00Z'));
+    expect(getDb().seedDay).toBe('2026-11-17');
+    setMockNow(null);
+  });
+
   it('처음 만든 시드는 mockNow 기준이다', () => {
     expect(getDb().seedDay).toBe('2026-11-15');
   });
@@ -67,7 +84,7 @@ describe('resetDb', () => {
     });
     const db = resetDb({ today: new Date('2026-12-01T03:00:00Z') });
     expect(db.users[0].name).toBe('김민지');
-    expect(getDb().seedDay).toBe('2026-12-01');
+    expect(db.seedDay).toBe('2026-12-01');
     expect(JSON.parse(localStorage.getItem(MOCK_DB_KEY)!).seedDay).toBe('2026-12-01');
   });
 

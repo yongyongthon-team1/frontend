@@ -456,7 +456,7 @@ export function createSeed(today: Date): DB {
     '14:00',
     '16:30',
     5,
-    demoIntro,
+    '겨울방학 캠퍼스 생활과 동아리 이야기를 나눠요.',
     'https://open.kakao.com/o/demo-khu-design-2',
     'RECRUITING',
     stamp(-14),

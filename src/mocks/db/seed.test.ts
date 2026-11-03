@@ -67,6 +67,16 @@ describe('createSeed', () => {
     ]);
   });
 
+  it('탐방 소개는 시연 탐방만 브리프 문구이고 6번은 디자인 얘기가 없다', () => {
+    const db = createSeed(today);
+    const intros = db.tours.map((t) => t.introduction);
+    expect(intros[0]).toBe(
+      '산업디자인 작업실과 수업 이야기, 학생들이 자주 가는 대학가 식당과 카페까지 함께 둘러봐요.',
+    );
+    expect(intros[5]).toBe('겨울방학 캠퍼스 생활과 동아리 이야기를 나눠요.');
+    expect(new Set(intros).size).toBe(intros.length);
+  });
+
   it('다른 날로 시드하면 날짜가 따라간다', () => {
     const db = createSeed(new Date('2026-12-01T03:00:00Z'));
     expect(db.seedDay).toBe('2026-12-01');
@@ -112,6 +122,29 @@ describe('createSeed', () => {
     expect(nearest(meals)).toBe(1);
     expect(db.stores[1].name).toBe('카페 모래시계');
     expect(nearest(cafes)).toBe(2);
+  });
+
+  it('경희대 중심과 예술·디자인대학 모두에서 서천 밥상이 가장 가까운 식당, 카페 모래시계가 가장 가까운 카페', () => {
+    const db = createSeed(today);
+    const khu = db.universities.find((u) => u.id === DEMO_UNIVERSITY_ID)!;
+    const design = db.campusPlaces.find(
+      (p) => p.universityId === DEMO_UNIVERSITY_ID && p.name === '예술·디자인대학',
+    )!;
+    for (const origin of [
+      { lat: khu.latitude, lng: khu.longitude },
+      { lat: design.latitude, lng: design.longitude },
+    ]) {
+      const distance = (id: number) => {
+        const s = db.stores.find((x) => x.id === id)!;
+        return distanceMeters(origin, { lat: s.latitude, lng: s.longitude });
+      };
+      const nearest = (categories: string[]) =>
+        db.stores
+          .filter((s) => categories.includes(s.category))
+          .sort((a, b) => distance(a.id) - distance(b.id))[0].name;
+      expect(nearest(['한식', '분식'])).toBe('서천 밥상');
+      expect(nearest(['카페'])).toBe('카페 모래시계');
+    }
   });
 
   it('경희대 밖 비제휴 상점 2곳은 단국대 근처다', () => {
@@ -250,6 +283,7 @@ describe('createSeed', () => {
     const db = createSeed(today);
     const codes = db.coupons.map((c) => c.code);
     expect(codes.every((c) => /^\d{6}$/.test(c))).toBe(true);
+    expect(codes).not.toContain('000000');
     expect(new Set(codes).size).toBe(codes.length);
   });
 
