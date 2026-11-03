@@ -75,35 +75,35 @@
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
-| auth | `POST /api/auth/login` | hs-s01 로그인 | ⬜ | ⬜ | ⬜ | ⬜ |
-| auth | `POST /api/auth/logout` | hs-a03 · guide-s01 · `/owner/me` (로그아웃) | ⬜ | ⬜ | ⬜ | ⬜ |
-| auth | `GET /api/me` | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 | ⬜ | ⬜ | ⬜ | ⬜ |
-| campuses | `GET /api/universities` | hs-s03, guide-s02 | ⬜ | ⬜ | ⬜ | ⬜ |
-| campuses | `GET /api/universities/:id/insight` | hs-s04, guide-s04 | ⬜ | ⬜ | ⬜ | ⬜ |
-| tours | `POST /api/recommendations` | hs-s03, hs-s04, hs-a06 | ⬜ | ⬜ | ⬜ | ⬜ |
-| tours | `GET /api/tours?status=&universityId=` | hs-s04 대체 목록(hs-a06), `/explore` | ⬜ | ⬜ | ⬜ | ⬜ |
-| tours | `GET /api/tours/:id` | hs-s05, hs-a06 | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `POST /api/tours/:id/applications` | hs-a04 | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `GET /api/me/applications` | hs-a05 | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `GET /api/me/applications/:id` | hs-s06, hs-s07 | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `POST /api/me/applications/:id/cancel` | hs-s07 | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `GET /api/guide/tours` | guide-a02 | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `GET /api/guide/tours/:id/applicants` | guide-s03 | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `POST /api/guide/applications/:id/approve` | guide-s03 | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `POST /api/guide/applications/:id/reject` | guide-s03 | ⬜ | ⬜ | ⬜ | ⬜ |
-| courses | `GET /api/guide/tours/:id/course` | guide-s04 · s05 · s06, `/guide/tours/:tourId/course` | ⬜ | ⬜ | ⬜ | ⬜ |
-| courses | `POST /api/guide/tours/:id/course/draft` | guide-s04 | ⬜ | ⬜ | ⬜ | ⬜ |
-| courses | `PUT /api/guide/tours/:id/course/order` | guide-s05 | ⬜ | ⬜ | ⬜ | ⬜ |
-| courses | `PATCH /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ⬜ | ⬜ | ⬜ |
-| courses | `DELETE /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ⬜ | ⬜ | ⬜ |
-| courses | `POST /api/guide/tours/:id/course/confirm` | guide-s05 → guide-s06 | ⬜ | ⬜ | ⬜ | ⬜ |
-| courses | `GET /api/tours/:id/course` | hs-s08 | ⬜ | ⬜ | ⬜ | ⬜ |
-| coupons | `GET /api/me/coupons?applicationId=` | hs-s09 (목록) | ⬜ | ⬜ | ⬜ | ⬜ |
-| coupons | `GET /api/me/coupons/:id` | hs-s09 (상세) | ⬜ | ⬜ | ⬜ | ⬜ |
-| coupons | `GET /api/owner/coupons/:code` | owner-s03, owner-a03 | ⬜ | ⬜ | ⬜ | ⬜ |
-| coupons | `POST /api/owner/coupons/:code/redeem` | owner-s03, owner-a03 | ⬜ | ⬜ | ⬜ | ⬜ |
-| demo | `GET /api/health` | 시연 패널 | ⬜ | ⬜ | ⬜ | ⬜ |
-| demo | `POST /api/demo/reset` | 시연 패널 | ⬜ | ⬜ | ⬜ | ⬜ |
+| auth | `POST /api/auth/login` | hs-s01 로그인 | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | `POST /api/auth/logout` | hs-a03 · guide-s01 · `/owner/me` (로그아웃) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | `GET /api/me` | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 | ⬜ | ✅ | ⬜ | ⬜ |
+| campuses | `GET /api/universities` | hs-s03, guide-s02 | ⬜ | ✅ | ⬜ | ⬜ |
+| campuses | `GET /api/universities/:id/insight` | hs-s04, guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | `POST /api/recommendations` | hs-s03, hs-s04, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | `GET /api/tours?status=&universityId=` | hs-s04 대체 목록(hs-a06), `/explore` | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | `GET /api/tours/:id` | hs-s05, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/tours/:id/applications` | hs-a04 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `GET /api/me/applications` | hs-a05 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `GET /api/me/applications/:id` | hs-s06, hs-s07 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/me/applications/:id/cancel` | hs-s07 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `GET /api/guide/tours` | guide-a02 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `GET /api/guide/tours/:id/applicants` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/guide/applications/:id/approve` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/guide/applications/:id/reject` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `GET /api/guide/tours/:id/course` | guide-s04 · s05 · s06, `/guide/tours/:tourId/course` | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `POST /api/guide/tours/:id/course/draft` | guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `PUT /api/guide/tours/:id/course/order` | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `PATCH /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `DELETE /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `POST /api/guide/tours/:id/course/confirm` | guide-s05 → guide-s06 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `GET /api/tours/:id/course` | hs-s08 | ⬜ | ✅ | ⬜ | ⬜ |
+| coupons | `GET /api/me/coupons?applicationId=` | hs-s09 (목록) | ⬜ | ✅ | ⬜ | ⬜ |
+| coupons | `GET /api/me/coupons/:id` | hs-s09 (상세) | ⬜ | ✅ | ⬜ | ⬜ |
+| coupons | `GET /api/owner/coupons/:code` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
+| coupons | `POST /api/owner/coupons/:code/redeem` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
+| demo | `GET /api/health` | 시연 패널 | ⬜ | ✅ | ⬜ | ⬜ |
+| demo | `POST /api/demo/reset` | 시연 패널 | ⬜ | ✅ | ⬜ | ⬜ |
 
 ## 팀 요청 · 블로커
 
