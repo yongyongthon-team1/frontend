@@ -4,6 +4,7 @@ import { MOCK_DB_VERSION, type DB } from './schema';
 import { createSeed, type SeedCheckpoint } from './seed';
 
 export { MOCK_DB_VERSION };
+export { nextId } from './ids';
 export const MOCK_DB_KEY = 'ytt.mockdb';
 
 let cache: DB | null = null;
@@ -74,12 +75,9 @@ export function mutate<T>(fn: (db: DB) => T): T {
   }
 }
 
-/** 캐시와 localStorage를 시드로 덮어쓴다. 체크포인트는 Task 8에서 지원한다. */
+/** 캐시와 localStorage를 시드로 덮어쓴다. 체크포인트(기본 START)를 주면 그 단계까지 진행한 시드다. */
 export function resetDb(opts: { today?: Date; checkpoint?: SeedCheckpoint } = {}): DB {
-  if (opts.checkpoint !== undefined && opts.checkpoint !== 'START') {
-    throw new Error('checkpoint는 Task 8에서 지원');
-  }
-  const db = createSeed(opts.today ?? mockNow());
+  const db = createSeed(opts.today ?? mockNow(), opts.checkpoint);
   cache = db;
   save(db);
   return db;
@@ -101,11 +99,4 @@ export function createSession(db: DB, userId: number): string {
 export function userIdFromToken(db: DB, token: string | null): number | null {
   if (token === null) return null;
   return db.sessions.find((s) => s.token === token)?.userId ?? null;
-}
-
-/** 시드 이후 규칙이 만드는 새 행의 ID. 모든 테이블이 하나의 카운터를 쓴다. */
-export function nextId(db: DB): number {
-  const id = db.nextId;
-  db.nextId += 1;
-  return id;
 }

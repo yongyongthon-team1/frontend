@@ -6,7 +6,7 @@ import {
 } from '@/features/coupons/model';
 import { tourTitle } from '@/features/tours/model';
 import type { CouponRow, DB, TourRow } from '@/mocks/db/schema';
-import { nextId } from '@/mocks/db/store';
+import { nextId } from '@/mocks/db/ids';
 import { endOfSeoulDay, seoulDateKey, toSeoulIso } from '@/shared/lib/date';
 import { MockApiError } from './errors';
 

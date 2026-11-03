@@ -1,7 +1,7 @@
 import type { ApplicationStatus } from '@/features/applications/model';
 import { mockNow } from '@/mocks/clock';
 import type { ApplicationRow, DB, TourRow } from '@/mocks/db/schema';
-import { nextId } from '@/mocks/db/store';
+import { nextId } from '@/mocks/db/ids';
 import { seoulDateKey, toSeoulIso } from '@/shared/lib/date';
 import { expireCouponsForApplication, issueCouponsForApplication } from './coupons';
 import { MockApiError } from './errors';

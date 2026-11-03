@@ -1,3 +1,6 @@
+import { approveApplication, applyToTour } from '@/mocks/rules/applications';
+import { confirmCourse, createDraft } from '@/mocks/rules/courses';
+import { DEMO_MOTIVATION } from '@/shared/config/demoAccounts';
 import { addDaysKey, endOfSeoulDay, seoulDateAt, seoulDateKey } from '@/shared/lib/date';
 import {
   MOCK_DB_VERSION,
@@ -28,10 +31,14 @@ function add<T extends { id: number }>(rows: T[], row: Omit<T, 'id'>): T {
 }
 
 /**
- * 오늘(Asia/Seoul) 기준 상대 날짜로 시연용 DB를 만든다. 검증 규칙을 거치지 않고 직접 넣는다.
- * 체크포인트(APPLIED · APPROVED · CONFIRMED)는 Task 8에서 규칙을 거쳐 만든다.
+ * 오늘(Asia/Seoul) 기준 상대 날짜로 시연용 DB를 만든다. 기본 시드(START)는 검증 규칙을 거치지 않고 직접 넣는다.
+ * 체크포인트는 시연 골든 패스를 그 단계까지 진행한 DB다. 화면에서 하는 것과 같은 규칙 함수를 시드 날 10:00(KST)에
+ * 차례로 불러 만든다(새 행 id는 `nextId`라 결정적, 쿠폰 코드만 매번 다르다).
+ * - APPLIED: 김민지가 탐방 1에 `DEMO_MOTIVATION`으로 신청(승인 대기)
+ * - APPROVED: + 정다은이 그 신청을 승인(승인 3명)
+ * - CONFIRMED: + AI 코스 초안 생성 → 확정(승인자마다 제휴 상점 쿠폰 발급)
  */
-export function createSeed(today: Date): DB {
+export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): DB {
   const day = seoulDateKey(today);
   const rel = (days: number) => addDaysKey(day, days);
   const stamp = (days: number, hhmm = '09:00') => seoulDateAt(rel(days), hhmm);
@@ -207,7 +214,15 @@ export function createSeed(today: Date): DB {
     }
     return u;
   };
-  student('student@demo.kr', '김민지', '수원영통고등학교', 2, '산업디자인', 'APPROVED', 'AGREED');
+  const minji = student(
+    'student@demo.kr',
+    '김민지',
+    '수원영통고등학교',
+    2,
+    '산업디자인',
+    'APPROVED',
+    'AGREED',
+  );
   student('newbie@demo.kr', '최하늘', '수원영통고등학교', 1, null, 'NONE', 'NONE');
   const seojun = student(
     'seojun@demo.kr',
@@ -658,6 +673,16 @@ export function createSeed(today: Date): DB {
     generatedAt: stamp(-28),
   });
 
-  // 김민지(student@demo.kr)는 시연에서 직접 신청하는 학생이라 신청 · 쿠폰이 없다.
+  // 김민지(student@demo.kr)는 시연에서 직접 신청하는 학생이라 START에는 신청 · 쿠폰이 없다.
+  if (checkpoint === 'START') return db;
+
+  // ── 체크포인트: 시연 순서 그대로 규칙 함수를 거친다 ────────────────────────
+  const at = new Date(seoulDateAt(day, '10:00'));
+  const application = applyToTour(db, minji.id, t1.id, DEMO_MOTIVATION, at);
+  if (checkpoint === 'APPLIED') return db;
+  approveApplication(db, guideKhu.id, application.id, at);
+  if (checkpoint === 'APPROVED') return db;
+  createDraft(db, guideKhu.id, t1.id, at);
+  confirmCourse(db, guideKhu.id, t1.id, at);
   return db;
 }

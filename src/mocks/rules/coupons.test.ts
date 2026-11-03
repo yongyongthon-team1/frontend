@@ -67,6 +67,7 @@ function putCourse(storeIds: number[], status: CourseStatus = 'CONFIRMED') {
     createdAt: at,
     updatedAt: at,
     confirmedAt: status === 'CONFIRMED' ? at : null,
+    interests: [],
   });
   const stop = (stopOrder: number, storeId: number | null): CourseStopRow => ({
     id: nextId(db),

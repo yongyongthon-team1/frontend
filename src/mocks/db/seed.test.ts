@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { DEMO_EMAILS, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
+import { computeCouponState } from '@/features/coupons/model';
+import { DEMO_EMAILS, DEMO_MOTIVATION, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { distanceMeters } from './geo';
 import { createSeed, DEMO_TOUR_ID, DEMO_UNIVERSITY_ID } from './seed';
 import type { DB } from './schema';
@@ -342,5 +343,107 @@ describe('createSeed', () => {
       '중앙도서관',
       '학생회관',
     ]);
+  });
+});
+
+describe('체크포인트 시드', () => {
+  const AT = '2026-11-15T10:00:00+09:00'; // 시드 날 10:00(KST)에 규칙 함수로 만든다
+  const userId = (db: DB, email: string) => db.users.find((u) => u.email === email)!.id;
+  const minjiApp = (db: DB) =>
+    db.applications.find(
+      (a) => a.tourId === DEMO_TOUR_ID && a.userId === userId(db, DEMO_EMAILS.student),
+    );
+  const approvedOf = (db: DB) =>
+    db.applications.filter((a) => a.tourId === DEMO_TOUR_ID && a.status === 'APPROVED');
+
+  it('START는 체크포인트를 주지 않은 시드와 같다', () =>
+    expect(createSeed(today, 'START')).toEqual(createSeed(today)));
+
+  it('APPLIED: 김민지가 시연 동기로 탐방 1에 신청(승인 대기)', () => {
+    const db = createSeed(today, 'APPLIED');
+    const minji = userId(db, DEMO_EMAILS.student);
+    expect(minjiApp(db)).toEqual({
+      id: 1000,
+      tourId: DEMO_TOUR_ID,
+      userId: minji,
+      motivation: DEMO_MOTIVATION,
+      status: 'PENDING',
+      activeUserId: minji,
+      createdAt: AT,
+      updatedAt: AT,
+    });
+    expect(approvedOf(db)).toHaveLength(2);
+    expect([db.courses, db.courseStops, db.nextId]).toEqual([[], [], 1001]);
+  });
+
+  it('APPROVED: + 정다은이 승인 → 승인 3명(박서준 · 이하은 · 김민지), 코스 · 새 쿠폰 없음', () => {
+    const db = createSeed(today, 'APPROVED');
+    expect(minjiApp(db)).toMatchObject({ status: 'APPROVED', updatedAt: AT });
+    expect(approvedOf(db).map((a) => db.users.find((u) => u.id === a.userId)!.name)).toEqual([
+      '박서준',
+      '이하은',
+      '김민지',
+    ]);
+    expect(db.tours[0].status).toBe('RECRUITING');
+    expect([db.courses, db.courseStops]).toEqual([[], []]);
+    expect(db.coupons.filter((c) => c.applicationId === minjiApp(db)!.id)).toEqual([]);
+  });
+
+  it('CONFIRMED: + 초안 생성 · 확정 → 캠퍼스 → 서천 밥상 → 카페 모래시계, 승인 3명 × 제휴 2곳 = 쿠폰 6장', () => {
+    const db = createSeed(today, 'CONFIRMED');
+    expect(db.courses).toEqual([
+      {
+        tourId: DEMO_TOUR_ID,
+        status: 'CONFIRMED',
+        createdAt: AT,
+        updatedAt: AT,
+        confirmedAt: AT,
+        interests: ['전공 수업', '캠퍼스 시설', '식사', '카페'],
+      },
+    ]);
+    const stops = [...db.courseStops].sort((a, b) => a.stopOrder - b.stopOrder);
+    expect(stops.map((s) => [s.id, s.stopOrder, s.visitTime, s.storeId, s.partnershipId])).toEqual([
+      [1001, 1, '14:00', null, null],
+      [1002, 2, '15:10', 1, 1],
+      [1003, 3, '16:00', 2, 2],
+    ]);
+    const approvedIds = approvedOf(db).map((a) => a.id);
+    const issued = db.coupons.filter((c) => approvedIds.includes(c.applicationId));
+    expect(issued.map((c) => c.id)).toEqual([1004, 1005, 1006, 1007, 1008, 1009]);
+    expect(db.nextId).toBe(1010);
+  });
+
+  it('CONFIRMED 체크포인트: 김민지 쿠폰 2장, 오늘 사용 가능', () => {
+    const db = createSeed(today, 'CONFIRMED');
+    const coupons = db.coupons.filter((c) => c.applicationId === minjiApp(db)!.id);
+    expect(coupons.map((c) => [c.storeId, c.status, c.discountSnapshot])).toEqual([
+      [1, 'ISSUED', '식사 금액 10% 할인'],
+      [2, 'ISSUED', '음료 1,000원 할인'],
+    ]);
+    const tourStartsAt = db.tours[0].startsAt;
+    for (const c of coupons) {
+      expect(c).toMatchObject({ issuedAt: AT, expiresAt: '2026-11-15T23:59:59+09:00' });
+      expect(c.code).toMatch(/^\d{6}$/);
+      const { status, expiresAt } = c;
+      expect(computeCouponState({ status, tourStartsAt, expiresAt }, today)).toBe('USABLE');
+    }
+  });
+
+  it('체크포인트도 시드 날짜를 따른다', () => {
+    const db = createSeed(new Date('2026-12-01T03:00:00Z'), 'CONFIRMED');
+    expect(minjiApp(db)!.createdAt).toBe('2026-12-01T10:00:00+09:00');
+    expect(db.courses[0].confirmedAt).toBe('2026-12-01T10:00:00+09:00');
+  });
+
+  it('같은 날 같은 체크포인트면 쿠폰 코드 말고는 같은 DB', () => {
+    const withoutCodes = (db: DB) => ({
+      ...db,
+      coupons: db.coupons.map((c) => ({ ...c, code: '' })),
+    });
+    for (const checkpoint of ['APPLIED', 'APPROVED', 'CONFIRMED'] as const) {
+      expect(withoutCodes(createSeed(today, checkpoint))).toEqual(
+        withoutCodes(createSeed(new Date('2026-11-15T05:30:00Z'), checkpoint)),
+      );
+    }
   });
 });

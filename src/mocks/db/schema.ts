@@ -8,7 +8,7 @@ import type { TourStatus } from '@/features/tours/model';
 // DATE는 `YYYY-MM-DD`, DATETIME은 `+09:00` ISO 8601 문자열이다.
 // `id`가 users.id를 가리키는 테이블(프로필 · 인증 · 동의)은 ERD 그대로 `id`가 사용자 ID다.
 
-export const MOCK_DB_VERSION = 1;
+export const MOCK_DB_VERSION = 2;
 
 export type StudentVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type GuardianConsentStatus = 'PENDING' | 'AGREED' | 'REJECTED';
@@ -132,6 +132,8 @@ export interface CourseRow {
   createdAt: string;
   updatedAt: string;
   confirmedAt: string | null;
+  /** 목업 전용(ERD에 없음). 초안을 만들 때 저장한 "입력된 관심사" 라벨(`Course.interests`). */
+  interests: string[];
 }
 
 export interface CourseStopRow {

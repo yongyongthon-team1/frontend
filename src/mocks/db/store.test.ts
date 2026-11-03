@@ -119,9 +119,21 @@ describe('resetDb', () => {
     expect(resetDb().seedDay).toBe('2026-11-15');
   });
 
-  it('START 외의 체크포인트는 아직 지원하지 않는다', () => {
-    expect(() => resetDb({ checkpoint: 'APPLIED' })).toThrow('checkpoint는 Task 8에서 지원');
-    expect(() => resetDb({ checkpoint: 'START' })).not.toThrow();
+  it('체크포인트를 적용한 시드로 캐시와 저장소를 덮어쓴다', () => {
+    const db = resetDb({ checkpoint: 'CONFIRMED' });
+    expect(getDb()).toBe(db);
+    expect(db.courses.map((c) => [c.tourId, c.status])).toEqual([[1, 'CONFIRMED']]);
+    const minji = db.users.find((u) => u.email === 'student@demo.kr')!.id;
+    const app = db.applications.find((a) => a.tourId === 1 && a.userId === minji)!;
+    expect(db.coupons.filter((c) => c.applicationId === app.id)).toHaveLength(2);
+    expect(JSON.parse(localStorage.getItem(MOCK_DB_KEY)!)).toEqual(db);
+
+    expect(
+      resetDb({ checkpoint: 'APPLIED' }).applications.find((a) => a.id === app.id)!.status,
+    ).toBe('PENDING');
+    expect(resetDb({ checkpoint: 'START' }).applications.some((a) => a.userId === minji)).toBe(
+      false,
+    );
   });
 });
 
