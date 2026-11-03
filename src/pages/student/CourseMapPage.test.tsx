@@ -47,6 +47,25 @@ describe('탐방 코스 지도 (hs-s08)', () => {
     );
   });
 
+  it('제휴 지점 카드는 한줄평(없으면 추천 이유)과 쿠폰 안내를 함께 보인다', async () => {
+    await openCourseMap('CONFIRMED', () =>
+      mutate((db) => {
+        db.courseStops.find((s) => s.tourId === 1 && s.stopOrder === 2)!.description =
+          '양이 넉넉한 학생 단골 밥집';
+      }),
+    );
+    const meal = await screen.findByRole('button', { name: /② 서천 밥상 · 15:10/ });
+    expect(within(meal).getByText('양이 넉넉한 학생 단골 밥집')).toBeInTheDocument();
+    expect(within(meal).getByText('공공데이터 기반 추천 · 쿠폰 사용 가능')).toBeInTheDocument();
+
+    const cafeReason = getDb().courseStops.find(
+      (s) => s.tourId === 1 && s.stopOrder === 3,
+    )!.recommendationReason!;
+    const cafe = screen.getByRole('button', { name: /③ 카페 모래시계 · 16:00/ });
+    expect(within(cafe).getByText(cafeReason)).toBeInTheDocument();
+    expect(within(cafe).getByText('공공데이터 기반 추천 · 쿠폰 사용 가능')).toBeInTheDocument();
+  });
+
   it('지점을 누르면 AI 리뷰 요약 시트', async () => {
     const { user, id } = await openCourseMap('CONFIRMED');
     await user.click(await screen.findByRole('button', { name: '② 서천 밥상' }));
