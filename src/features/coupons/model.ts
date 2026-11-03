@@ -65,3 +65,49 @@ export function couponStateLabel(state: CouponState, usedAt: string | null): str
       return usedAt ? `사용 완료 · ${formatTime(usedAt)}` : '사용 완료';
   }
 }
+
+export interface CouponNotice {
+  title: string;
+  description: string;
+}
+
+/**
+ * 사장님 쿠폰 사용 처리 화면의 오류 카드(owner-a03). 조회 · 사용 처리 오류 코드 또는 조회 상태로 문구를 정한다.
+ * 오류 코드가 우선이고, 코드가 없거나 모르는 코드면 상태를 본다. 카드가 필요 없으면(사용 가능 · 모르는 오류) null.
+ * `usedAt`은 `이미 사용된 쿠폰`의 사용 시각이다(조회 결과의 값 또는 사용 처리 오류의 `details.usedAt`).
+ */
+export function couponNotice(input: {
+  errorCode?: string;
+  state?: CouponState;
+  usedAt?: string | null;
+}): CouponNotice | null {
+  const { errorCode, state, usedAt } = input;
+  if (errorCode === 'COUPON_ALREADY_USED') return usedNotice(usedAt);
+  if (errorCode === 'COUPON_EXPIRED' || errorCode === 'COUPON_OTHER_STORE') return EXPIRED_NOTICE;
+  if (errorCode === 'COUPON_NOT_FOUND') return NOT_FOUND_NOTICE;
+  if (errorCode === 'COUPON_NOT_YET') return NOT_YET_NOTICE;
+  if (state === 'USED') return usedNotice(usedAt);
+  if (state === 'EXPIRED') return EXPIRED_NOTICE;
+  if (state === 'BEFORE_DAY') return NOT_YET_NOTICE;
+  return null;
+}
+
+const EXPIRED_NOTICE: CouponNotice = {
+  title: '만료되었거나 다른 가게 쿠폰',
+  description: '코드를 다시 확인해 주세요.',
+};
+const NOT_FOUND_NOTICE: CouponNotice = {
+  title: '존재하지 않는 6자리 코드',
+  description: '입력값을 다시 확인해 주세요.',
+};
+const NOT_YET_NOTICE: CouponNotice = {
+  title: '아직 사용할 수 없는 쿠폰',
+  description: '탐방 당일에만 사용할 수 있어요.',
+};
+
+function usedNotice(usedAt: string | null | undefined): CouponNotice {
+  return {
+    title: '이미 사용된 쿠폰',
+    description: usedAt ? `재사용 불가 · 사용 시각 ${formatTime(usedAt)}` : '재사용 불가',
+  };
+}

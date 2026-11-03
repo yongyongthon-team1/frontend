@@ -5,6 +5,7 @@ import { CourseDraftPage } from '@/pages/guide/CourseDraftPage';
 import { CourseEditPage } from '@/pages/guide/CourseEditPage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
 import { ApplyPage } from '@/pages/student/ApplyPage';
 import { CouponDetailPage } from '@/pages/student/CouponDetailPage';
@@ -179,7 +180,7 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: '/owner/coupons/redeem',
-                    element: <PlaceholderPage title="쿠폰 사용 처리" wireframe="owner-s03" />, // P0 · Task 20
+                    element: <CouponRedeemPage />,
                   },
                   {
                     path: '/owner/store',
