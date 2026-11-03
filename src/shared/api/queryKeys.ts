@@ -1,0 +1,24 @@
+import type { RecommendationQuery, TourStatus } from '@/features/tours/model';
+
+// TanStack Query 키는 모두 여기서 만든다. 첫 요소가 묶음 이름이고, 인자 없는 목록 키(`qk.myApplications`)는 같은
+// 묶음 상세 키(`qk.myApplication(id)`)의 접두사라 목록을 무효화하면 상세도 다시 불러온다. 가이드의 신청자 · 코스는
+// 탐방 목록(`qk.guideTours`)과 따로 묶는다 — 승인 뒤 목록을 무효화해도 방금 `setQueryData`한 신청자 보드를 다시 부르지 않게.
+export const qk = {
+  me: ['me'] as const,
+  universities: ['universities'] as const,
+  insight: (universityId: number) => ['insight', universityId] as const,
+  recommendations: (q: RecommendationQuery) => ['recommendations', q] as const,
+  tours: (filter: { status?: TourStatus; universityId?: number }) =>
+    ['tours', 'list', filter] as const,
+  tour: (id: number) => ['tours', 'detail', id] as const,
+  myApplications: ['myApplications'] as const,
+  myApplication: (id: number) => ['myApplications', id] as const,
+  myCoupons: (applicationId?: number) => ['myCoupons', 'list', applicationId ?? null] as const,
+  coupon: (id: number) => ['myCoupons', 'detail', id] as const,
+  course: (tourId: number) => ['course', tourId] as const,
+  guideTours: ['guideTours'] as const,
+  applicants: (tourId: number) => ['applicants', tourId] as const,
+  guideCourse: (tourId: number) => ['guideCourse', tourId] as const,
+  couponLookup: (code: string) => ['couponLookup', code] as const,
+  health: ['health'] as const,
+};

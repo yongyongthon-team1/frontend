@@ -25,8 +25,8 @@
 
 | 코드 | 화면 | 라우트 | 우선 | UI | 목업 | 실API | 하이파이 | QA |
 |---|---|---|---|---|---|---|---|---|
-| `hs-s01` | 로그인 | `/login` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-s02` | 재학 인증 · 보호자 동의 | `/verify` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-s01` | 로그인 | `/login` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| `hs-s02` | 재학 인증 · 보호자 동의 | `/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-s03` | 홈 · AI 탐방 추천 | `/` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-s04` | AI 추천 탐방 목록 | `/recommendations` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-s05` | 탐방 상세 · 신청 | `/tours/:tourId` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -34,37 +34,37 @@
 | `hs-s07` | 내 탐방 · 승인 완료 | `/my-tours/:applicationId` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-s08` | 탐방 코스 지도 | `/my-tours/:applicationId/course` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-s09` | 상점 쿠폰 · 사용 | `/my-tours/:applicationId/coupons` · `/coupons/:couponId` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-s10` | 방문 리뷰 작성 | `/reviews/new` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-a01` | 회원가입 · 역할 선택 | `/signup` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-a02` | 보호자 동의 페이지 | `/consent/:token` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-a03` | 내 정보 · 인증 상태 | `/me` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-s10` | 방문 리뷰 작성 | `/reviews/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-a01` | 회원가입 · 역할 선택 | `/signup` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-a02` | 보호자 동의 페이지 | `/consent/:token` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-a03` | 내 정보 · 인증 상태 | `/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a04` | 탐방 신청서 | `/tours/:tourId/apply` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a05` | 내 탐방 상태별 목록 | `/my-tours` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a06` | 탐방 추천·신청 예외 상태 | `/recommendations` · `/tours/:tourId` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-s01` | 가이드 프로필 | `/guide/me` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-s02` | 탐방 개설 | `/guide/tours/new` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-s01` | 가이드 프로필 | `/guide/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-s02` | 탐방 개설 | `/guide/tours/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s03` | 신청자 관리 | `/guide/tours/:tourId/applicants` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s04` | AI 추천 코스 생성 | `/guide/tours/:tourId/course/draft` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s05` | 코스 편집 · 상점 교체 | `/guide/tours/:tourId/course/edit` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s06` | 코스 확정 · 쿠폰 발급 | `/guide/tours/:tourId/course/confirmed` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-s07` | 탐방 종료 · 완료 | `/guide/tours/:tourId/complete` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-a01` | 대학생 재학 인증 | `/guide/verify` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-s07` | 탐방 종료 · 완료 | `/guide/tours/:tourId/complete` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-a01` | 대학생 재학 인증 | `/guide/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-a02` | 내가 개설한 탐방 | `/guide/tours` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-a03` | 주변 상점 교체 | `/guide/tours/:tourId/course/stops/pick` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-a04` | 탐방 취소 확인 | `/guide/tours/:tourId/cancel` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `owner-s01` | 사업자 인증 | `/owner/verify` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `owner-s02` | 내 가게 · 제휴 할인 | `/owner/store` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-a03` | 주변 상점 교체 | `/guide/tours/:tourId/course/stops/pick` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-a04` | 탐방 취소 확인 | `/guide/tours/:tourId/cancel` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `owner-s01` | 사업자 인증 | `/owner/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `owner-s02` | 내 가게 · 제휴 할인 | `/owner/store` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s03` | 쿠폰 사용 처리 | `/owner/coupons/redeem` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s04` | 방문 · 리뷰 리포트 | `/owner/report` | P2 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s05` | 빈 시간 달력 | — | OUT | ➖ | ➖ | ➖ | ➖ | ➖ |
-| `owner-s06` | 운영자 인증 심사 | `/admin/verifications` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `owner-a01` | 가게 후보 선택·직접 등록 | `/owner/store/connect` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `owner-a02` | 학생증 상세 심사·반려 | `/admin/verifications/:id` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `owner-s06` | 운영자 인증 심사 | `/admin/verifications` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `owner-a01` | 가게 후보 선택·직접 등록 | `/owner/store/connect` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `owner-a02` | 학생증 상세 심사·반려 | `/admin/verifications/:id` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-a03` | 쿠폰·리포트 예외 상태 | `/owner/coupons/redeem` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | — | 모집 중 탐방 둘러보기 (가이드 · 사장님 `탐색` 탭, 읽기 전용) | `/explore` | P2 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| — | 사장님 내 정보 · 로그아웃 | `/owner/me` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| — | 확정 코스 지도 보기 (고교생 지도 화면 재사용, `hs-s08`) | `/guide/tours/:tourId/course` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| — | 404 · 에러 화면 | `*` | P1 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| — | 사장님 내 정보 · 로그아웃 | `/owner/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| — | 확정 코스 지도 보기 (고교생 지도 화면 재사용, `hs-s08`) | `/guide/tours/:tourId/course` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| — | 404 · 에러 화면 | `*` | P1 | ✅ | ➖ | ➖ | ⬜ | ⬜ |
 
 - `hs-a06`, `owner-a03`은 별도 라우트가 없는 상태 화면이다. 위 표의 라우트는 그 상태가 얹히는 화면이다.
 - 코드가 `—`인 행은 와이어프레임이 없는 라우트다. 화면은 와이어 없이 설계 문서(5.3)를 기준으로 만든다.

@@ -1,0 +1,184 @@
+import { act, screen, waitFor, within } from '@testing-library/react';
+import { isValidElement, type ReactNode } from 'react';
+import { matchRoutes } from 'react-router';
+import { describe, expect, it } from 'vitest';
+import type { Role } from '@/features/auth/model';
+import { useSession } from '@/features/auth/session';
+import { createSession, mutate } from '@/mocks/db/store';
+import { qk } from '@/shared/api/queryKeys';
+import { renderApp } from '@/test/renderApp';
+import { RequireAuth } from './guards/RequireAuth';
+import { RequireRole } from './guards/RequireRole';
+import { routes } from './routes';
+
+function sessionTokenOf(email: string): string {
+  return mutate((db) => createSession(db, db.users.find((u) => u.email === email)!.id));
+}
+
+describe('가드', () => {
+  it('로그인 안 하면 /login?next=', async () => {
+    const { router } = await renderApp('/my-tours');
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(router.state.location.search).toBe('?next=%2Fmy-tours');
+  });
+
+  it('고교생이 가이드 화면에 가면 자기 첫 화면으로', async () => {
+    const { router } = await renderApp('/guide/tours', { as: 'student' });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+  });
+
+  it('없는 주소는 404', async () => {
+    await renderApp('/nope', { as: 'student' });
+    expect(await screen.findByText('페이지를 찾을 수 없어요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '처음으로' })).toHaveAttribute('href', '/');
+  });
+
+  it('저장된 토큰만 있으면 내 정보를 불러온 뒤 화면을 그린다', async () => {
+    const { router, queryClient } = await renderApp('/login');
+    useSession.setState({ token: sessionTokenOf('student@demo.kr') });
+    await act(() => router.navigate('/my-tours'));
+    expect(await screen.findByRole('link', { name: '내 탐방' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: 'student@demo.kr' });
+  });
+
+  it('세션이 만료되면(401) 토큰을 비우고 로그인으로', async () => {
+    const { router } = await renderApp('/login');
+    useSession.setState({ token: 'mock-expired' });
+    await act(() => router.navigate('/me'));
+    await waitFor(() => expect(router.state.location.search).toBe('?next=%2Fme'));
+    expect(router.state.location.pathname).toBe('/login');
+    expect(useSession.getState().token).toBeNull();
+  });
+});
+
+describe('로그아웃', () => {
+  it('로그아웃하면 세션·캐시를 비우고 /login', async () => {
+    const { user, router, queryClient } = await renderApp('/me', { as: 'student' });
+    await user.click(await screen.findByRole('button', { name: '로그아웃' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(router.state.location.search).toBe('');
+    expect(useSession.getState().token).toBeNull();
+    expect(queryClient.getQueryData(qk.me)).toBeUndefined();
+    expect(
+      queryClient
+        .getQueryCache()
+        .getAll()
+        .every((q) => q.state.data === undefined),
+    ).toBe(true);
+  });
+});
+
+describe('레이아웃', () => {
+  it('고교생 하단 탭 3개', async () => {
+    await renderApp('/me', { as: 'student' });
+    for (const n of ['탐색', '내 탐방', 'MY']) {
+      expect(await screen.findByRole('link', { name: n })).toBeInTheDocument();
+    }
+  });
+
+  it.each([
+    [
+      'guide',
+      '/guide/tours',
+      [
+        ['탐색', '/explore'],
+        ['운영', '/guide/tours'],
+        ['MY', '/guide/me'],
+      ],
+    ],
+    [
+      'owner',
+      '/owner/store',
+      [
+        ['탐색', '/explore'],
+        ['운영', '/owner/store'],
+        ['MY', '/owner/me'],
+      ],
+    ],
+  ])('%s 하단 탭', async (as, path, tabs) => {
+    await renderApp(path, { as });
+    const nav = await screen.findByRole('navigation', { name: '주요 메뉴' });
+    const links = within(nav).getAllByRole('link');
+    expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual(tabs);
+  });
+
+  it('운영자는 탭 없이 로그아웃 버튼', async () => {
+    await renderApp('/admin/verifications', { as: 'admin' });
+    expect(await screen.findByRole('button', { name: '로그아웃' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).toBeNull();
+  });
+
+  it('자리 화면: 문구 · 와이어프레임 코드, 사장님 가게 자리에는 쿠폰 사용 처리 링크', async () => {
+    await renderApp('/owner/store', { as: 'owner' });
+    expect(await screen.findByText('MVP 2단계에서 열려요.')).toBeInTheDocument();
+    expect(screen.getByText('와이어프레임: owner-s02')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '쿠폰 사용 처리' })).toHaveAttribute(
+      'href',
+      '/owner/coupons/redeem',
+    );
+  });
+});
+
+// 설계 5.3의 라우트 표. 화면 구현과 무관하게 라우트 등록과 가드만 확인한다(각 태스크가 자리 화면을 교체해도 유지).
+type Access = Role | 'PUBLIC' | 'ANY';
+const SPEC_ROUTES: Array<[path: string, access: Access]> = [
+  ['/login', 'PUBLIC'],
+  ['/signup', 'PUBLIC'],
+  ['/consent/abc', 'PUBLIC'],
+  ['/', 'HIGH_SCHOOL'],
+  ['/recommendations', 'HIGH_SCHOOL'],
+  ['/tours/1', 'ANY'],
+  ['/tours/1/apply', 'HIGH_SCHOOL'],
+  ['/tours/1/apply/done', 'HIGH_SCHOOL'],
+  ['/my-tours', 'HIGH_SCHOOL'],
+  ['/my-tours/1', 'HIGH_SCHOOL'],
+  ['/my-tours/1/course', 'HIGH_SCHOOL'],
+  ['/my-tours/1/coupons', 'HIGH_SCHOOL'],
+  ['/coupons/1', 'HIGH_SCHOOL'],
+  ['/reviews/new', 'HIGH_SCHOOL'],
+  ['/verify', 'HIGH_SCHOOL'],
+  ['/me', 'HIGH_SCHOOL'],
+  ['/guide/tours', 'UNIVERSITY'],
+  ['/guide/tours/1/applicants', 'UNIVERSITY'],
+  ['/guide/tours/1/course/draft', 'UNIVERSITY'],
+  ['/guide/tours/1/course/edit', 'UNIVERSITY'],
+  ['/guide/tours/1/course/stops/pick', 'UNIVERSITY'],
+  ['/guide/tours/1/course/confirmed', 'UNIVERSITY'],
+  ['/guide/tours/1/course', 'UNIVERSITY'],
+  ['/guide/tours/new', 'UNIVERSITY'],
+  ['/guide/tours/1/complete', 'UNIVERSITY'],
+  ['/guide/tours/1/cancel', 'UNIVERSITY'],
+  ['/guide/me', 'UNIVERSITY'],
+  ['/guide/verify', 'UNIVERSITY'],
+  ['/explore', 'ANY'],
+  ['/owner/coupons/redeem', 'OWNER'],
+  ['/owner/store', 'OWNER'],
+  ['/owner/verify', 'OWNER'],
+  ['/owner/store/connect', 'OWNER'],
+  ['/owner/me', 'OWNER'],
+  ['/owner/report', 'OWNER'],
+  ['/admin/verifications', 'ADMIN'],
+  ['/admin/verifications/1', 'ADMIN'],
+];
+
+function accessOf(elements: ReactNode[]): Access {
+  for (const el of elements) {
+    if (isValidElement<{ role: Role }>(el) && el.type === RequireRole) return el.props.role;
+  }
+  return elements.some((el) => isValidElement(el) && el.type === RequireAuth) ? 'ANY' : 'PUBLIC';
+}
+
+describe('라우트 표 (설계 5.3)', () => {
+  it.each(SPEC_ROUTES)('%s → %s', (path, access) => {
+    const matches = matchRoutes(routes, path);
+    expect(matches?.at(-1)?.route.path).not.toBe('*');
+    expect(accessOf(matches!.map((m) => m.route.element))).toBe(access);
+  });
+
+  it('없는 주소는 * 로 간다', () => {
+    expect(matchRoutes(routes, '/nope')?.at(-1)?.route.path).toBe('*');
+  });
+});

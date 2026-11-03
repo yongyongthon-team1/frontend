@@ -32,6 +32,12 @@
   --field-h: 56px;
   --gutter: 20px;
 
+  /* 폰 프레임(폭 480px 이상 화면의 가운데 폰 모양) */
+  --frame-width: 390px;
+  --frame-max-height: 844px;
+  --frame-margin: 16px;
+  --shadow-frame: 0 16px 48px rgb(0 0 0 / 0.16);
+
   /* 글꼴 */
   --font-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
 }
