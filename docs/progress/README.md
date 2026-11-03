@@ -71,10 +71,39 @@
 
 ## API 연동
 
-도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 `docs/api/frontend-needs.md` 작성 때(Task 4) 채운다.
+도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 [`../api/frontend-needs.md`](../api/frontend-needs.md)의 골든 패스 엔드포인트 29개이고, 나머지 P1 화면의 API는 명세가 오면 추가한다.
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
+| auth | `POST /api/auth/login` | hs-s01 로그인 | ⬜ | ⬜ | ⬜ | ⬜ |
+| auth | `POST /api/auth/logout` | hs-a03 · guide-s01 · `/owner/me` (로그아웃) | ⬜ | ⬜ | ⬜ | ⬜ |
+| auth | `GET /api/me` | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 | ⬜ | ⬜ | ⬜ | ⬜ |
+| campuses | `GET /api/universities` | hs-s03, guide-s02 | ⬜ | ⬜ | ⬜ | ⬜ |
+| campuses | `GET /api/universities/:id/insight` | hs-s04, guide-s04 | ⬜ | ⬜ | ⬜ | ⬜ |
+| tours | `POST /api/recommendations` | hs-s03, hs-s04, hs-a06 | ⬜ | ⬜ | ⬜ | ⬜ |
+| tours | `GET /api/tours?status=&universityId=` | hs-s04 대체 목록(hs-a06), `/explore` | ⬜ | ⬜ | ⬜ | ⬜ |
+| tours | `GET /api/tours/:id` | hs-s05, hs-a06 | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `POST /api/tours/:id/applications` | hs-a04 | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `GET /api/me/applications` | hs-a05 | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `GET /api/me/applications/:id` | hs-s06, hs-s07 | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `POST /api/me/applications/:id/cancel` | hs-s07 | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `GET /api/guide/tours` | guide-a02 | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `GET /api/guide/tours/:id/applicants` | guide-s03 | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `POST /api/guide/applications/:id/approve` | guide-s03 | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `POST /api/guide/applications/:id/reject` | guide-s03 | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | `GET /api/guide/tours/:id/course` | guide-s04 · s05 · s06, `/guide/tours/:tourId/course` | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | `POST /api/guide/tours/:id/course/draft` | guide-s04 | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | `PUT /api/guide/tours/:id/course/order` | guide-s05 | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | `PATCH /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | `DELETE /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | `POST /api/guide/tours/:id/course/confirm` | guide-s05 → guide-s06 | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | `GET /api/tours/:id/course` | hs-s08 | ⬜ | ⬜ | ⬜ | ⬜ |
+| coupons | `GET /api/me/coupons?applicationId=` | hs-s09 (목록) | ⬜ | ⬜ | ⬜ | ⬜ |
+| coupons | `GET /api/me/coupons/:id` | hs-s09 (상세) | ⬜ | ⬜ | ⬜ | ⬜ |
+| coupons | `GET /api/owner/coupons/:code` | owner-s03, owner-a03 | ⬜ | ⬜ | ⬜ | ⬜ |
+| coupons | `POST /api/owner/coupons/:code/redeem` | owner-s03, owner-a03 | ⬜ | ⬜ | ⬜ | ⬜ |
+| demo | `GET /api/health` | 시연 패널 | ⬜ | ⬜ | ⬜ | ⬜ |
+| demo | `POST /api/demo/reset` | 시연 패널 | ⬜ | ⬜ | ⬜ | ⬜ |
 
 ## 팀 요청 · 블로커
 
@@ -94,7 +123,7 @@
 | 10 | 디자인 · 기획 | 와이어프레임의 옛 추천 기준 문구(guide-s04 · s05 · a03). 처리: 설계 5.6대로 실제 기준 문구로 교체, 디자인 · 기획에 공유 | 11/8 | ⬜ |
 | 11 | 기획 | 화면에 올릴 가공 데이터 지표 1~2개(데이터 활용 점수). 처리: 프론트가 자리 · 목업 값을 먼저 만들고, 지표 · 출처는 데이터 담당이 정함 | 11/8 | ⬜ |
 | 12 | 백엔드 | 실서버 진위확인 API 키 · 데모 사업자번호(U-07). 처리: 목업은 데모 번호 3종, 실서버는 백엔드 확인 | 11/8 | ⬜ |
-| 13 | 백엔드 | 배포 주소(11/12까지 고정) · 인증 방식 · 응답 필드 표기 · OpenAPI 제공 · 시연 계정 시드 · 당일 날짜 시드 스크립트 · 비밀 키 보호 시연 리셋 수단 · LLM 캐시 · 타임아웃 대체 응답 · 골든 패스 API 11/9까지 배포. 처리: `frontend-needs.md`로 요청, 골든 패스 계약 11/6 동결 제안 | 11/6 (계약 동결) · 11/9 (API 배포) · 11/12 (주소 고정) | ⬜ |
+| 13 | 백엔드 | 배포 주소(11/12까지 고정) · 인증 방식 · 응답 필드 표기 · OpenAPI 제공 · 시연 계정 시드 · 당일 날짜 시드 스크립트 · 비밀 키 보호 시연 리셋 수단 · LLM 캐시 · 타임아웃 대체 응답 · 골든 패스 API 11/9까지 배포. 처리: `frontend-needs.md`로 요청, 골든 패스 계약 11/6 동결 제안 | 11/6 (계약 동결) · 11/9 (API 배포) · 11/12 (주소 고정) | 🟨 |
 | 14 | 디자인 | 토큰 11/5 선전달, 골든 패스 화면 우선, 11/6 이후 구조 변경 없음, 변수 · 컴포넌트가 있는 디자인 파일, 무대 450px 제약. 처리: 사용자가 디자이너에게 전달 | 11/5 (토큰) | ⬜ |
 | 15 | 운영진 | 무대 노트북 OS · 브라우저 · 해상도 · 프로젝터, 사전 접속 · 탭 미리 열기 가능 여부, 네트워크(와이파이 · 유선 · 핫스팟), 라이브 시연 대신 영상 허용 여부, 배포본 데이터 초기화 · 모드 전환이 코드 수정이 아님. 처리: 사용자/팀이 문의 | 11/8 | ⬜ |
 | 16 | 사용자 | 카카오맵 JavaScript 키 · Vercel 프로젝트(팀 계정 · 고정 도메인) 준비. 처리: 사용자/팀 준비물 | 11/4 | ⬜ |

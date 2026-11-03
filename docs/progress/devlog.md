@@ -12,6 +12,7 @@
 - Task 1 완료: Vite · React 19 · TypeScript 프로젝트와 품질 도구(ESLint · Prettier · Vitest · CI)를 셋업했다(커밋 8411215).
 - Task 2 진행: 진척 대시보드, 이 개발 일지, 결정 기록 9건을 만들었다.
 - Task 3 공통 라이브러리(날짜·에러 코드·HTTP·환경 설정) 완료.
+- Task 4 완료: 도메인 타입 · 라벨 · 제목 · 시간 슬롯 함수와 API 계약 초안(`docs/api/frontend-needs.md`, 엔드포인트 29개)을 썼다. 11/5 백엔드에 공유할 문서다(팀 요청 13번 진행 중).
 
 ### 다음 할 일
 
