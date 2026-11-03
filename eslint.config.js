@@ -25,6 +25,10 @@ export default tseslint.config(
     },
   },
   {
+    files: ['playwright.config.ts', 'vite.config.ts'],
+    languageOptions: { globals: globals.node },
+  },
+  {
     files: ['src/pages/**'],
     rules: {
       'no-restricted-imports': [
