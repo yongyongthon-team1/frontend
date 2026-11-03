@@ -47,6 +47,10 @@
 
 ## 팀 일정 (팀 홈 캘린더)
 
+> 정본: 노션 팀 홈 `# 일정` 데이터베이스 — 캘린더 보기 · 보드 보기(상태: Not started / In progress / Done)
+> https://app.notion.com/p/1-405e0c1995d6800997a6f50af8225e2e · DB: https://app.notion.com/p/408e0c1995d680e8be5cce86f42d362d
+> 11/4 확인 시점 보드: In progress 1건(`기능명세 전달 후 피드백`, 10/30), 나머지 9건 Not started, Done 0건. `기획 확정`은 날짜 없이 보드에만 있음.
+
 | 기간 | 단계 |
 |---|---|
 | 10/31 ~ 11/2 | 와이어프레임 (디자인) |
