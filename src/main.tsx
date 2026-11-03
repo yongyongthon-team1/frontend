@@ -4,6 +4,7 @@ import { App } from './app/App';
 import { readDemoOverride } from './demo/demoStore';
 import { env, resolveApiMode } from './shared/config/env';
 import { configureHttp } from './shared/lib/http';
+import 'pretendard/dist/web/variable/pretendardvariable-dynamic-subset.css';
 import './styles/globals.css';
 
 // 부트스트랩: API 모드 결정(URL ?mode= > 시연 패널 저장값 > env) → 목업이면 워커를 켜고 기다림 → HTTP 설정 → 렌더.

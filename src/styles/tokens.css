@@ -1,0 +1,37 @@
+/*
+ * 디자인 토큰 — 이 파일의 값만 바꾸면 앱 전체 스타일이 바뀐다(결정 0003).
+ * 하이파이 디자인이 오면 아래 값을 교체한다. 컴포넌트에는 색 값(HEX)을 직접 쓰지 않는다.
+ * Tailwind 유틸리티(bg-surface, text-muted, rounded-md …)로 연결하는 곳은 globals.css의 @theme다.
+ */
+:root {
+  /* 색 */
+  --color-bg: #ffffff;
+  --color-surface: #f2f2f2;
+  --color-border: #d9d9d9;
+  --color-text: #1a1a1a;
+  --color-text-muted: #6b6b6b;
+  --color-primary: #2b2b2b;
+  --color-on-primary: #ffffff;
+  --color-accent: #3b5bdb;
+  --color-success: #2f9e44;
+  --color-warning: #e8590c;
+  --color-danger: #e03131;
+  --color-backdrop: #e9ecef;
+  --color-scrim: rgb(0 0 0 / 0.45);
+
+  /* 반경 */
+  --radius-sm: 8px;
+  --radius-md: 14px;
+  --radius-lg: 20px;
+  --radius-frame: 36px;
+
+  /* 크기 */
+  --topbar-h: 68px;
+  --tabbar-h: 81px;
+  --btn-h: 50px;
+  --field-h: 56px;
+  --gutter: 20px;
+
+  /* 글꼴 */
+  --font-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+}
