@@ -8,6 +8,8 @@
 
 **Tech Stack:** Vite 7 · React 19 · TypeScript 5 · React Router 7 · TanStack Query 5 · Zustand 5 · React Hook Form 7 + Zod 4 · Tailwind CSS 4 · Radix Dialog · sonner · lucide-react · pretendard · react-kakao-maps-sdk · MSW 2 · Vitest 3 + Testing Library + jsdom · Playwright · ESLint 9 + Prettier 3 · npm
 
+**Rulings:** `docs/superpowers/plans/2026-11-04-mvp1-rulings.md` — 실행 중 판정(계획 리뷰 49건 반영). 같은 태스크에서 이 계획과 다르면 판정 문서가 우선한다.
+
 **Spec:** `docs/superpowers/specs/2026-11-03-frontend-design.md` (근거 자료 `docs/reference/` — 화면 문구는 `docs/reference/wireframes/*.png`)
 
 **이 계획의 범위:** 설계 5.3의 **P0 화면** + 공통 기반 + 시연 도구 + E2E + 배포 준비. **P1 화면은 "자리(placeholder) 라우트"로만** 두고 MVP 2단계 계획에서 채운다. 실서버 연동 · 하이파이 반영 · P2는 3단계 계획(백엔드 명세 · 시안 도착 후).
