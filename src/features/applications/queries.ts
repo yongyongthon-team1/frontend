@@ -1,0 +1,89 @@
+import {
+  useMutation,
+  useQuery,
+  useQueryClient,
+  type UseMutationResult,
+  type UseQueryResult,
+} from '@tanstack/react-query';
+import { qk } from '@/shared/api/queryKeys';
+import {
+  getApplicantsBoard,
+  getGuideTours,
+  getMyApplication,
+  getMyApplications,
+  postApplication,
+  postApprove,
+  postCancelApplication,
+  postReject,
+} from './api';
+import type { ApplicantsBoard, GuideTourSummary, MyApplication } from './model';
+
+/**
+ * 탐방 신청. 성공하면 탐방 상세(내 신청 · 남은 자리)와 내 신청 목록을 다시 불러온다 — 추천은 건드리지 않는다.
+ * 실패해도 탐방 상세를 다시 불러와, 방금 정원이 찬 경우처럼 바뀐 신청 가능 상태를 화면에 반영한다.
+ */
+export function useApplyToTour(tourId: number): UseMutationResult<MyApplication, Error, string> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (motivation: string) => postApplication(tourId, motivation),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.tour(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.myApplications });
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.tour(tourId) });
+    },
+  });
+}
+
+export function useMyApplications(): UseQueryResult<MyApplication[]> {
+  return useQuery({ queryKey: qk.myApplications, queryFn: getMyApplications });
+}
+
+export function useMyApplication(id: number): UseQueryResult<MyApplication> {
+  return useQuery({ queryKey: qk.myApplication(id), queryFn: () => getMyApplication(id) });
+}
+
+/** 취소하면 내 신청(목록 · 상세 모두)과 그 탐방의 남은 자리를 다시 불러온다. */
+export function useCancelMyApplication(id: number): UseMutationResult<MyApplication, Error, void> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => postCancelApplication(id),
+    onSuccess: (app) => {
+      void queryClient.invalidateQueries({ queryKey: qk.myApplications });
+      void queryClient.invalidateQueries({ queryKey: qk.tour(app.tour.id) });
+    },
+  });
+}
+
+export function useGuideTours(): UseQueryResult<GuideTourSummary[]> {
+  return useQuery({ queryKey: qk.guideTours, queryFn: getGuideTours });
+}
+
+export function useApplicantsBoard(tourId: number): UseQueryResult<ApplicantsBoard> {
+  return useQuery({ queryKey: qk.applicants(tourId), queryFn: () => getApplicantsBoard(tourId) });
+}
+
+function useBoardMutation(
+  tourId: number,
+  mutationFn: (applicationId: number) => Promise<ApplicantsBoard>,
+) {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn,
+    // 서버가 돌려준 보드를 바로 그리고, 목록 · 탐방 상세(남은 자리)는 다시 불러온다.
+    onSuccess: (board) => {
+      queryClient.setQueryData(qk.applicants(tourId), board);
+      void queryClient.invalidateQueries({ queryKey: qk.guideTours });
+      void queryClient.invalidateQueries({ queryKey: qk.tour(tourId) });
+    },
+  });
+}
+
+export function useApprove(tourId: number): UseMutationResult<ApplicantsBoard, Error, number> {
+  return useBoardMutation(tourId, postApprove);
+}
+
+export function useReject(tourId: number): UseMutationResult<ApplicantsBoard, Error, number> {
+  return useBoardMutation(tourId, postReject);
+}

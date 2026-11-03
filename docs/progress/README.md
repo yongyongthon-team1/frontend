@@ -29,8 +29,8 @@
 | `hs-s02` | 재학 인증 · 보호자 동의 | `/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-s03` | 홈 · AI 탐방 추천 | `/` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `hs-s04` | AI 추천 탐방 목록 | `/recommendations` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
-| `hs-s05` | 탐방 상세 · 신청 | `/tours/:tourId` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-s06` | 신청 완료 · 승인 대기 | `/tours/:tourId/apply/done` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-s05` | 탐방 상세 · 신청 | `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| `hs-s06` | 신청 완료 · 승인 대기 | `/tours/:tourId/apply/done` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `hs-s07` | 내 탐방 · 승인 완료 | `/my-tours/:applicationId` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-s08` | 탐방 코스 지도 | `/my-tours/:applicationId/course` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-s09` | 상점 쿠폰 · 사용 | `/my-tours/:applicationId/coupons` · `/coupons/:couponId` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -38,9 +38,9 @@
 | `hs-a01` | 회원가입 · 역할 선택 | `/signup` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a02` | 보호자 동의 페이지 | `/consent/:token` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a03` | 내 정보 · 인증 상태 | `/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-a04` | 탐방 신청서 | `/tours/:tourId/apply` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-a04` | 탐방 신청서 | `/tours/:tourId/apply` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `hs-a05` | 내 탐방 상태별 목록 | `/my-tours` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-a06` | 탐방 추천·신청 예외 상태 | `/recommendations` · `/tours/:tourId` | P0 | 🟨 | 🟨 | ⬜ | ⬜ | ⬜ |
+| `hs-a06` | 탐방 추천·신청 예외 상태 | `/recommendations` · `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `guide-s01` | 가이드 프로필 | `/guide/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s02` | 탐방 개설 | `/guide/tours/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s03` | 신청자 관리 | `/guide/tours/:tourId/applicants` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |

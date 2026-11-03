@@ -1,7 +1,10 @@
 import type { RouteObject } from 'react-router';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
+import { ApplyPage } from '@/pages/student/ApplyPage';
 import { HomePage } from '@/pages/student/HomePage';
 import { RecommendationsPage } from '@/pages/student/RecommendationsPage';
+import { TourDetailPage } from '@/pages/student/TourDetailPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
 import { ErrorPage } from './ErrorPage';
 import { RequireAuth } from './guards/RequireAuth';
@@ -39,7 +42,7 @@ export const routes: RouteObject[] = [
               // ── 모든 역할 ────────────────────────────────────────────
               {
                 path: '/tours/:tourId',
-                element: <PlaceholderPage title="탐방 상세" wireframe="hs-s05" />, // P0 · Task 14
+                element: <TourDetailPage />,
               },
               {
                 path: '/explore',
@@ -60,11 +63,11 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/tours/:tourId/apply',
-                    element: <PlaceholderPage title="탐방 신청서" wireframe="hs-a04" />, // P0 · Task 14
+                    element: <ApplyPage />,
                   },
                   {
                     path: '/tours/:tourId/apply/done',
-                    element: <PlaceholderPage title="신청 완료 · 승인 대기" wireframe="hs-s06" />, // P0 · Task 14
+                    element: <ApplyDonePage />,
                   },
                   {
                     path: '/my-tours',
