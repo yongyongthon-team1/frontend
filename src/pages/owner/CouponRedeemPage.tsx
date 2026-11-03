@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router';
+import { useLocation, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { couponNotice } from '@/features/coupons/model';
 import { useCouponLookup, useRedeemCoupon } from '@/features/coupons/queries';
@@ -29,7 +29,15 @@ function cleanCode(raw: string | null): string {
  */
 export function CouponRedeemPage() {
   const [params] = useSearchParams();
-  const [code, setCode] = useState(() => cleanCode(params.get('code')));
+  const { key: locationKey } = useLocation();
+  const urlCode = cleanCode(params.get('code'));
+  const [code, setCode] = useState(urlCode);
+  // 이 화면에 머문 채 `?code=`로 다시 오면(시연 패널의 쿠폰 가게 사장님 전환을 또 누름 — 같은 주소여도) 그 코드로 바꾼다.
+  const [seenLocationKey, setSeenLocationKey] = useState(locationKey);
+  if (locationKey !== seenLocationKey) {
+    setSeenLocationKey(locationKey);
+    if (urlCode !== '') setCode(urlCode);
+  }
   const lookup = useCouponLookup(code);
   const redeem = useRedeemCoupon();
   const demoOn = useDemoToolsOn();

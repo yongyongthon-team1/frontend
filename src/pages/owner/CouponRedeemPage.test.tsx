@@ -114,6 +114,26 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     expect(await screen.findByLabelText(CODE_LABEL)).toHaveValue('12');
   });
 
+  it('열린 화면에 ?code=가 다시 들어오면 그 코드로 바꿔 조회한다(쿠폰 가게 사장님 전환을 또 누름)', async () => {
+    const { user, router } = await renderApp('/owner/coupons/redeem?code=111111', {
+      as: 'owner',
+      checkpoint: 'CONFIRMED',
+    });
+    const input = await screen.findByLabelText(CODE_LABEL);
+    expect(input).toHaveValue('111111');
+
+    const code = demoCouponCode(1);
+    await act(() => router.navigate(`/owner/coupons/redeem?code=${code}`));
+    expect(input).toHaveValue(code);
+    expect(await screen.findByText('쿠폰 확인 결과')).toBeInTheDocument();
+
+    // 같은 주소로 다시 와도(입력을 지운 뒤) 그 코드로 채운다.
+    await user.click(screen.getByRole('button', { name: '다른 코드 입력' }));
+    expect(input).toHaveValue('');
+    await act(() => router.navigate(`/owner/coupons/redeem?code=${code}`));
+    expect(input).toHaveValue(code);
+  });
+
   it('사용 처리 연타는 요청 1번 (Review Focus 6)', async () => {
     // 응답이 늦어야 첫 클릭의 요청이 진행 중인 채로 두 번째 클릭이 들어온다.
     const { user } = await renderApp('/owner/coupons/redeem', {

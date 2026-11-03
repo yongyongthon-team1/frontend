@@ -1,17 +1,15 @@
 import { http, HttpResponse } from 'msw';
 import { mockNow } from '@/mocks/clock';
-import type { SeedCheckpoint } from '@/mocks/db/seed';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { delayBase } from '@/mocks/latency';
 import { MockApiError } from '@/mocks/rules/errors';
+import { SEED_CHECKPOINTS, type SeedCheckpoint } from '@/shared/config/demoAccounts';
 import { api, readBody, withErrors } from './util';
 
 // 시연 패널용 헬스 체크와 시연 데이터 초기화. 목업의 초기화는 `X-Demo-Key`를 보지 않는다(403은 실서버 전용).
 
-const CHECKPOINTS: readonly SeedCheckpoint[] = ['START', 'APPLIED', 'APPROVED', 'CONFIRMED'];
-
 const isCheckpoint = (value: unknown): value is SeedCheckpoint =>
-  CHECKPOINTS.includes(value as SeedCheckpoint);
+  SEED_CHECKPOINTS.includes(value as SeedCheckpoint);
 
 export const demoHandlers = [
   http.get(

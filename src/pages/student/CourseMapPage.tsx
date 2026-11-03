@@ -6,6 +6,7 @@ import { MapView } from '@/features/courses/components/MapView';
 import { StopList } from '@/features/courses/components/StopList';
 import { StoreSheet } from '@/features/courses/components/StoreSheet';
 import { useCourse } from '@/features/courses/queries';
+import { useDemoStore } from '@/demo/demoStore';
 import { formatDuration, formatTourDate } from '@/shared/lib/date';
 import { buttonClass } from '@/shared/ui/buttonStyles';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -32,6 +33,8 @@ export function CourseMapPage() {
   // 쿠폰 목록 오류는 따로 보이지 않는다 — 시트는 "쿠폰 보기" 없이 그려지고, 아래 버튼으로 쿠폰 목록에 갈 수 있다.
   const { data: coupons } = useMyCoupons(applicationId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // 시연 패널의 지도 `도식`: 카카오맵을 부르지 않고 도식 지도로 고정한다(결정 0004의 수동 토글).
+  const mapMode = useDemoStore((s) => s.mapMode);
 
   const topBar = <TopBar title="오늘의 탐방 코스" back={`/my-tours/${applicationId}`} />;
 
@@ -109,7 +112,11 @@ export function CourseMapPage() {
         </StatusChip>
 
         <div className="mt-4">
-          <MapView stops={course.stops} onSelect={setSelectedId} forceSchematic={false} />
+          <MapView
+            stops={course.stops}
+            onSelect={setSelectedId}
+            forceSchematic={mapMode === 'schematic'}
+          />
         </div>
         <div className="mt-4">
           <StopList stops={course.stops} onSelect={setSelectedId} />

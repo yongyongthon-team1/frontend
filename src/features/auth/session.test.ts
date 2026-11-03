@@ -1,8 +1,17 @@
 import { QueryClient } from '@tanstack/react-query';
-import { afterEach, describe, expect, it } from 'vitest';
-import { handleUnauthorized, registerQueryClient, SESSION_KEY, useSession } from './session';
+import { afterEach, describe, expect, it, vi } from 'vitest';
+import {
+  handleUnauthorized,
+  registerQueryClient,
+  SESSION_KEY,
+  setUnauthorizedRecovery,
+  useSession,
+} from './session';
 
-afterEach(() => useSession.setState({ token: null }));
+afterEach(() => {
+  useSession.setState({ token: null });
+  setUnauthorizedRecovery(null);
+});
 
 function clientWithData(): QueryClient {
   const qc = new QueryClient();
@@ -36,5 +45,86 @@ describe('세션', () => {
     handleUnauthorized();
     expect(useSession.getState().token).toBeNull();
     expect(qc.getQueryData(['me'])).toBeUndefined();
+  });
+});
+
+describe('401 복구(시연 계정 자동 재로그인 등록 지점)', () => {
+  /** 끝을 테스트가 정하는 복구 시도. */
+  function deferredRecovery() {
+    let finish: (ok: boolean) => void = () => {};
+    const recover = vi.fn(
+      () =>
+        new Promise<boolean>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    return { recover, finish: (ok: boolean) => finish(ok) };
+  }
+
+  it('복구가 성공하면 토큰을 지우지 않고 쿼리를 다시 불러온다', async () => {
+    const qc = clientWithData();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { recover, finish } = deferredRecovery();
+    setUnauthorizedRecovery(recover);
+    useSession.setState({ token: 'stale' });
+
+    handleUnauthorized();
+    handleUnauthorized(); // 복구 중에 겹쳐 온 401은 복구 결과를 따른다
+    expect(recover).toHaveBeenCalledTimes(1);
+    expect(useSession.getState().token).toBe('stale');
+
+    useSession.setState({ token: 'fresh' }); // 복구가 다시 로그인했다
+    finish(true);
+    await vi.waitFor(() => expect(invalidate).toHaveBeenCalled());
+    expect(useSession.getState().token).toBe('fresh');
+    expect(qc.getQueryData(['me'])).toEqual({ id: 1 });
+  });
+
+  it('복구는 페이지 세션당 한 번 — 두 번째 401은 토큰과 캐시를 비운다', async () => {
+    const qc = clientWithData();
+    const invalidate = vi.spyOn(qc, 'invalidateQueries');
+    const { recover, finish } = deferredRecovery();
+    setUnauthorizedRecovery(recover);
+    useSession.setState({ token: 'stale' });
+    handleUnauthorized();
+    finish(true);
+    await vi.waitFor(() => expect(invalidate).toHaveBeenCalled());
+
+    handleUnauthorized();
+    expect(recover).toHaveBeenCalledTimes(1);
+    expect(useSession.getState().token).toBeNull();
+    expect(qc.getQueryData(['me'])).toBeUndefined();
+  });
+
+  it('복구가 실패하면 토큰과 캐시를 비운다', async () => {
+    const qc = clientWithData();
+    const { recover, finish } = deferredRecovery();
+    setUnauthorizedRecovery(recover);
+    useSession.setState({ token: 'stale' });
+    handleUnauthorized();
+    finish(false);
+    await vi.waitFor(() => expect(useSession.getState().token).toBeNull());
+    expect(qc.getQueryData(['me'])).toBeUndefined();
+  });
+
+  it('복구할 게 없으면(null) 바로 비우고, 다음 401에서 다시 물어본다', () => {
+    const qc = clientWithData();
+    const recover = vi.fn(() => null);
+    setUnauthorizedRecovery(recover);
+    useSession.setState({ token: 'stale' });
+    handleUnauthorized();
+    expect(useSession.getState().token).toBeNull();
+    expect(qc.getQueryData(['me'])).toBeUndefined();
+
+    useSession.setState({ token: 'again' });
+    handleUnauthorized();
+    expect(recover).toHaveBeenCalledTimes(2);
+  });
+
+  it('토큰이 없으면 복구도 부르지 않는다 (G6)', () => {
+    const recover = vi.fn(() => Promise.resolve(true));
+    setUnauthorizedRecovery(recover);
+    handleUnauthorized();
+    expect(recover).not.toHaveBeenCalled();
   });
 });

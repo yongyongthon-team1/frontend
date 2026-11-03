@@ -1,6 +1,10 @@
 import { approveApplication, applyToTour } from '@/mocks/rules/applications';
 import { confirmCourse, createDraft } from '@/mocks/rules/courses';
-import { DEMO_MOTIVATION } from '@/shared/config/demoAccounts';
+import {
+  DEMO_MOTIVATION,
+  DEMO_SEED_PASSWORD,
+  type SeedCheckpoint,
+} from '@/shared/config/demoAccounts';
 import { addDaysKey, endOfSeoulDay, seoulDateAt, seoulDateKey } from '@/shared/lib/date';
 import {
   MOCK_DB_VERSION,
@@ -11,12 +15,12 @@ import {
   type TourRow,
 } from './schema';
 
-export type SeedCheckpoint = 'START' | 'APPLIED' | 'APPROVED' | 'CONFIRMED';
+// 체크포인트 타입은 시연 도구와 같이 쓰려고 공용 설정에 있다(기존 import 경로를 위해 다시 내보낸다).
+export type { SeedCheckpoint };
 
 export const DEMO_TOUR_ID = 1;
 export const DEMO_UNIVERSITY_ID = 2;
 
-const PASSWORD = 'demo1234';
 /** 시드 이후 규칙이 만드는 행의 ID는 여기서부터 시작한다. */
 const FIRST_RUNTIME_ID = 1000;
 /** 운영자(admin@demo.kr)는 사용자 목록의 마지막(18번)이다. 심사자 ID로 쓴다. */
@@ -172,7 +176,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
   ) => {
     const u = add(db.users, {
       email,
-      password: PASSWORD,
+      password: DEMO_SEED_PASSWORD,
       name,
       role: 'HIGH_SCHOOL',
       createdAt: created,
@@ -280,7 +284,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
   ) => {
     const u = add(db.users, {
       email,
-      password: PASSWORD,
+      password: DEMO_SEED_PASSWORD,
       name,
       role: 'UNIVERSITY',
       createdAt: created,
@@ -351,7 +355,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
   ].map(([email, name]) => {
     const u = add(db.users, {
       email,
-      password: PASSWORD,
+      password: DEMO_SEED_PASSWORD,
       name,
       role: 'OWNER',
       createdAt: created,
@@ -367,7 +371,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
   });
   const admin = add(db.users, {
     email: 'admin@demo.kr',
-    password: PASSWORD,
+    password: DEMO_SEED_PASSWORD,
     name: '운영자',
     role: 'ADMIN',
     createdAt: created,
