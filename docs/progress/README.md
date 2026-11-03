@@ -43,13 +43,13 @@
 | `hs-a06` | 탐방 추천·신청 예외 상태 | `/recommendations` · `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `guide-s01` | 가이드 프로필 | `/guide/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s02` | 탐방 개설 | `/guide/tours/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-s03` | 신청자 관리 | `/guide/tours/:tourId/applicants` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-s03` | 신청자 관리 | `/guide/tours/:tourId/applicants` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `guide-s04` | AI 추천 코스 생성 | `/guide/tours/:tourId/course/draft` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s05` | 코스 편집 · 상점 교체 | `/guide/tours/:tourId/course/edit` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s06` | 코스 확정 · 쿠폰 발급 | `/guide/tours/:tourId/course/confirmed` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s07` | 탐방 종료 · 완료 | `/guide/tours/:tourId/complete` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-a01` | 대학생 재학 인증 | `/guide/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-a02` | 내가 개설한 탐방 | `/guide/tours` | P0 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-a02` | 내가 개설한 탐방 | `/guide/tours` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `guide-a03` | 주변 상점 교체 | `/guide/tours/:tourId/course/stops/pick` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-a04` | 탐방 취소 확인 | `/guide/tours/:tourId/cancel` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s01` | 사업자 인증 | `/owner/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |

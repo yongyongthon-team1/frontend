@@ -1,4 +1,6 @@
 import type { RouteObject } from 'react-router';
+import { ApplicantsPage } from '@/pages/guide/ApplicantsPage';
+import { GuideToursPage } from '@/pages/guide/GuideToursPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
 import { ApplyPage } from '@/pages/student/ApplyPage';
@@ -117,7 +119,7 @@ export const routes: RouteObject[] = [
                 children: [
                   {
                     path: '/guide/tours',
-                    element: <PlaceholderPage title="내가 개설한 탐방" wireframe="guide-a02" />, // P0 · Task 18
+                    element: <GuideToursPage />,
                   },
                   {
                     path: '/guide/tours/new',
@@ -125,7 +127,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/tours/:tourId/applicants',
-                    element: <PlaceholderPage title="신청자 관리" wireframe="guide-s03" />, // P0 · Task 18
+                    element: <ApplicantsPage />,
                   },
                   {
                     path: '/guide/tours/:tourId/course',
