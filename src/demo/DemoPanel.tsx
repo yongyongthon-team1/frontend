@@ -42,8 +42,19 @@ const CHECKPOINT_OPTIONS = SEED_CHECKPOINTS.map((value) => ({
   label: CHECKPOINT_LABEL[value],
 }));
 
-const LOGIN_FAILED = '시연 계정으로 로그인하지 못했어요.';
 const RESET_FAILED = '시연 데이터를 초기화하지 못했어요.';
+
+const errorCode = (error: unknown) => (error instanceof ApiError ? error.code : undefined);
+
+/** 역할 전환 실패: 지금 세션 · 화면은 그대로이고 이유만 알린다(판정 31). */
+function switchFailed(error: unknown) {
+  toast.error(errorMessage(errorCode(error)));
+}
+
+function resetFailed(error: unknown) {
+  const code = errorCode(error);
+  toast.error(RESET_FAILED, { description: code ? errorMessage(code) : undefined });
+}
 
 type Action = DemoRole | 'coupon' | 'reset';
 
@@ -97,10 +108,14 @@ function useDemoActions(onDone: () => void): DemoActions {
   const navigate = useNavigate();
   const [running, setRunning] = useState<Action | null>(null);
   const runningRef = useRef(false);
-  // 역할 전환은 지금 기록을 바꿔 쓴다 — 뒤로 가기로 이전 역할 화면이나 로그인 화면에 돌아가지 않게.
-  const deps = { queryClient, navigate: (to: string) => void navigate(to, { replace: true }) };
+  // 역할 전환의 이동: 지금 기록을 바꿔 쓰고(뒤로 가기로 이전 역할 화면에 돌아가지 않게), flushSync로 그린다 —
+  // 바로 앞에서 바꾼 신원과 새 주소가 한 번의 렌더로 들어간다(판정 31).
+  const deps = {
+    queryClient,
+    navigate: (to: string) => void navigate(to, { replace: true, flushSync: true }),
+  };
 
-  async function run(action: Action, task: () => Promise<void>, failure: string) {
+  async function run(action: Action, task: () => Promise<void>, onError: (error: unknown) => void) {
     if (runningRef.current) return;
     runningRef.current = true;
     setRunning(action);
@@ -108,9 +123,7 @@ function useDemoActions(onDone: () => void): DemoActions {
       await task();
       onDone();
     } catch (error) {
-      toast.error(failure, {
-        description: error instanceof ApiError ? errorMessage(error.code) : undefined,
-      });
+      onError(error);
     } finally {
       runningRef.current = false;
       setRunning(null);
@@ -119,8 +132,8 @@ function useDemoActions(onDone: () => void): DemoActions {
 
   return {
     running,
-    switchRole: (role) => void run(role, () => quickLogin(role, deps), LOGIN_FAILED),
-    switchCouponOwner: () => void run('coupon', () => switchToCouponOwner(deps), LOGIN_FAILED),
+    switchRole: (role) => void run(role, () => quickLogin(role, deps), switchFailed),
+    switchCouponOwner: () => void run('coupon', () => switchToCouponOwner(deps), switchFailed),
     reset: (checkpoint) =>
       void run(
         'reset',
@@ -130,7 +143,7 @@ function useDemoActions(onDone: () => void): DemoActions {
           void navigate('/login', { replace: true });
           toast.success('시연 데이터를 초기화했어요.');
         },
-        RESET_FAILED,
+        resetFailed,
       ),
   };
 }

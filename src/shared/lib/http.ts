@@ -35,6 +35,11 @@ export interface RequestOptions {
   body?: unknown;
   headers?: Record<string, string>;
   timeoutMs?: number;
+  /**
+   * false면 세션 토큰을 붙이지 않고, 401이어도 `onUnauthorized`(세션 만료 처리)를 부르지 않는다. 로그인 요청용 —
+   * 로그인의 401은 자격 증명 오류이지 지금 세션의 만료가 아니다(로그인한 채 다른 계정으로 로그인해도 세션을 지키게).
+   */
+  auth?: boolean;
 }
 
 let config: HttpConfig = {
@@ -76,12 +81,12 @@ async function toApiError(res: Response): Promise<ApiError> {
 
 async function send<T>(
   path: string,
-  init: { method: string; body?: BodyInit; headers: Record<string, string> },
+  init: { method: string; body?: BodyInit; headers: Record<string, string>; auth: boolean },
   timeoutMs: number,
 ): Promise<T> {
   const url = new URL(config.baseUrl + path, window.location.origin);
   const headers: Record<string, string> = { Accept: 'application/json', ...init.headers };
-  const token = config.getToken();
+  const token = init.auth ? config.getToken() : null;
   if (token) headers.Authorization = `Bearer ${token}`;
 
   const controller = new AbortController();
@@ -99,7 +104,7 @@ async function send<T>(
       signal: controller.signal,
     });
     if (!res.ok) {
-      if (res.status === 401) config.onUnauthorized();
+      if (res.status === 401 && init.auth) config.onUnauthorized();
       throw await toApiError(res);
     }
     const text = await res.text();
@@ -119,14 +124,21 @@ async function send<T>(
 }
 
 export function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = 'GET', body, headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  if (body === undefined) return send<T>(path, { method, headers }, timeoutMs);
+  const {
+    method = 'GET',
+    body,
+    headers = {},
+    timeoutMs = DEFAULT_TIMEOUT_MS,
+    auth = true,
+  } = options;
+  if (body === undefined) return send<T>(path, { method, headers, auth }, timeoutMs);
   return send<T>(
     path,
     {
       method,
       body: JSON.stringify(body),
       headers: { 'Content-Type': 'application/json', ...headers },
+      auth,
     },
     timeoutMs,
   );
@@ -138,6 +150,6 @@ export function upload<T>(
   form: FormData,
   options: Omit<RequestOptions, 'body'> = {},
 ): Promise<T> {
-  const { method = 'POST', headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS } = options;
-  return send<T>(path, { method, body: form, headers }, timeoutMs);
+  const { method = 'POST', headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS, auth = true } = options;
+  return send<T>(path, { method, body: form, headers, auth }, timeoutMs);
 }

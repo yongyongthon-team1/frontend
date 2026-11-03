@@ -15,6 +15,10 @@ import { useDemoStore, validLastCoupon } from './demoStore';
 
 export interface QuickLoginDeps {
   queryClient: QueryClient;
+  /**
+   * 새 계정의 첫 화면으로 이동. 화면이 떠 있으면 `flushSync`로 이동해야 한다 — 그래야 바로 앞에서 바꾼 신원과 새 주소가
+   * 한 번의 렌더로 그려진다(판정 31). 첫 렌더 전(원클릭 링크)에는 갈 곳만 기록한다.
+   */
   navigate(to: string): void;
   /** 로그인 뒤 갈 곳. 없으면 그 계정의 첫 화면(`getLandingPath`). */
   next?: string;
@@ -34,20 +38,21 @@ function demoPassword(): string {
 }
 
 /**
- * 시연 계정 빠른 로그인(역할 전환 · 원클릭 링크 `?as=`). 이전 역할의 데이터가 한 프레임도 보이지 않게 쿼리 캐시부터
- * 비우고(Review Focus 4), 토큰을 비운 뒤 로그인한다 — 로그인 실패 401이 자동 재로그인 · 로그아웃을 부르지 않는다(G6).
- * 받은 내 정보는 `['me']`에 넣어 가드가 다시 불러오지 않게 한다. 실패하면 로그아웃 상태로 남기고 던진다.
+ * 시연 계정 빠른 로그인(역할 전환 · 원클릭 링크 `?as=`). 판정 31: 로그인하는 동안은 지금 세션과 화면을 그대로 두고,
+ * 성공하면 한 동기 구간에서 한 번에 바꾼다 — 쿼리 캐시 비움(Review Focus 4) → 새 토큰 → 내 정보(`['me']`, 가드가
+ * 다시 부르지 않게) → 빠른 로그인 기록 → 이동. 이동이 flushSync로 그리므로 로그인 화면도, 새 신원으로 그린 이전 화면도
+ * 나오지 않는다. 토큰은 null을 거치지 않는다(빠른 로그인 기록 구독이 지우지 않는다).
+ * 실패하면 아무것도 바꾸지 않고 던진다 — 로그인 요청은 세션 토큰을 붙이지 않고 그 401은 세션 만료로 처리되지 않는다.
  */
 export async function quickLogin(
   target: DemoRole | { email: string },
   deps: QuickLoginDeps,
 ): Promise<void> {
   const email = typeof target === 'string' ? DEMO_EMAILS[target] : target.email;
-  deps.queryClient.clear();
-  useSession.getState().setToken(null);
   const { token, me } = await login({ email, password: demoPassword() });
-  deps.queryClient.setQueryData(qk.me, me);
+  deps.queryClient.clear();
   useSession.getState().setToken(token);
+  deps.queryClient.setQueryData(qk.me, me);
   useDemoStore.getState().setActiveDemoEmail(email);
   deps.navigate(deps.next ?? getLandingPath(me));
 }

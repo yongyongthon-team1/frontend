@@ -82,6 +82,23 @@ describe('request', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
+  it('auth: false면 토큰을 붙이지 않고, 401이어도 onUnauthorized를 부르지 않는다(로그인 요청)', async () => {
+    const spy = vi.fn();
+    configureHttp({ getToken: () => 't1', onUnauthorized: spy });
+    server.use(
+      http.post('/api/auth/login', ({ request: req }) =>
+        HttpResponse.json(
+          { code: 'INVALID_CREDENTIALS', message: req.headers.get('Authorization') ?? 'none' },
+          { status: 401 },
+        ),
+      ),
+    );
+    await expect(
+      request('/auth/login', { method: 'POST', body: {}, auth: false }),
+    ).rejects.toMatchObject({ status: 401, code: 'INVALID_CREDENTIALS', message: 'none' });
+    expect(spy).not.toHaveBeenCalled();
+  });
+
   it('시간이 지나면 TIMEOUT', async () => {
     server.use(
       http.get('/api/slow', async () => {

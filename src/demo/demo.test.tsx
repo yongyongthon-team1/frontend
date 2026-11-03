@@ -3,6 +3,7 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { useSession } from '@/features/auth/session';
 import { getDb, mutate } from '@/mocks/db/store';
+import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
 import { DEMO_EMAILS } from '@/shared/config/demoAccounts';
@@ -31,7 +32,17 @@ beforeEach(() => {
 
 afterEach(() => {
   server.events.removeAllListeners('request:start');
+  setMockLatency({ base: 0, ai: 0 }); // 테스트 setup의 값으로 되돌린다
 });
+
+/** `/api/auth/login` 요청 수를 센다. */
+function countLogins(): { count: number } {
+  const counter = { count: 0 };
+  server.events.on('request:start', ({ request }) => {
+    if (request.url.endsWith('/api/auth/login')) counter.count += 1;
+  });
+  return counter;
+}
 
 function panel() {
   return screen.getByRole('region', { name: '시연 패널' });
@@ -62,6 +73,93 @@ describe('시연 패널', () => {
     expect(queryClient.getQueryData(qk.myApplications)).toBeUndefined();
     expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: DEMO_EMAILS.guide });
     expect(useDemoStore.getState().activeDemoEmail).toBe(DEMO_EMAILS.guide);
+  });
+
+  describe('로그인 먼저, 교체는 한 번에 (판정 31)', () => {
+    let disconnect: () => void = () => {};
+    beforeEach(() => {
+      disconnect = connectDemoSession(); // main.tsx처럼 401 복구 · 빠른 로그인 기록 구독을 건다
+    });
+    afterEach(() => disconnect());
+
+    it('역할 전환은 로그인 화면을 거치지 않고, 주소가 바뀔 때 이미 새 신원이다', async () => {
+      const { user, router, queryClient } = await renderApp('/my-tours', {
+        as: 'student',
+        checkpoint: 'APPLIED',
+      });
+      act(() => useDemoStore.setState({ enabled: true, activeDemoEmail: STUDENT }));
+      await screen.findByText('신청 · 가이드 승인 대기');
+      const studentToken = useSession.getState().token;
+      const clear = vi.spyOn(queryClient, 'clear');
+
+      // 전환 중 라우터가 지난 주소와 그때의 토큰, 세션 토큰 · 빠른 로그인 기록의 모든 값을 기록한다.
+      const visits: Array<{ path: string; token: string | null }> = [];
+      const stopRouter = router.subscribe((state) =>
+        visits.push({ path: state.location.pathname, token: useSession.getState().token }),
+      );
+      const tokens: Array<string | null> = [];
+      const stopTokens = useSession.subscribe((s) => tokens.push(s.token));
+      const demoEmails: Array<string | null> = [];
+      const stopEmails = useDemoStore.subscribe((s) => demoEmails.push(s.activeDemoEmail));
+
+      await user.click(screen.getByRole('button', { name: '가이드' }));
+      await screen.findByRole('heading', { name: '내가 개설한 탐방' });
+      stopRouter();
+      stopTokens();
+      stopEmails();
+
+      expect(visits.map((v) => v.path)).toEqual(['/guide/tours']); // /login을 거치지 않는다
+      expect(visits[0]!.token).not.toBe(studentToken);
+      expect(visits[0]!.token).not.toBeNull();
+      expect(tokens).not.toContain(null);
+      expect(demoEmails).not.toContain(null);
+      expect(useDemoStore.getState().activeDemoEmail).toBe(DEMO_EMAILS.guide);
+      expect(clear).toHaveBeenCalled();
+      expect(queryClient.getQueryData(qk.myApplications)).toBeUndefined();
+    });
+
+    it('전환 로그인이 실패하면 지금 사용자 · 화면 · 토큰을 그대로 두고 토스트로 알린다', async () => {
+      const { user, router, queryClient } = await renderApp('/my-tours', {
+        as: 'student',
+        checkpoint: 'APPLIED',
+      });
+      act(() => useDemoStore.setState({ enabled: true, activeDemoEmail: STUDENT }));
+      await screen.findByText('신청 · 가이드 승인 대기');
+      const token = useSession.getState().token;
+      const clear = vi.spyOn(queryClient, 'clear');
+      // 로그인 실패 401은 세션 만료가 아니다 — 지금 세션의 복구 · 로그아웃을 부르면 안 된다.
+      server.use(
+        http.post('/api/auth/login', () =>
+          HttpResponse.json({ code: 'INVALID_CREDENTIALS', message: 'x' }, { status: 401 }),
+        ),
+      );
+
+      await user.click(screen.getByRole('button', { name: '가이드' }));
+      expect(await screen.findByText('이메일 또는 비밀번호가 맞지 않아요.')).toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/my-tours');
+      expect(useSession.getState().token).toBe(token);
+      expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: STUDENT });
+      expect(useDemoStore.getState().activeDemoEmail).toBe(STUDENT);
+      expect(screen.getByText('신청 · 가이드 승인 대기')).toBeInTheDocument();
+      expect(clear).not.toHaveBeenCalled();
+    });
+
+    it('전환 중에 다른 역할을 눌러도 무시한다(로그인 요청 1번)', async () => {
+      const { user, router } = await renderApp('/my-tours', { as: 'student' });
+      act(() => useDemoStore.setState({ enabled: true }));
+      await screen.findByRole('heading', { name: '내 탐방 · 신청 상태' });
+      setMockLatency({ base: 150, ai: 0 }); // 첫 전환의 로그인이 진행 중일 때 두 번째 클릭이 들어오게
+      const logins = countLogins();
+
+      await user.click(screen.getByRole('button', { name: '가이드' }));
+      await user.click(screen.getByRole('button', { name: '사장님' }));
+      await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours'));
+      expect(logins.count).toBe(1);
+      // 늦춘 요청이 다음 테스트까지 남지 않게 새 화면의 데이터를 받을 때까지 기다린다(다음 테스트는 목업 DB · 세션을 새로 만든다).
+      expect((await screen.findAllByRole('link', { name: '신청자 보기' })).length).toBeGreaterThan(
+        0,
+      );
+    });
   });
 
   it('쿠폰 가게 사장님으로 전환하면 코드가 채워진다', async () => {
@@ -190,14 +288,6 @@ describe('시연 계정 자동 재로그인', () => {
     disconnect = connectDemoSession();
   });
   afterEach(() => disconnect());
-
-  function countLogins(): { count: number } {
-    const counter = { count: 0 };
-    server.events.on('request:start', ({ request }) => {
-      if (request.url.endsWith('/api/auth/login')) counter.count += 1;
-    });
-    return counter;
-  }
 
   /** 백엔드가 다시 켜져 세션을 잃은 상황: 목업 DB의 세션을 모두 지운다. */
   function dropServerSessions() {
