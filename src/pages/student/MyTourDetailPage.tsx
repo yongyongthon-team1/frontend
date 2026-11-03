@@ -88,9 +88,11 @@ export function MyTourDetailPage() {
             title={`${tour.universityName} ${tour.campusName}`}
             description={`${formatShortDate(tour.startsAt)} ${formatTimeRange(tour.startsAt, tour.endsAt)} · ${tour.guideName} 가이드`}
           >
-            <p className="text-sm font-semibold text-ink">
-              진행 상태 · {studentCourseLabel(app.courseStatus)}
-            </p>
+            {active ? (
+              <p className="text-sm font-semibold text-ink">
+                진행 상태 · {studentCourseLabel(app.courseStatus)}
+              </p>
+            ) : null}
           </InfoCard>
 
           {app.openChatUrl ? (

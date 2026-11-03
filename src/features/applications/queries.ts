@@ -45,7 +45,7 @@ export function useMyApplication(id: number): UseQueryResult<MyApplication> {
   return useQuery({ queryKey: qk.myApplication(id), queryFn: () => getMyApplication(id) });
 }
 
-/** 취소하면 내 신청(목록 · 상세 모두)과 그 탐방의 남은 자리를 다시 불러온다. */
+/** 취소하면 내 신청(목록 · 상세 모두)과 그 탐방의 남은 자리를 다시 불러온다. 실패하면 내 신청만 다시 불러온다. */
 export function useCancelMyApplication(
   id: number,
 ): UseMutationResult<MyApplication, ApiError, void> {
@@ -55,6 +55,10 @@ export function useCancelMyApplication(
     onSuccess: (app) => {
       void queryClient.invalidateQueries({ queryKey: qk.myApplications });
       void queryClient.invalidateQueries({ queryKey: qk.tour(app.tour.id) });
+    },
+    // 실패해도 서버 값(`cancellable` 등)을 다시 받아 화면의 취소 버튼 · 사유를 맞춘다.
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.myApplications });
     },
   });
 }

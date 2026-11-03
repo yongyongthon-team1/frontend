@@ -1,6 +1,8 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { mutate } from '@/mocks/db/store';
+import { server } from '@/mocks/node';
 import { applyToTour as applyToTourRule } from '@/mocks/rules/applications';
 import { findApplicationId, renderApp } from '@/test/renderApp';
 
@@ -85,6 +87,57 @@ describe('내 탐방 (hs-a05 · hs-s07)', () => {
     expect(screen.queryByRole('button', { name: '탐방 신청 취소' })).not.toBeInTheDocument();
     expect(screen.queryByText('캠퍼스 & 상권 코스')).not.toBeInTheDocument();
     expect(screen.queryByText('오픈채팅 바로가기 ↗')).not.toBeInTheDocument();
+    expect(screen.queryByText(/진행 상태/)).not.toBeInTheDocument();
+  });
+
+  it('취소된 신청은 진행 상태 줄이 없다', async () => {
+    const { user, router } = await renderApp('/my-tours', { as: 'student' });
+    mutate((db) =>
+      applyToTourRule(
+        db,
+        db.users.find((u) => u.email === STUDENT)!.id,
+        6,
+        '수업이 궁금해요',
+        new Date(),
+      ),
+    );
+    await router.navigate(`/my-tours/${findApplicationId(STUDENT, 6)}`);
+    expect(await screen.findByText(/진행 상태 · 코스 준비 중/)).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: '탐방 신청 취소' }));
+    await user.click(await screen.findByRole('button', { name: '신청 취소' }));
+    expect(await screen.findByText('취소됨')).toBeInTheDocument();
+    expect(screen.queryByText(/진행 상태/)).not.toBeInTheDocument();
+  });
+
+  it('취소가 실패하면 토스트를 보이고 신청을 다시 불러온다', async () => {
+    const { user, router } = await renderApp('/my-tours', { as: 'student' });
+    mutate((db) =>
+      applyToTourRule(
+        db,
+        db.users.find((u) => u.email === STUDENT)!.id,
+        6,
+        '수업이 궁금해요',
+        new Date(),
+      ),
+    );
+    const id = findApplicationId(STUDENT, 6);
+    let detailGets = 0;
+    server.use(
+      http.post('/api/me/applications/:id/cancel', () =>
+        HttpResponse.json({ code: 'CANCEL_AFTER_TOUR_DATE', message: 'x' }, { status: 409 }),
+      ),
+      http.get('/api/me/applications/:id', () => {
+        detailGets += 1;
+        return undefined; // 기본 핸들러로 넘긴다
+      }),
+    );
+    await router.navigate(`/my-tours/${id}`);
+    await user.click(await screen.findByRole('button', { name: '탐방 신청 취소' }));
+    expect(detailGets).toBe(1);
+    await user.click(await screen.findByRole('button', { name: '신청 취소' }));
+    expect(await screen.findByText('탐방 날짜가 되어 취소할 수 없어요.')).toBeInTheDocument();
+    await waitFor(() => expect(detailGets).toBe(2));
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
   });
 
   it('목록 카드는 라벨·설명을 보이고 행동만 링크다', async () => {
