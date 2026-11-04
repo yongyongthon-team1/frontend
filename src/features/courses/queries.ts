@@ -4,7 +4,6 @@ import {
   useMutation,
   useQuery,
   useQueryClient,
-  type MutationKey,
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
@@ -38,11 +37,9 @@ export function useGuideCourse(tourId: number): UseQueryResult<Course | null> {
 function useCourseMutation<TVariables>(
   tourId: number,
   mutationFn: (variables: TVariables) => Promise<Course>,
-  mutationKey?: MutationKey,
 ): UseMutationResult<Course, ApiError, TVariables> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationKey,
     mutationFn,
     onSuccess: (course) => {
       queryClient.setQueryData(qk.guideCourse(tourId), course);
@@ -50,9 +47,21 @@ function useCourseMutation<TVariables>(
   });
 }
 
-/** AI 코스 초안 생성. 뮤테이션 키가 있어 화면을 떠났다 돌아와도 진행 중인 생성을 알아본다(`useIsCreatingDraft`). */
+/**
+ * AI 코스 초안 생성. 뮤테이션 키가 있어 화면을 떠났다 돌아와도 진행 중인 생성을 알아본다(`useIsCreatingDraft`).
+ * 코스가 생기면 신청자 관리의 코스 버튼(`코스 이어서 편집`)과 가이드 탐방 목록의 코스 상태도 바뀌므로 다시 불러온다.
+ */
 export function useCreateDraft(tourId: number): UseMutationResult<Course, ApiError, void> {
-  return useCourseMutation(tourId, () => postCourseDraft(tourId), qk.courseDraft(tourId));
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationKey: qk.courseDraft(tourId),
+    mutationFn: () => postCourseDraft(tourId),
+    onSuccess: (course) => {
+      queryClient.setQueryData(qk.guideCourse(tourId), course);
+      void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.guideTours });
+    },
+  });
 }
 
 /** 이 탐방의 AI 초안 생성 요청이 진행 중인지 — 지금 화면이 보낸 것이든, 떠난 화면이 보낸 것이든. */

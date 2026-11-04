@@ -240,4 +240,44 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     expect(screen.getByText('승인된 신청자에게 제휴 상점 쿠폰이 발급돼요.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '뒤로 가기' })).toBeNull();
   });
+
+  it('초안을 만든 뒤 신청자 관리로 돌아가면 코스 버튼은 코스 이어서 편집, 탐방 목록도 다시 불러온다', async () => {
+    let guideTourGets = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'GET' && new URL(request.url).pathname === '/api/guide/tours') {
+        guideTourGets++;
+      }
+    });
+    const { user, router } = await renderApp('/guide/tours', {
+      as: 'guide',
+      checkpoint: 'APPROVED',
+    });
+    await user.click((await screen.findAllByRole('link', { name: '신청자 보기' }))[0]!);
+    await user.click(await screen.findByRole('button', { name: 'AI 코스 만들기' }));
+    expect(await screen.findByText('2시간 30분 추천 코스')).toBeInTheDocument();
+
+    await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
+    expect(await screen.findByRole('button', { name: '코스 이어서 편집' })).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: 'AI 코스 만들기' })).not.toBeInTheDocument();
+
+    expect(guideTourGets).toBe(1);
+    await router.navigate('/guide/tours');
+    await waitFor(() => expect(guideTourGets).toBe(2));
+  });
+
+  it('코스 확정 뒤에 승인하면 확정 화면의 승인 수 · 쿠폰 발급 수가 늘어난다', async () => {
+    const { user } = await renderApp('/guide/tours/1/course/confirmed', {
+      as: 'guide',
+      checkpoint: 'CONFIRMED',
+    });
+    expect(await screen.findByText('참가 승인 3명 · 쿠폰 6장 발급')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '신청자 관리로 이동' }));
+
+    // 최유진(승인 대기)을 승인하면 코스 안 제휴 상점 2곳의 쿠폰이 더 발급된다.
+    const yujin = (await screen.findByRole('heading', { name: /최유진/ })).closest('article')!;
+    await user.click(within(yujin).getByRole('button', { name: '승인' }));
+    expect(await screen.findByText('최유진 님을 승인했어요.')).toBeInTheDocument();
+    await user.click(screen.getByRole('button', { name: '확정 코스 보기' }));
+    expect(await screen.findByText('참가 승인 4명 · 쿠폰 8장 발급')).toBeInTheDocument();
+  });
 });

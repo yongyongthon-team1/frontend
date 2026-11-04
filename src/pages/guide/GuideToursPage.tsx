@@ -19,11 +19,9 @@ function isActive(tour: GuideTourSummary): boolean {
   return tour.status === 'RECRUITING' || tour.status === 'CLOSED';
 }
 
-/** API 순서를 그대로 쓰되, 탐방 1(시연 탐방)이 맨 앞이 아니면 진행 중 탐방을 시작 시각 순으로 세운다. */
+/** 진행 중 탐방은 늘 시작 시각이 이른 것부터 세운다(판정 35 — API 순서나 시연 탐방 id에 기대지 않는다). */
 function orderActive(tours: GuideTourSummary[]): GuideTourSummary[] {
-  const active = tours.filter(isActive);
-  if (active[0]?.id === 1) return active;
-  return [...active].sort((a, b) => a.startsAt.localeCompare(b.startsAt));
+  return tours.filter(isActive).sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt));
 }
 
 /** 가이드가 개설한 탐방 목록(guide-a02). 진행 중 탐방은 신청자 관리로, 지난 탐방은 기록으로만 보여 준다. */

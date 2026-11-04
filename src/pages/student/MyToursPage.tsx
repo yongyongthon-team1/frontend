@@ -21,14 +21,17 @@ export function MyToursPage() {
     <>
       <TopBar title="내 탐방 · 신청 상태" />
       <Page>
-        {query.isError ? (
-          <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-        ) : applications === undefined ? (
-          <>
-            <Skeleton className="h-6 w-1/2" />
-            <Skeleton className="mt-4 h-28" />
-            <Skeleton className="mt-3 h-28" />
-          </>
+        {/* 다시 불러오다 실패해도 이미 받은 목록은 그대로 보인다(판정 24) — 오류 화면은 받은 데이터가 없을 때만. */}
+        {applications === undefined ? (
+          query.isError ? (
+            <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+          ) : (
+            <>
+              <Skeleton className="h-6 w-1/2" />
+              <Skeleton className="mt-4 h-28" />
+              <Skeleton className="mt-3 h-28" />
+            </>
+          )
         ) : applications.length === 0 ? (
           <EmptyState
             title="아직 신청한 탐방이 없어요."

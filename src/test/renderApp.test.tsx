@@ -1,3 +1,4 @@
+import { toast } from 'sonner';
 import { describe, expect, it } from 'vitest';
 import { DEMO_TOUR_ID } from '@/mocks/db/seed';
 import { getDb, resetDb } from '@/mocks/db/store';
@@ -30,6 +31,18 @@ describe('테스트 도우미', () => {
 
   it('findApplicationId: 없으면 알려 준다', () => {
     expect(() => findApplicationId('student@demo.kr', DEMO_TOUR_ID)).toThrow(/student@demo.kr/);
+  });
+
+  // 두 테스트는 순서대로 돈다: 앞 테스트가 띄운 토스트는 다음 테스트의 Toaster에 다시 나타나지 않는다(setup의 toast.dismiss).
+  it('토스트를 띄운다', () => {
+    toast('앞 테스트의 토스트');
+    expect(toast.getToasts()).toContainEqual(
+      expect.objectContaining({ title: '앞 테스트의 토스트' }),
+    );
+  });
+
+  it('앞 테스트의 토스트는 다음 테스트로 넘어가지 않는다', () => {
+    expect(toast.getToasts()).toEqual([]);
   });
 
   it('demoCouponCode: 김민지의 탐방 1 신청에 발급된 그 상점 ISSUED 쿠폰', () => {

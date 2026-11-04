@@ -1,6 +1,6 @@
 import { useLayoutEffect, useRef, useState, type ReactNode } from 'react';
 import { useLocation } from 'react-router';
-import { FrameProvider } from './FrameContext';
+import { FrameProvider } from '@/shared/ui/FrameContext';
 
 /**
  * 폰 프레임(설계 5.8). 폭 480px 미만은 전체 화면, 이상은 가운데 390px 프레임이다(CSS: globals.css `.mobile-*`).

@@ -45,7 +45,10 @@ export function useMyApplication(id: number): UseQueryResult<MyApplication> {
   return useQuery({ queryKey: qk.myApplication(id), queryFn: () => getMyApplication(id) });
 }
 
-/** 취소하면 내 신청(목록 · 상세 모두)과 그 탐방의 남은 자리를 다시 불러온다. 실패하면 내 신청만 다시 불러온다. */
+/**
+ * 취소하면 내 신청(목록 · 상세 모두)과 그 탐방의 남은 자리, 내 쿠폰(취소하면 발급된 쿠폰이 만료된다)을 다시 불러온다.
+ * 실패하면 내 신청만 다시 불러온다.
+ */
 export function useCancelMyApplication(
   id: number,
 ): UseMutationResult<MyApplication, ApiError, void> {
@@ -55,6 +58,7 @@ export function useCancelMyApplication(
     onSuccess: (app) => {
       void queryClient.invalidateQueries({ queryKey: qk.myApplications });
       void queryClient.invalidateQueries({ queryKey: qk.tour(app.tour.id) });
+      void queryClient.invalidateQueries({ queryKey: qk.allMyCoupons });
     },
     // 실패해도 서버 값(`cancellable` 등)을 다시 받아 화면의 취소 버튼 · 사유를 맞춘다.
     onError: () => {
@@ -78,11 +82,18 @@ function useBoardMutation(
   const queryClient = useQueryClient();
   return useMutation({
     mutationFn,
-    // 서버가 돌려준 보드를 바로 그리고, 목록 · 탐방 상세(남은 자리)는 다시 불러온다.
+    // 서버가 돌려준 보드를 바로 그리고, 목록 · 탐방 상세(남은 자리) · 가이드 코스(확정 뒤 승인이면 쿠폰 발급 수)는
+    // 다시 불러온다.
     onSuccess: (board) => {
       queryClient.setQueryData(qk.applicants(tourId), board);
       void queryClient.invalidateQueries({ queryKey: qk.guideTours });
       void queryClient.invalidateQueries({ queryKey: qk.tour(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.guideCourse(tourId) });
+    },
+    // 실패하면(409 이미 처리됨 · 정원 초과 등 — 다른 기기에서 먼저 처리했을 수 있다) 보드를 서버 기준으로 다시 불러온다
+    // (설계 5.5 — 판정 15 · 18과 같은 원칙).
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });
     },
   });
 }

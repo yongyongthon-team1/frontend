@@ -30,7 +30,8 @@ export function TourDetailPage() {
   const me = useMe();
   const { data: tour } = tourQuery;
 
-  if (tourQuery.isError) {
+  // 다시 불러오다 실패해도 이미 받은 탐방은 그대로 보인다(판정 24) — 오류 화면은 받은 데이터가 없을 때만.
+  if (tour === undefined && tourQuery.isError) {
     return (
       <>
         <TopBar title="탐방 상세" back />

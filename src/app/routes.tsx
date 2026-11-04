@@ -17,7 +17,7 @@ import { MyToursPage } from '@/pages/student/MyToursPage';
 import { RecommendationsPage } from '@/pages/student/RecommendationsPage';
 import { TourDetailPage } from '@/pages/student/TourDetailPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
-import { ErrorPage } from './ErrorPage';
+import { ErrorPage, RouteErrorPage } from './ErrorPage';
 import { RequireAuth } from './guards/RequireAuth';
 import { RequireRole } from './guards/RequireRole';
 import { AppShell } from './layouts/AppShell';
@@ -28,6 +28,8 @@ import { NotFoundPage } from './NotFoundPage';
  * 설계 5.3의 라우트 전부. 아직 없는 화면은 `PlaceholderPage`(자리)이고, P0 자리는 각 태스크가 실제 화면으로 바꾼다
  * (주석의 Task 번호). 코드 분할(lazy)은 쓰지 않는다(결정 0006).
  * 가드 두 겹(설계 5.4): `RequireAuth`(토큰 → 내 정보) 안에 `RoleTabLayout`(역할별 하단 탭), 그 안에 `RequireRole`.
+ * 에러 경계 두 겹(설계 5.10): 로그인한 화면의 렌더 오류는 같은 탭 레이아웃 안의 `RouteErrorPage`가 받아 프레임 ·
+ * 하단 탭 · 시연 패널이 남는다. 그 밖(공개 화면 · 레이아웃 자체)은 루트의 `ErrorPage`.
  */
 export const routes: RouteObject[] = [
   {
@@ -49,6 +51,11 @@ export const routes: RouteObject[] = [
         children: [
           {
             element: <RoleTabLayout />,
+            errorElement: (
+              <RoleTabLayout>
+                <RouteErrorPage />
+              </RoleTabLayout>
+            ),
             children: [
               // ── 모든 역할 ────────────────────────────────────────────
               {

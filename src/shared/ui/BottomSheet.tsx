@@ -1,8 +1,8 @@
 import * as Dialog from '@radix-ui/react-dialog';
 import { X } from 'lucide-react';
 import type { ReactNode } from 'react';
-import { useFrameContainer } from '@/app/layouts/FrameContext';
 import { cn } from '@/shared/lib/cn';
+import { useFrameContainer } from './FrameContext';
 
 export interface BottomSheetProps {
   open: boolean;

@@ -1,9 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
+import type { UserEvent } from '@testing-library/user-event';
 import { afterEach, describe, expect, it } from 'vitest';
 import { mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
-import { renderApp } from '@/test/renderApp';
+import { approveApplication } from '@/mocks/rules/applications';
+import { DEMO_EMAILS } from '@/shared/config/demoAccounts';
+import { findApplicationId, renderApp } from '@/test/renderApp';
 
 afterEach(() => {
   server.events.removeAllListeners('request:start');
@@ -82,6 +85,41 @@ describe('신청자 관리 (guide-s03)', () => {
     await user.click(await screen.findByRole('button', { name: 'AI 코스 만들기' }));
     await waitFor(() => expect(visited).toContain('/guide/tours/1/course/draft?generate=1'));
   });
+
+  it.each([
+    [
+      '승인',
+      async (user: UserEvent, card: HTMLElement) =>
+        user.click(within(card).getByRole('button', { name: '승인' })),
+    ],
+    [
+      '거절',
+      async (user: UserEvent, card: HTMLElement) => {
+        await user.click(within(card).getByRole('button', { name: '거절' }));
+        const dialog = await screen.findByRole('alertdialog');
+        await user.click(within(dialog).getByRole('button', { name: '거절' }));
+      },
+    ],
+  ])(
+    '%s이 실패하면(다른 곳에서 이미 처리 — 409) 토스트를 보이고 보드를 다시 불러온다 (설계 5.5)',
+    async (_, attempt) => {
+      const { user } = await renderApp('/guide/tours/1/applicants', {
+        as: 'guide',
+        checkpoint: 'APPLIED',
+      });
+      await screen.findByText('대기 2명 · 승인 2명 · 남은 자리 3명');
+      // 같은 가이드가 다른 기기에서 김민지를 먼저 승인했다 — 이 화면의 보드는 아직 승인 대기다.
+      mutate((db) => {
+        const guide = db.users.find((u) => u.email === DEMO_EMAILS.guide)!;
+        approveApplication(db, guide.id, findApplicationId(DEMO_EMAILS.student, 1), new Date());
+      });
+
+      await attempt(user, minjiCard());
+      expect(await screen.findByText('이미 처리된 요청이에요.')).toBeInTheDocument();
+      expect(await screen.findByText('대기 1명 · 승인 3명 · 남은 자리 2명')).toBeInTheDocument();
+      expect(minjiCard()).toHaveTextContent('승인됨');
+    },
+  );
 
   it('남은 자리가 없으면 승인은 비활성 + 사유, 거절은 활성', async () => {
     const { router } = await renderApp('/guide/tours/6/applicants', {

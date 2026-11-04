@@ -32,7 +32,8 @@ export function MyTourDetailPage() {
   const [confirmOpen, setConfirmOpen] = useState(false);
   const { data: app } = query;
 
-  if (query.isError) {
+  // 다시 불러오다 실패해도 이미 받은 신청은 그대로 보인다(판정 24) — 오류 화면은 받은 데이터가 없을 때만.
+  if (app === undefined && query.isError) {
     return (
       <>
         <TopBar title="내 탐방" back="/my-tours" />

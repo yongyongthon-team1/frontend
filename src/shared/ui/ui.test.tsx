@@ -4,7 +4,7 @@ import { Compass, ListChecks } from 'lucide-react';
 import { useState } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { FrameProvider } from '@/app/layouts/FrameContext';
+import { FrameProvider } from './FrameContext';
 import { AiBadge } from './AiBadge';
 import { AiLoading } from './AiLoading';
 import { Badge } from './Badge';

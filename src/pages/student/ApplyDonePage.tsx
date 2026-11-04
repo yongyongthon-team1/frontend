@@ -29,11 +29,8 @@ export function ApplyDonePage() {
 
         <h3 className="mt-6 text-lg font-bold text-ink">신청한 탐방</h3>
         <div className="mt-3">
-          {tourQuery.isError ? (
-            <ErrorState error={tourQuery.error} onRetry={() => void tourQuery.refetch()} />
-          ) : tour === undefined ? (
-            <Skeleton className="h-32" />
-          ) : (
+          {/* 다시 불러오다 실패해도 이미 받은 탐방은 그대로 보인다(판정 24). */}
+          {tour !== undefined ? (
             <TourCard
               title={`${tour.universityName} ${tour.campusName}`}
               lines={[
@@ -42,6 +39,10 @@ export function ApplyDonePage() {
                 '상태 · 신청됨',
               ]}
             />
+          ) : tourQuery.isError ? (
+            <ErrorState error={tourQuery.error} onRetry={() => void tourQuery.refetch()} />
+          ) : (
+            <Skeleton className="h-32" />
           )}
         </div>
 

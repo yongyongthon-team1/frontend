@@ -15,6 +15,8 @@ export const qk = {
   myApplication: (id: number) => ['myApplications', id] as const,
   myCoupons: (applicationId?: number) => ['myCoupons', 'list', applicationId ?? null] as const,
   coupon: (id: number) => ['myCoupons', 'detail', id] as const,
+  /** 내 쿠폰 목록 · 상세 전부의 접두사(무효화용). */
+  allMyCoupons: ['myCoupons'] as const,
   course: (tourId: number) => ['course', tourId] as const,
   guideTours: ['guideTours'] as const,
   applicants: (tourId: number) => ['applicants', tourId] as const,

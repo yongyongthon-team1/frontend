@@ -1,4 +1,4 @@
-import { useLayoutEffect, useRef } from 'react';
+import { useLayoutEffect, useRef, type ReactNode } from 'react';
 import { Outlet, useLocation } from 'react-router';
 import { useMe } from '@/features/auth/queries';
 import { BottomTabBar } from '@/shared/ui/BottomTabBar';
@@ -6,9 +6,10 @@ import { TABS } from '../tabs';
 
 /**
  * 로그인 화면들의 레이아웃: 세로 flex — 스크롤 영역(화면) + 내 역할의 하단 탭(탭이 없는 운영자는 생략).
- * `RequireAuth` 안에서만 쓴다(내 정보가 이미 있다).
+ * `RequireAuth` 안에서만 쓴다(내 정보가 이미 있다). `children`을 주면 하위 라우트 대신 그것을 그린다 — 화면 단위
+ * 에러 경계(routes.tsx의 errorElement)가 같은 탭 레이아웃 안에 오류를 그릴 때 쓴다.
  */
-export function RoleTabLayout() {
+export function RoleTabLayout({ children }: { children?: ReactNode }) {
   const { data: me } = useMe();
   const tabs = me ? TABS[me.role] : [];
   const scrollRef = useRef<HTMLElement>(null);
@@ -22,7 +23,7 @@ export function RoleTabLayout() {
   return (
     <div className="flex min-h-0 flex-1 flex-col">
       <main ref={scrollRef} className="min-h-0 flex-1 overflow-y-auto">
-        <Outlet />
+        {children ?? <Outlet />}
       </main>
       {tabs.length > 0 ? <BottomTabBar tabs={tabs} /> : null}
     </div>

@@ -37,8 +37,11 @@ export function CourseMapPage() {
   const mapMode = useDemoStore((s) => s.mapMode);
 
   const topBar = <TopBar title="오늘의 탐방 코스" back={`/my-tours/${applicationId}`} />;
+  const course = courseQuery.data;
 
-  if (appQuery.isError) {
+  // 다시 불러오다 실패해도 이미 받은 신청 · 코스는 그대로 보인다(판정 24) — 오류 · 준비 중 화면은 받은 데이터가
+  // 없을 때만.
+  if (app === undefined && appQuery.isError) {
     return (
       <>
         {topBar}
@@ -61,7 +64,7 @@ export function CourseMapPage() {
       </>
     );
   }
-  if (courseQuery.isError) {
+  if (course === undefined && courseQuery.isError) {
     return (
       <>
         {topBar}
@@ -78,7 +81,6 @@ export function CourseMapPage() {
       </>
     );
   }
-  const course = courseQuery.data;
   if (course === undefined) {
     return (
       <>

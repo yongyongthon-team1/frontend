@@ -1,7 +1,7 @@
 import * as Dialog from '@radix-ui/react-dialog';
-import { useFrameContainer } from '@/app/layouts/FrameContext';
 import { cn } from '@/shared/lib/cn';
 import { Button } from './Button';
+import { useFrameContainer } from './FrameContext';
 
 export interface ConfirmDialogProps {
   open: boolean;
