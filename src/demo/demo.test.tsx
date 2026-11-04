@@ -6,7 +6,7 @@ import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
-import { DEMO_EMAILS } from '@/shared/config/demoAccounts';
+import { DEMO_EMAILS, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { findApplicationId, renderApp } from '@/test/renderApp';
 import { useBootStatus } from './bootStatus';
 import { useDemoStore } from './demoStore';
@@ -198,13 +198,27 @@ describe('시연 패널', () => {
 
   it('시연 데이터 초기화(체크포인트)', async () => {
     const { user, router } = await renderApp('/my-tours', { as: 'student' });
-    act(() => useDemoStore.setState({ enabled: true }));
+    act(() =>
+      useDemoStore.setState({
+        enabled: true,
+        lastCoupon: { code: '123456', storeId: 1 },
+        aiSpeed: 'slow',
+        mapMode: 'schematic',
+      }),
+    );
     await user.selectOptions(screen.getByRole('combobox', { name: '체크포인트' }), '코스 확정');
     await user.click(screen.getByRole('button', { name: '시연 데이터 초기화' }));
     // 초기화는 세션도 비운다 — 발표자는 역할 버튼으로 다시 들어간다(지난 데이터의 주소를 next로 남기지 않는다).
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     await waitFor(() => expect(router.state.location.search).toBe(''));
     expect(useSession.getState().token).toBeNull();
+    // 지난 데이터의 최근 쿠폰은 지운다(판정 32). 패널 버튼은 데이터만 — 패널에 보이는 설정은 그대로다(판정 33).
+    expect(within(panel()).queryByText(/최근 쿠폰/)).toBeNull();
+    expect(useDemoStore.getState()).toMatchObject({
+      lastCoupon: null,
+      aiSpeed: 'slow',
+      mapMode: 'schematic',
+    });
 
     await user.click(screen.getByRole('button', { name: '고교생' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
@@ -248,9 +262,9 @@ describe('시연 패널', () => {
 });
 
 describe('발표 모드', () => {
-  it('역할 버튼 4개만 남은 세로 막대와 역할 배지', async () => {
+  it('역할 버튼 4개만 남은 세로 막대와 역할 배지 — 최근 쿠폰이 없으면 사장님은 owner1', async () => {
     useDemoStore.setState({ enabled: true, presentMode: true });
-    const { user, router } = await renderApp('/', { as: 'student' });
+    const { user, router, queryClient } = await renderApp('/', { as: 'student' });
     expect(await screen.findByText('고교생 화면')).toBeInTheDocument();
     for (const name of ROLE_BUTTONS) {
       expect(within(panel()).getByRole('button', { name })).toBeInTheDocument();
@@ -260,8 +274,49 @@ describe('발표 모드', () => {
 
     await user.click(within(panel()).getByRole('button', { name: '사장님' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/owner/store'));
+    expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: DEMO_EMAILS.owner });
     expect(await screen.findByText('사장님 화면')).toBeInTheDocument();
     expect(screen.queryByText('고교생 화면')).toBeNull();
+  });
+
+  it('학생이 본 쿠폰이 있으면 사장님은 그 쿠폰 가게의 사장님이 되어 코드를 채운다 (판정 32)', async () => {
+    useDemoStore.setState({ enabled: true, presentMode: true });
+    const { user, router, queryClient } = await renderApp('/my-tours', {
+      as: 'student',
+      checkpoint: 'CONFIRMED',
+    });
+    // 무대 대본(둘째 지점을 아래로)처럼 상점 2의 쿠폰을 본다 — owner1(상점 1)로 들어가면 "다른 가게 쿠폰"이 된다.
+    const coupon = getDb().coupons.find(
+      (c) => c.applicationId === findApplicationId(STUDENT, 1) && c.storeId === 2,
+    )!;
+    await router.navigate(`/coupons/${coupon.id}`);
+    await screen.findByTestId('coupon-code');
+
+    await user.click(within(panel()).getByRole('button', { name: '사장님' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/owner/coupons/redeem'));
+    expect(router.state.location.search).toBe(`?code=${coupon.code}`);
+    expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: DEMO_STORE_OWNERS[2] });
+    expect(await screen.findByLabelText('6자리 쿠폰 코드')).toHaveValue(coupon.code);
+    expect(await screen.findByText('내 가게 쿠폰')).toBeInTheDocument();
+    expect(screen.getByText('사장님 화면')).toBeInTheDocument();
+  });
+
+  it('막대에 API 모드를 늘 보이고, AI 느리게 · 지도 도식은 켜져 있을 때만 보인다 (판정 33)', async () => {
+    useDemoStore.setState({ enabled: true, presentMode: true });
+    await renderApp('/', { as: 'student' });
+    expect(within(panel()).getByText('목업')).toBeInTheDocument();
+    expect(within(panel()).queryByText('실서버')).toBeNull();
+    expect(within(panel()).queryByText('AI 느리게')).toBeNull();
+    expect(within(panel()).queryByText('지도 도식')).toBeNull();
+
+    act(() => {
+      useBootStatus.setState({ apiMode: 'real' });
+      useDemoStore.setState({ aiSpeed: 'slow', mapMode: 'schematic' });
+    });
+    expect(within(panel()).getByText('실서버')).toBeInTheDocument();
+    expect(within(panel()).queryByText('목업')).toBeNull();
+    expect(within(panel()).getByText('AI 느리게')).toBeInTheDocument();
+    expect(within(panel()).getByText('지도 도식')).toBeInTheDocument();
   });
 
   it('역할 배지는 발표 모드에서만', async () => {

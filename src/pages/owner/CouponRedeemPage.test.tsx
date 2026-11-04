@@ -241,6 +241,21 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     expect(await screen.findByText('쿠폰 확인 결과')).toBeInTheDocument();
   });
 
+  it('최근 쿠폰이 내 가게 쿠폰일 때만 최근 쿠폰 채우기를 보여 준다 (판정 32)', async () => {
+    await renderApp('/owner/coupons/redeem', { as: 'owner', checkpoint: 'CONFIRMED' }); // owner1 = 상점 1
+    await screen.findByLabelText(CODE_LABEL);
+    act(() => {
+      useDemoStore.setState({ enabled: true, lastCoupon: { code: demoCouponCode(1), storeId: 1 } });
+    });
+    expect(await screen.findByRole('button', { name: '최근 쿠폰 채우기' })).toBeInTheDocument();
+
+    // 학생이 마지막으로 본 쿠폰이 다른 가게(상점 2) 것이면 채워도 "다른 가게 쿠폰"이라 버튼을 숨긴다.
+    act(() => {
+      useDemoStore.setState({ lastCoupon: { code: demoCouponCode(2), storeId: 2 } });
+    });
+    expect(screen.queryByRole('button', { name: '최근 쿠폰 채우기' })).not.toBeInTheDocument();
+  });
+
   it('저장된 최근 쿠폰이 6자리 숫자가 아니면 채우기 버튼을 숨긴다', async () => {
     useDemoStore.setState({ enabled: true, lastCoupon: { code: 'abc', storeId: 1 } });
     await renderApp('/owner/coupons/redeem', { as: 'owner' });

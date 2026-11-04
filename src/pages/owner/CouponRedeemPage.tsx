@@ -1,9 +1,10 @@
 import { useState } from 'react';
 import { useLocation, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
+import { useMe } from '@/features/auth/queries';
 import { couponNotice } from '@/features/coupons/model';
 import { useCouponLookup, useRedeemCoupon } from '@/features/coupons/queries';
-import { useDemoStore, useDemoToolsOn } from '@/demo/demoStore';
+import { useDemoStore, useDemoToolsOn, validLastCoupon } from '@/demo/demoStore';
 import { formatTime, formatTourDate } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import { Button } from '@/shared/ui/Button';
@@ -16,7 +17,6 @@ import { StatusChip } from '@/shared/ui/StatusChip';
 import { TopBar } from '@/shared/ui/TopBar';
 
 const CODE_LENGTH = 6;
-const COUPON_CODE = /^\d{6}$/;
 
 /** `?code=` 같은 바깥 값을 CodeInput과 같은 규칙(숫자만, 6자리까지)으로 다듬는다. */
 function cleanCode(raw: string | null): string {
@@ -41,10 +41,12 @@ export function CouponRedeemPage() {
   const lookup = useCouponLookup(code);
   const redeem = useRedeemCoupon();
   const demoOn = useDemoToolsOn();
-  const lastCode = useDemoStore((s) => s.lastCoupon?.code);
-  // 저장된 값은 믿지 않는다 — 6자리 숫자일 때만 채우기를 보여 준다.
+  const { data: me } = useMe();
+  const lastCoupon = validLastCoupon(useDemoStore((s) => s.lastCoupon));
+  // 저장된 값은 믿지 않는다(6자리 숫자 · 시연 가게만, 판정 26). 그리고 내 가게 쿠폰일 때만 채운다 — 학생이 다른 가게
+  // 쿠폰을 마지막으로 봤으면 채워도 "다른 가게 쿠폰"이다(판정 32).
   const fillableCode =
-    demoOn && lastCode !== undefined && COUPON_CODE.test(lastCode) ? lastCode : null;
+    demoOn && lastCoupon !== null && lastCoupon.storeId === me?.storeId ? lastCoupon.code : null;
 
   const data = lookup.data;
   // 다시 불러오다 실패해도 이미 받은 조회 결과는 그대로 둔다.

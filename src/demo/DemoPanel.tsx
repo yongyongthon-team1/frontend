@@ -60,8 +60,8 @@ type Action = DemoRole | 'coupon' | 'reset';
 
 /**
  * 시연 패널(설계 5.8). DOM 하나이고 배치만 CSS가 바꾼다(판정 Task 21): 폭 900px 이상이면 프레임 옆(`MobileFrame`의
- * aside 슬롯), 좁으면 프레임 오른쪽 위의 토글 버튼 뒤에 접힌다. 발표 모드에서는 역할 버튼 4개만 남은 세로 막대다.
- * 시연 도구가 켜졌을 때만 그린다(`useDemoToolsOn` — AppShell).
+ * aside 슬롯), 좁으면 프레임 오른쪽 위의 토글 버튼 뒤에 접힌다. 발표 모드에서는 역할 버튼 4개와 작은 설정 표시만
+ * 남은 세로 막대다. 시연 도구가 켜졌을 때만 그린다(`useDemoToolsOn` — AppShell).
  */
 export function DemoPanel() {
   const presentMode = useDemoStore((s) => s.presentMode) === true;
@@ -148,27 +148,68 @@ function useDemoActions(onDone: () => void): DemoActions {
   };
 }
 
-function RoleButtons({ actions }: { actions: DemoActions }) {
-  return DEMO_ROLES.map((role) => (
-    <Button
-      key={role}
-      size="sm"
-      variant="secondary"
-      className="px-2"
-      loading={actions.running === role}
-      onClick={() => actions.switchRole(role)}
-    >
-      {ROLE_LABEL[role]}
-    </Button>
-  ));
+/** 역할 버튼 4개. `ownerToCoupon`이면 `사장님`이 쿠폰 가게 사장님 전환을 대신한다(발표 모드 — 판정 32). */
+function RoleButtons({
+  actions,
+  ownerToCoupon = false,
+}: {
+  actions: DemoActions;
+  ownerToCoupon?: boolean;
+}) {
+  return DEMO_ROLES.map((role) => {
+    const toCoupon = ownerToCoupon && role === 'owner';
+    return (
+      <Button
+        key={role}
+        size="sm"
+        variant="secondary"
+        className="px-2"
+        loading={actions.running === (toCoupon ? 'coupon' : role)}
+        onClick={() => (toCoupon ? actions.switchCouponOwner() : actions.switchRole(role))}
+      >
+        {ROLE_LABEL[role]}
+      </Button>
+    );
+  });
 }
 
-/** 발표 모드: 역할 버튼 4개만 남은 작은 세로 막대. */
+/**
+ * 발표 모드: 역할 버튼 4개만 남은 작은 세로 막대. `사장님`은 학생이 마지막으로 본 쿠폰이 있으면 그 쿠폰을 발급한
+ * 가게의 사장님으로 바꾸고 사용 처리 화면에 코드를 채운다 — 무대에서 다섯째 버튼을 고르지 않게, 사장님 = 방금 본
+ * 쿠폰의 사장님이다(판정 32). 쿠폰이 없으면 평소처럼 owner1. 아래에는 지금 설정을 작게 보인다(판정 33).
+ */
 function RoleBar({ actions }: { actions: DemoActions }) {
+  const coupon = validLastCoupon(useDemoStore((s) => s.lastCoupon));
   return (
     <div className="flex flex-col gap-2 rounded-lg border border-border bg-bg p-2 shadow-md">
-      <RoleButtons actions={actions} />
+      <RoleButtons actions={actions} ownerToCoupon={coupon !== null} />
+      <RoleBarStatus />
     </div>
+  );
+}
+
+/**
+ * 발표 모드에서는 환경 토글이 안 보이므로 지금 API 모드(`목업` · `실서버`)를 늘 작게 보이고, 기본값이 아닌 설정
+ * (AI 느리게 · 지도 도식)은 켜져 있을 때만 보인다 — 지난 리허설의 설정이 무대에서 몰래 남지 않게(판정 33).
+ */
+function RoleBarStatus() {
+  const apiMode = useBootStatus((s) => s.apiMode);
+  const aiSpeed = useDemoStore((s) => s.aiSpeed);
+  const mapMode = useDemoStore((s) => s.mapMode);
+  return (
+    <ul aria-label="시연 설정" className="flex flex-col items-center gap-1 text-xs font-semibold">
+      <li className="text-muted">{apiMode === 'real' ? '실서버' : '목업'}</li>
+      {aiSpeed === 'slow' ? (
+        <li>
+          <Badge tone="warning">AI 느리게</Badge>
+        </li>
+      ) : null}
+      {mapMode === 'schematic' ? (
+        <li>
+          <Badge tone="warning">지도 도식</Badge>
+        </li>
+      ) : null}
+    </ul>
   );
 }
 

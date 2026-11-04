@@ -18,6 +18,9 @@ beforeEach(() => {
     enabled: false,
     apiModeOverride: null,
     presentMode: false,
+    aiSpeed: 'normal',
+    mapMode: 'auto',
+    lastCoupon: null,
     resetKey: null,
     activeDemoEmail: null,
   });
@@ -72,13 +75,34 @@ describe('렌더 전 적용', () => {
   });
 
   it('없는 파라미터는 저장값을 건드리지 않는다', () => {
-    useDemoStore.setState({ enabled: true, apiModeOverride: 'mock', presentMode: true });
+    useDemoStore.setState({
+      enabled: true,
+      apiModeOverride: 'mock',
+      presentMode: true,
+      aiSpeed: 'slow',
+      mapMode: 'schematic',
+    });
     applyDemoParamsBeforeRender(parseDemoParams('?as=student'));
     expect(useDemoStore.getState()).toMatchObject({
       enabled: true,
       apiModeOverride: 'mock',
       presentMode: true,
+      aiSpeed: 'slow',
+      mapMode: 'schematic',
     });
+  });
+
+  it('mode는 demo=1과 함께일 때만 저장한다(시연 패널 없는 방문자가 실서버 모드에 갇히지 않게, 판정 33)', () => {
+    applyDemoParamsBeforeRender(parseDemoParams('?mode=real'));
+    expect(useDemoStore.getState().apiModeOverride).toBeNull();
+    applyDemoParamsBeforeRender(parseDemoParams('?demo=1&mode=real'));
+    expect(useDemoStore.getState().apiModeOverride).toBe('real');
+  });
+
+  it('reset=1은 지난 리허설의 AI 속도 · 지도 모드도 기본값(보통 · 자동)으로 되돌린다 (판정 33)', () => {
+    useDemoStore.setState({ aiSpeed: 'slow', mapMode: 'schematic' });
+    applyDemoParamsBeforeRender(parseDemoParams('?demo=1&reset=1&as=student&present=1'));
+    expect(useDemoStore.getState()).toMatchObject({ aiSpeed: 'normal', mapMode: 'auto' });
   });
 });
 
@@ -142,5 +166,12 @@ describe('첫 렌더 전 실행(초기화 · 빠른 로그인)', () => {
     const landing = await runDemoParams(parseDemoParams('?reset=1'), { queryClient, path: '/' });
     expect(landing).toBeNull();
     expect(useSession.getState().token).toBeNull();
+  });
+
+  it('reset=1은 지난 데이터의 최근 쿠폰도 지운다 (판정 32)', async () => {
+    const queryClient = setupClient();
+    useDemoStore.setState({ lastCoupon: { code: '123456', storeId: 2 } });
+    await runDemoParams(parseDemoParams('?demo=1&reset=1&as=student'), { queryClient, path: '/' });
+    expect(useDemoStore.getState().lastCoupon).toBeNull();
   });
 });

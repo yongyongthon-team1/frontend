@@ -39,7 +39,7 @@ interface DemoState {
   setPresentMode(presentMode: boolean): void;
   setAiSpeed(aiSpeed: AiSpeed): void;
   setMapMode(mapMode: MapMode): void;
-  setLastCoupon(coupon: LastCoupon): void;
+  setLastCoupon(coupon: LastCoupon | null): void;
   setResetKey(resetKey: string | null): void;
   setActiveDemoEmail(email: string | null): void;
 }

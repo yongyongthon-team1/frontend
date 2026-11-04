@@ -18,3 +18,12 @@ test('배포 빌드: 로그인 후 딥링크 새로고침에도 상태 유지', 
     'page',
   );
 });
+
+// 파비콘 링크가 없으면 브라우저가 /favicon.ico를 찾고, SPA rewrite가 그 요청에 index.html을 준다.
+test('배포 빌드: 파비콘은 SVG 파일로 준다', async ({ page }) => {
+  await page.goto('/login');
+  await expect(page.locator('link[rel="icon"]')).toHaveAttribute('href', '/favicon.svg');
+  const icon = await page.request.get('/favicon.svg');
+  expect(icon.ok()).toBe(true);
+  expect(icon.headers()['content-type']).toContain('image/svg+xml');
+});

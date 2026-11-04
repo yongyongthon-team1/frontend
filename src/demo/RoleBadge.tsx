@@ -13,8 +13,9 @@ const ROLE_BADGE: Record<Role, { label: string; tone: Tone }> = {
 };
 
 /**
- * 발표 모드의 역할 배지(설계 5.8 — 관객에게 "지금 가이드 화면"임을 보여 준다). TopBar가 아니라 앱 계층이
+ * 발표 모드의 역할 배지(설계 5.8 — 관객에게 "지금 가이드 화면"임을 크게 보여 준다). TopBar가 아니라 앱 계층이
  * 프레임 오른쪽 위에 겹쳐 그린다(판정 Task 21 — shared가 demo를 모르게). 위치는 globals.css `.role-badge`.
+ * 크기는 무대에서 읽히는 16px 굵은 글씨이고, 골든 패스 화면의 TopBar 제목 글자를 덮지 않는다(e2e/golden-path 발표 모드).
  */
 export function RoleBadge() {
   const presentMode = useDemoStore((s) => s.presentMode) === true;
@@ -32,7 +33,7 @@ function CurrentRoleBadge() {
   if (token === null || badge === undefined) return null;
   return (
     <div className="role-badge rounded-full bg-bg shadow-md">
-      <Badge tone={badge.tone} className="px-3 py-1.5 text-sm">
+      <Badge tone={badge.tone} className="px-3 py-2 text-base font-bold">
         {badge.label}
       </Badge>
     </div>

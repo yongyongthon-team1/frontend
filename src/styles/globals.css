@@ -135,12 +135,16 @@
     display: none;
   }
 
-  /* 발표 모드의 역할 배지(RoleBadge): 프레임 오른쪽 위, TopBar 줄 가운데에 겹친다. 바텀시트 · 다이얼로그(40~50) 아래. */
+  /*
+   * 발표 모드의 역할 배지(RoleBadge): 프레임 오른쪽 위, TopBar 줄 세로 가운데에 겹친다(배지 높이와 상관없이).
+   * 바텀시트 · 다이얼로그(40~50) 아래.
+   */
   .role-badge {
     position: absolute;
-    top: calc((var(--topbar-h) - 2rem) / 2);
+    top: calc(var(--topbar-h) / 2);
     right: var(--gutter);
     z-index: 30;
+    transform: translateY(-50%);
     pointer-events: none;
   }
 

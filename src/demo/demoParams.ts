@@ -15,6 +15,7 @@ import { resetDemoData } from './resetDemo';
 
 // 원클릭 시연 링크(설계 5.8): `?demo=1&mode=mock|real&reset=1&checkpoint=CONFIRMED&as=student&present=1&key=…`
 // 한 번으로 시연 도구 · API 모드 · 데이터 초기화 · 역할 · 발표 모드를 세팅한다. 모르는 값은 없는 것으로 본다.
+// `mode`는 이번 페이지에는 늘 쓰이고(`resolveApiMode`), 저장은 `demo=1`과 함께일 때만 한다.
 
 export interface DemoParams {
   demo: boolean;
@@ -51,13 +52,21 @@ export function parseDemoParams(search: string): DemoParams {
   };
 }
 
-/** 렌더 전에 시연 설정에 저장한다: demo → 시연 도구 켬, mode → API 모드 덮어쓰기, present → 발표 모드, key → 초기화 키. */
+/**
+ * 렌더 전에 시연 설정에 저장한다: demo → 시연 도구 켬, mode → API 모드 덮어쓰기(`demo=1`과 함께일 때만 — 시연 패널이
+ * 없는 방문자가 실서버 모드에 갇히지 않게), present → 발표 모드, key → 초기화 키. reset은 AI 속도 · 지도 모드도
+ * 기본값(보통 · 자동)으로 되돌린다 — 지난 리허설의 설정이 발표 모드(패널 토글이 안 보임)에서 몰래 남지 않게(판정 33).
+ */
 export function applyDemoParamsBeforeRender(p: DemoParams): void {
   const store = useDemoStore.getState();
   if (p.demo) store.setEnabled(true);
-  if (p.mode !== null) store.setApiModeOverride(p.mode);
+  if (p.demo && p.mode !== null) store.setApiModeOverride(p.mode);
   if (p.present !== null) store.setPresentMode(p.present);
   if (p.key !== null) store.setResetKey(p.key);
+  if (p.reset) {
+    store.setAiSpeed('normal');
+    store.setMapMode('auto');
+  }
 }
 
 function failureDescription(error: unknown): string | undefined {
