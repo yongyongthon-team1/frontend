@@ -49,8 +49,8 @@
 | GET /api/me | — | `Me` | UNAUTHORIZED 401 | 모든 화면(가드 · 첫 화면 결정), 재학 인증 · 내 정보 |
 | GET /api/universities | — | `University[]` | — | 홈 학교 선택, 탐방 개설 |
 | GET /api/universities/:id/insight | — | `Insight` | NOT_FOUND 404 | 추천 목록, 코스 초안(방학 상권 인사이트 카드) |
-| POST /api/recommendations | `RecommendationQuery` | `RecommendationResult` | VALIDATION 400 | 홈 `/`, 추천 목록 `/recommendations` |
-| GET /api/tours?status=&universityId= | — | `TourSummary[]` | — | 추천 0건 대체 목록, 탐색 `/explore` |
+| POST /api/recommendations | `RecommendationQuery` | `RecommendationResult` | VALIDATION 400 | 홈 `/`, 추천 목록 `/recommendations`(추천 0건이면 넓힌 대체 목록도 이 응답의 `items` · `fallback`으로 온다) |
+| GET /api/tours?status=&universityId= | — | `TourSummary[]` | — | 탐색 `/explore`(P2, 가이드 · 사장님 `탐색` 탭) |
 | GET /api/tours/:id | — | `TourDetail` | NOT_FOUND 404 | 탐방 상세 `/tours/:tourId` |
 | POST /api/tours/:id/applications | `{motivation}` | `MyApplication` (201) | NOT_VERIFIED · GUARDIAN_NOT_AGREED 403 / TOUR_NOT_RECRUITING · TOUR_CLOSED · DUPLICATE_APPLICATION · REAPPLY_AFTER_REJECT 409 / VALIDATION 400 | 신청서 `/tours/:tourId/apply` |
 | GET /api/me/applications | — | `MyApplication[]` | — | 내 탐방 목록 `/my-tours` |
@@ -72,18 +72,18 @@
 | GET /api/owner/coupons/:code | — | `CouponLookup` | COUPON_NOT_FOUND 404 / COUPON_OTHER_STORE 403 | 쿠폰 사용 처리 `/owner/coupons/redeem` |
 | POST /api/owner/coupons/:code/redeem | — | `RedeemResult` | COUPON_ALREADY_USED(`details.usedAt`) · COUPON_EXPIRED · COUPON_NOT_YET 409 / COUPON_OTHER_STORE 403 / COUPON_NOT_FOUND 404 | 쿠폰 사용 처리 |
 | GET /api/health | — | `{ok:true, mode}` | — | 시연 패널(연결 확인), 배포 확인 |
-| POST /api/demo/reset | `{checkpoint?}` + 헤더 `X-Demo-Key` | `{ok:true}` | FORBIDDEN 403 | 시연 패널(시연 데이터 초기화) |
+| POST /api/demo/reset | `{checkpoint?}` + 헤더 `X-Demo-Key`(세션 토큰 없음) | `{ok:true}` | FORBIDDEN 403(키 없음 · 틀림) / VALIDATION 400(모르는 `checkpoint`) | 시연 패널(시연 데이터 초기화), 원클릭 시연 링크 `reset=1` |
 
 참고
 
 - 코스 응답(`Course`)을 돌려주는 변경 API는 모두 **변경 후의 전체 `Course`**를 준다. 신청 승인 · 거절은 **변경 후의 전체 `ApplicantsBoard`**를 준다. 프론트가 응답으로 화면을 바로 갱신한다.
 - `GET /api/guide/tours/:id/course`는 코스가 아직 없으면 `NOT_FOUND 404`를 준다. 프론트는 이를 "코스 없음" 상태로 그린다.
 - `GET /api/tours/:id/course`는 코스가 `CONFIRMED`이고 요청자가 승인된 신청자(또는 해당 가이드)일 때만 준다. 코스가 없거나 `DRAFT`면 `COURSE_NOT_READY 404`, 승인되지 않은 사람이면 `FORBIDDEN 403`.
-- `POST /api/demo/reset`은 시연 데이터를 시드 상태로 되돌린다. `checkpoint`(선택)를 주면 "신청 완료 · 승인 완료 · 코스 확정 · 쿠폰 발급" 같은 중간 단계에서 시작한다. 6절에서 방식을 묻는다.
+- `POST /api/demo/reset`은 시연 데이터를 시드 상태로 되돌린다. `checkpoint`(선택)를 주면 "신청 완료 · 승인 완료 · 코스 확정 · 쿠폰 발급" 같은 중간 단계에서 시작한다. 프론트가 기대하는 약속(키 · 체크포인트 값 · 세션)은 6절 11번, 시연 계정 · 가게 짝은 13번이다.
 
 ## 4. 타입 정의
 
-아래 타입은 프론트 `src/features/*/model.ts`의 실제 정의와 같다. `string`으로 적힌 날짜 · 시각은 2절 형식을 따른다.
+아래 타입은 프론트 `src/features/*/model.ts`의 실제 정의와 같다. 단 `CourseStop.review.recent`(최근 리뷰)는 계약에 먼저 넣은 필드라 프론트 타입 · 목업 · 화면(상점 시트의 `최근 리뷰` 펼치기, 설계 5.6 · R-02)은 MVP 2단계에서 맞춘다. 그때까지 프론트는 이 필드를 읽지 않으므로 먼저 내려 줘도 된다. `string`으로 적힌 날짜 · 시각은 2절 형식을 따른다.
 
 **서버가 계산해서 주길 기대하는 값.** 프론트는 자기 시계로 유효 여부를 판단하지 않고 이 값을 그대로 그린다.
 
@@ -96,7 +96,7 @@
 | `MyApplication.couponCount` | 이 신청으로 발급된 쿠폰 수 |
 | `Coupon.state` | `BEFORE_DAY`(탐방 당일 전) · `USABLE` · `EXPIRED` · `USED`. 발급 상태(`status`)와 시각을 합쳐 서버가 판정 |
 | `Coupon.reviewWritten` | 이 쿠폰의 상점에 리뷰를 이미 썼는지 |
-| `CourseStop.review` · `CourseStop.partnership` | 지점별 리뷰 요약(평균 · 개수 · AI 요약)과 제휴 할인. 해당 없으면 `null` |
+| `CourseStop.review` · `CourseStop.partnership` | 지점별 리뷰 요약(평균 · 개수 · AI 요약 · 최근 리뷰 최신순 최대 3개)과 제휴 할인. 해당 없으면 `null`(캠퍼스 지점의 `review`). 리뷰가 0건인 상점은 `{ average: null, count: 0, summary: null, recent: [] }` |
 | `Course.issuedCouponCount` | 코스 확정 때 발급된 쿠폰 수 |
 | `TourSummary.title` | 탐방 제목. ERD에 없어서 "대학교 + 가이드 학과 + 탐방"으로 만드는 안을 쓰고 있다(6절 질문) |
 
@@ -141,8 +141,11 @@ type CourseStatus = 'DRAFT' | 'CONFIRMED';
 type StopType = 'CAMPUS' | 'STORE';
 interface CourseStop { id: number; order: number; visitTime: string; type: StopType; name: string; category: string;
   lat: number; lng: number; description: string | null; recommendationReason: string | null; storeId: number | null;
-  partnership: { discount: string } | null; review: { average: number | null; count: number; summary: string | null } | null;
+  partnership: { discount: string } | null;
+  review: { average: number | null; count: number; summary: string | null;
+    recent: { rating: number; content: string; createdAt: string }[] } | null;  // recent: 최신순 최대 3개(판정 34, 프론트 반영은 MVP 2단계)
   dataSource: string | null }
+// review.recent[]: rating 1~5(ERD reviews.rating), content = 한줄평(reviews.content), createdAt = 작성 시각(+09:00 ISO 8601)
 interface CourseTourInfo { id: number; title: string; universityId: number; universityShortName: string; campusName: string;
   startsAt: string; endsAt: string | null }
 interface Course { tourId: number; status: CourseStatus; tour: CourseTourInfo; stops: CourseStop[]; interests: string[];
@@ -205,9 +208,18 @@ MVP에는 막다른 곳 없는 최소판으로 들어가는 화면들이다. 위
 
 **시연 운영**
 
-11. **시연 리셋 수단**: `POST /api/demo/reset`을 비밀 키 헤더(`X-Demo-Key`)로 보호하는 안이다. 공개 배포이므로 키 없이 호출되면 안 된다. 다른 수단(스크립트, 관리 도구)이면 알려 주세요. `checkpoint` 값으로 중간 단계 시드에서 시작할 수 있으면 좋다.
+11. **시연 리셋 수단**: `POST /api/demo/reset`을 비밀 키 헤더(`X-Demo-Key`)로 보호하는 안이다. 공개 배포이므로 키 없이 호출되면 안 된다. 다른 수단(스크립트, 관리 도구)이면 알려 주세요. `checkpoint` 값으로 중간 단계 시드에서 시작할 수 있으면 좋다. 프론트(시연 패널 · 원클릭 링크 `reset=1`)는 지금 이렇게 부르고, 목업은 키 검사(403)만 빼고 같은 약속을 구현한다.
+    - 요청: 본문 `{ "checkpoint"?: "START" | "APPLIED" | "APPROVED" | "CONFIRMED" }`(없으면 `START`), 헤더 `X-Demo-Key: <키>`. 키는 원클릭 시연 링크의 `key=`로 받아 브라우저에 둔다.
+    - **세션 토큰 없이** 부른다(`Authorization` 헤더 없음). 리셋은 로그인과 상관없이 키만으로 동작해야 한다 — 지난 리허설의 만료된 토큰이 남아 있어도 리셋이 되게.
+    - 응답: 성공 `200 { "ok": true }`. 키가 없거나 틀리면 `403 FORBIDDEN`, 모르는 `checkpoint`는 `400 VALIDATION`(데이터는 그대로).
+    - 리셋할 때마다 12번처럼 **그날(Asia/Seoul) 기준 상대 날짜**로 다시 시드한다(시연 탐방 = 오늘).
+    - 프론트는 리셋이 성공하면 세션 토큰을 버리고 시연 계정으로 다시 로그인한다. 그래서 리셋이 기존 세션을 모두 무효로 만들어도 된다.
+    - `checkpoint`는 시연 골든 패스(설계 6.1)를 그 단계까지 진행한 데이터다. `START`: 기본 시드 — 시연 학생 `student@demo.kr`은 어느 탐방에도 신청 · 쿠폰이 없다. `APPLIED`: + 그 학생이 시연 탐방(가이드 `guide@demo.kr`)에 신청했다(승인 대기). `APPROVED`: + 가이드가 그 신청을 승인했다. `CONFIRMED`: + 가이드가 코스 초안을 만들어 확정했다(승인자마다 코스 안 제휴 상점 쿠폰이 발급돼 오늘 사용 가능). 목업 시드의 시연 탐방에는 미리 승인된 학생 2명과 승인 대기 1명이 더 있다(승인 화면 · 정원 표시용).
 12. **당일 날짜 시드**: 시연 탐방은 "오늘", 시작 시각은 발표 시간대 이후, 제휴 기간은 오늘을 포함하는 시드를 만드는 스크립트가 필요하다([결정 0007](../decisions/0007-demo-data-seeded-with-today.md)). 리셋 때마다 오늘 기준으로 다시 만들어 주세요.
-13. **시연 계정 시드**: 역할별 계정(고교생 · 가이드 · 사장님 · 운영자)과, 제휴 상점마다 사장님 계정이 필요하다. 시연 캠퍼스 주변의 식사 · 카페 상점은 모두 제휴 상점으로 두면 골든 패스가 항상 이어진다.
+13. **시연 계정 시드**: 역할별 계정(고교생 · 가이드 · 사장님 · 운영자)과, 제휴 상점마다 사장님 계정이 필요하다. 시연 캠퍼스 주변의 식사 · 카페 상점은 모두 제휴 상점으로 두면 골든 패스가 항상 이어진다. 프론트는 아래 값을 고정해 쓴다(`src/shared/config/demoAccounts.ts` — 빠른 로그인 · 원클릭 링크 `as=` · 시연 패널). 다르게 시드하면 알려 주세요. 그 파일 하나만 바꾼다.
+    - 계정 이메일: 고교생 `student@demo.kr`(재학 인증 `APPROVED` · 보호자 동의 `AGREED` — 바로 신청할 수 있다), 인증 전 고교생 `newbie@demo.kr`(재학 인증 미제출), 가이드 `guide@demo.kr`(재학 인증 `APPROVED` · 가이드 프로필 작성, 시연 탐방의 가이드), 사장님 `owner1@demo.kr` ~ `owner4@demo.kr`(사업자 인증 완료, 각자 가게 1개 연결), 운영자 `admin@demo.kr`.
+    - 비밀번호: 시연 계정은 **모두 같은 비밀번호 하나**를 쓴다. 프론트는 빌드 환경변수 `VITE_DEMO_PASSWORD`로 받는다(번들에 들어가 공개되므로 시연 전용 계정에만 쓴다). 목업의 비밀번호는 `demo1234`다.
+    - 가게 ↔ 사장님: 상점 id `1` = `owner1`, `2` = `owner2`, `3` = `owner3`, `4` = `owner4`(목업: 서천 밥상 · 카페 모래시계 · 영통 분식집 · 보드게임 카페 다이스). 시연 도구의 `쿠폰 가게 사장님으로 전환`(발표 모드에서는 `사장님` 버튼)이 학생 쿠폰의 `storeId`로 사장님 계정을 고르므로 이 짝이 맞아야 하고, 프론트는 이 네 가게만 시연 가게로 본다. 사장님의 `GET /api/me`는 연결한 가게의 `storeId`를 준다(사용 처리 화면이 "내 가게 쿠폰"인지 고를 때 쓴다).
 14. **일정**: 골든 패스 계약 동결 11/6, API 배포 11/9, 배포 주소 고정 11/12가 가능한지 확인 부탁드린다.
 
 **정해 둔 규칙 · 임시 문구**
