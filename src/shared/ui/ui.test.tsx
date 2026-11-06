@@ -690,6 +690,43 @@ describe('ListRow', () => {
   });
 });
 
+function StatefulTabs({ onChange }: { onChange(value: string): void }) {
+  const [value, setValue] = useState('upcoming');
+  return (
+    <SegmentedTabs
+      label="탐방 구분"
+      tabs={[
+        { value: 'upcoming', label: '예정된 탐방' },
+        { value: 'past', label: '지난 탐방' },
+      ]}
+      value={value}
+      onChange={(v) => {
+        onChange(v);
+        setValue(v);
+      }}
+    />
+  );
+}
+
+function StatefulChips({ onChange }: { onChange(value: string): void }) {
+  const [value, setValue] = useState('all');
+  return (
+    <FilterChips
+      label="추천 필터"
+      chips={[
+        { value: 'all', label: '전체' },
+        { value: 'design', label: '디자인' },
+        { value: 'khu', label: '경희대', kind: 'school' },
+      ]}
+      value={value}
+      onChange={(v) => {
+        onChange(v);
+        setValue(v);
+      }}
+    />
+  );
+}
+
 describe('SegmentedTabs', () => {
   const tabs = [
     { value: 'upcoming', label: '예정된 탐방' },
@@ -710,14 +747,42 @@ describe('SegmentedTabs', () => {
     );
   });
 
-  it('탭을 누르면 onChange(value), 방향키로도 옮긴다', async () => {
+  it('탭을 누르면 onChange(value)', async () => {
     const onChange = vi.fn();
     render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="upcoming" onChange={onChange} />);
     await userEvent.click(screen.getByRole('tab', { name: '지난 탐방' }));
     expect(onChange).toHaveBeenLastCalledWith('past');
+  });
+
+  it('방향키로 이웃 탭을 고르고 초점을 옮긴다(양 끝에서 감긴다)', async () => {
+    const onChange = vi.fn();
+    render(<StatefulTabs onChange={onChange} />);
     screen.getByRole('tab', { name: '예정된 탐방' }).focus();
     await userEvent.keyboard('{ArrowRight}');
+    expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenLastCalledWith('past');
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveFocus();
+    onChange.mockClear();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(onChange).toHaveBeenLastCalledWith('upcoming');
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveFocus();
+    onChange.mockClear();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(onChange).toHaveBeenLastCalledWith('past');
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveFocus();
+  });
+
+  it('value가 어느 탭에도 없으면 첫 탭이 Tab 정지점이다', () => {
+    render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="none" onChange={() => {}} />);
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute('tabindex', '-1');
+  });
+
+  it('긴 라벨의 말줄임은 안쪽 span에서 일어난다', () => {
+    render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="upcoming" onChange={() => {}} />);
+    const tab = screen.getByRole('tab', { name: '예정된 탐방' });
+    expect(tab.querySelector('span > span')).toHaveClass('truncate');
+    expect(tab.querySelector('span')).not.toHaveClass('truncate');
   });
 });
 
@@ -742,6 +807,28 @@ describe('FilterChips', () => {
     await userEvent.click(screen.getByRole('radio', { name: '경희대' }));
     expect(onChange).toHaveBeenCalledWith('khu');
   });
+
+  it('방향키로 이웃 칩을 고르고 초점을 옮긴다(양 끝에서 감긴다)', async () => {
+    const onChange = vi.fn();
+    render(<StatefulChips onChange={onChange} />);
+    screen.getByRole('radio', { name: '전체' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(onChange).toHaveBeenLastCalledWith('design');
+    expect(screen.getByRole('radio', { name: '디자인' })).toHaveFocus();
+    onChange.mockClear();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(onChange).toHaveBeenLastCalledWith('all');
+    onChange.mockClear();
+    await userEvent.keyboard('{ArrowLeft}');
+    expect(onChange).toHaveBeenLastCalledWith('khu');
+    expect(screen.getByRole('radio', { name: '경희대' })).toHaveFocus();
+  });
+
+  it('value가 어느 칩에도 없으면 첫 칩이 Tab 정지점이다', () => {
+    render(<FilterChips label="추천 필터" chips={chips} value="none" onChange={() => {}} />);
+    expect(screen.getByRole('radio', { name: '전체' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('radio', { name: '경희대' })).toHaveAttribute('tabindex', '-1');
+  });
 });
 
 describe('StepList · NumberedList', () => {
@@ -755,6 +842,30 @@ describe('StepList · NumberedList', () => {
     expect(items[2]).toHaveTextContent('03');
   });
 
+  it('StepList · NumberedList: ol에 list 역할이 명시된다', () => {
+    const { container } = render(
+      <>
+        <StepList steps={['하나', '둘']} />
+        <NumberedList items={['하나', '둘']} />
+      </>,
+    );
+    const lists = container.querySelectorAll('ol');
+    expect(lists).toHaveLength(2);
+    lists.forEach((ol) => expect(ol).toHaveAttribute('role', 'list'));
+  });
+
+  it('StepList · NumberedList: 같은 문구가 겹쳐도 경고 없이 그린다', () => {
+    const error = vi.spyOn(console, 'error').mockImplementation(() => {});
+    render(
+      <>
+        <StepList steps={['같음', '같음']} />
+        <NumberedList items={['같음', '같음']} />
+      </>,
+    );
+    expect(error).not.toHaveBeenCalled();
+    error.mockRestore();
+  });
+
   it('StepList: current가 없으면 aria-current가 없다', () => {
     render(<StepList steps={['하나', '둘']} />);
     expect(document.querySelector('[aria-current]')).toBeNull();
@@ -766,7 +877,7 @@ describe('StepList · NumberedList', () => {
     expect(items).toHaveLength(3);
     expect(items[0]).toHaveTextContent('1');
     expect(items[2]).toHaveTextContent('동네 카페 질문');
-    expect(items[2].querySelector('span')).toHaveClass('bg-local-soft');
+    expect(items[2].querySelector('span')).toHaveClass('bg-local-soft', 'text-ink');
     expect(items[0].querySelector('span')).toHaveClass('bg-brand-soft');
   });
 });

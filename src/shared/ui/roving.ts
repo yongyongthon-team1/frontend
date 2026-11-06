@@ -18,3 +18,9 @@ export function handleRovingKeyDown(
   const items = e.currentTarget.querySelectorAll<HTMLElement>(`[role="${role}"]`);
   items[next]?.focus();
 }
+
+// 선택값이 어느 항목에도 없을 때도 그룹이 Tab으로 닿도록, 선택 항목(없으면 첫 항목)만 정지점(0)으로 둔다.
+export function rovingTabIndex(values: string[], current: string, value: string): 0 | -1 {
+  const stop = values.includes(current) ? current : values[0];
+  return value === stop ? 0 : -1;
+}

@@ -1,5 +1,5 @@
 import { cn } from '@/shared/lib/cn';
-import { handleRovingKeyDown } from './roving';
+import { handleRovingKeyDown, rovingTabIndex } from './roving';
 
 export interface SegmentedTabsProps {
   tabs: { value: string; label: string }[];
@@ -27,17 +27,17 @@ export function SegmentedTabs({ tabs, value, onChange, label }: SegmentedTabsPro
             type="button"
             role="tab"
             aria-selected={selected}
-            tabIndex={selected ? 0 : -1}
+            tabIndex={rovingTabIndex(values, value, tab.value)}
             onClick={() => onChange(tab.value)}
             className="min-w-0 flex-1 p-1"
           >
             <span
               className={cn(
-                'flex h-full items-center justify-center truncate rounded-[13px] px-2 text-sm transition-colors',
+                'flex h-full items-center justify-center rounded-[13px] px-2 text-sm transition-colors',
                 selected ? 'bg-brand font-bold text-on-primary' : 'font-medium text-muted',
               )}
             >
-              {tab.label}
+              <span className="truncate">{tab.label}</span>
             </span>
           </button>
         );

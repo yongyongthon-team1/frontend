@@ -1,5 +1,5 @@
 import { cn } from '@/shared/lib/cn';
-import { handleRovingKeyDown } from './roving';
+import { handleRovingKeyDown, rovingTabIndex } from './roving';
 import { touchExpandClass } from './touch';
 
 export interface FilterChip {
@@ -34,7 +34,7 @@ export function FilterChips({ chips, value, onChange, label }: FilterChipsProps)
             type="button"
             role="radio"
             aria-checked={checked}
-            tabIndex={checked ? 0 : -1}
+            tabIndex={rovingTabIndex(values, value, chip.value)}
             onClick={() => onChange(chip.value)}
             className={cn(
               touchExpandClass,
