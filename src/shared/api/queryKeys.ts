@@ -24,5 +24,6 @@ export const qk = {
   /** 뮤테이션 키: AI 코스 초안 생성. 화면이 다시 마운트돼도 진행 중인 생성을 알아본다. */
   courseDraft: (tourId: number) => ['courseDraft', tourId] as const,
   couponLookup: (code: string) => ['couponLookup', code] as const,
+  myStore: ['myStore'] as const,
   health: ['health'] as const,
 };

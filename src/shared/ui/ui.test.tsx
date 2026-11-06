@@ -449,6 +449,19 @@ describe('CodeInput', () => {
     expect(screen.getByLabelText('6자리 쿠폰 코드')).toHaveValue('123456');
   });
 
+  it('입력한 자리는 칸 하나씩 보이고, 입력할 칸이 강조된다', async () => {
+    const { container } = render(<W />);
+    const cells = () => Array.from(container.querySelectorAll('[aria-hidden] > div'));
+    expect(cells()).toHaveLength(6);
+    await userEvent.type(screen.getByLabelText('6자리 쿠폰 코드'), '4826');
+    expect(cells().map((c) => c.textContent)).toEqual(['4', '8', '2', '6', '', '']);
+    expect(cells()[4]).toHaveClass('border-brand');
+    expect(cells()[0]).not.toHaveClass('border-brand');
+    await userEvent.type(screen.getByLabelText('6자리 쿠폰 코드'), '19');
+    expect(cells().map((c) => c.textContent)).toEqual(['4', '8', '2', '6', '1', '9']);
+    expect(cells()[5]).toHaveClass('border-brand'); // 다 차면 마지막 칸
+  });
+
   it('length와 label을 바꿀 수 있다', async () => {
     const onComplete = vi.fn();
     function W4() {

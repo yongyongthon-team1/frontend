@@ -59,14 +59,14 @@
 | `guide-a03` | 주변 상점 교체 | `/guide/tours/:tourId/course/stops/pick` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-a04` | 탐방 취소 확인 | `/guide/tours/:tourId/cancel` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s01` | 사업자 인증 | `/owner/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `owner-s02` | 내 가게 · 제휴 할인 | `/owner/store` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `owner-s03` | 쿠폰 사용 처리 | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| `owner-s02` | 내 가게 · 제휴 할인 · V2(O01 가게 홈 · O01-E 미연결, 오른쪽 위 `로그아웃`. 제휴 설정 O06은 2B) | `/owner/store` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `owner-s03` | 쿠폰 사용 처리 · V2(O02 입력 · 조회, O07 사용 완료) | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `owner-s04` | 방문 · 리뷰 리포트 | `/owner/report` | P2 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s05` | 빈 시간 달력 | — | OUT | ➖ | ➖ | ➖ | ➖ | ➖ |
 | `owner-s06` | 운영자 인증 심사 | `/admin/verifications` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-a01` | 가게 후보 선택·직접 등록 | `/owner/store/connect` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-a02` | 학생증 상세 심사·반려 | `/admin/verifications/:id` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `owner-a03` | 쿠폰·리포트 예외 상태 | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| `owner-a03` | 쿠폰·리포트 예외 상태 · V2(O08 쿠폰 오류 · 만료) | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | — | 모집 중 탐방 둘러보기 (가이드 · 사장님 `탐색` 탭, 읽기 전용) | `/explore` | P2 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | — | 사장님 내 정보 · 로그아웃 | `/owner/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | — | 확정 코스 지도 보기 (고교생 지도 화면 재사용, `hs-s08`) | `/guide/tours/:tourId/course` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -76,12 +76,13 @@
 - 코드가 `—`인 행은 와이어프레임이 없는 라우트다. 화면은 와이어 없이 설계 문서(5.3)를 기준으로 만든다.
 - `hs-s08`은 목업 · 도식 지도로 확인했다. 카카오맵(실제 지도)은 JavaScript 키(팀 요청 16)가 오면 고정 도메인에서 확인한다.
 - `hs-s08` 상점 시트의 `최근 리뷰`(펼치기, 설계 5.6 · R-02)는 계약에만 먼저 넣었다(`CourseStop.review.recent` 최신순 최대 3개, 판정 34). 프론트 타입 · 목업 · 화면은 MVP 2단계에서 만든다.
+- `owner-s03`의 O07에는 V2에 없는 `이번 탐방으로 온 학생 {n}명`을 시연의 상권 효과 장면용으로 남겼다(판정 2A-R13). `owner-s02`에서 제휴가 없으면 `제휴 혜택을 설정해 주세요` 문구만 보이고(링크는 2B의 `/owner/store/partnership`이 생기면), 가게 연결은 `/owner/store/connect`(자리)로 간다.
 - `owner-a03`은 쿠폰 오류 3종(이미 사용 · 만료/다른 가게 · 없는 코드)과 "아직 사용할 수 없는 쿠폰"까지다. 리포트 빈 상태는 `owner-s04`(P2)와 함께 만든다.
 - `guide-s05`는 순서 · 한줄평 · 삭제까지다(V2 G03의 지점 시트). 지점 추가 · 상점 교체는 2단계(`guide-a03`)에서 만든다.
 
 ## API 연동
 
-도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 [`../api/frontend-needs.md`](../api/frontend-needs.md)의 골든 패스 엔드포인트 29개이고, 나머지 P1 화면의 API는 명세가 오면 추가한다.
+도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 [`../api/frontend-needs.md`](../api/frontend-needs.md)의 골든 패스 엔드포인트 29개이고, 나머지 P1 화면의 API는 명세가 오면 추가한다. 예외로 P1 `GET /api/owner/store`(계약 3-2절 #26)는 내 가게 화면 때문에 목업을 먼저 만들었다.
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
@@ -112,6 +113,7 @@
 | coupons | `GET /api/me/coupons/:id` | hs-s09 (상세) | ⬜ | ✅ | ⬜ | ⬜ |
 | coupons | `GET /api/owner/coupons/:code` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
 | coupons | `POST /api/owner/coupons/:code/redeem` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
+| stores | `GET /api/owner/store` | owner-s02 (O01 · O01-E, P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
 | demo | `GET /api/health` | 시연 패널 | ⬜ | ✅ | ⬜ | ⬜ |
 | demo | `POST /api/demo/reset` | 시연 패널 | ⬜ | ✅ | ⬜ | ⬜ |
 

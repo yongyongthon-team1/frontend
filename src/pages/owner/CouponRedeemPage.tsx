@@ -1,17 +1,26 @@
 import { useState } from 'react';
+import { Check, ChevronRight } from 'lucide-react';
 import { useLocation, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { useMe } from '@/features/auth/queries';
-import { couponNotice } from '@/features/coupons/model';
+import {
+  couponNotice,
+  couponStateLabel,
+  formatCouponCode,
+  type CouponLookup,
+  type CouponNotice,
+  type RedeemResult,
+} from '@/features/coupons/model';
 import { useCouponLookup, useRedeemCoupon } from '@/features/coupons/queries';
 import { useDemoStore, useDemoToolsOn, validLastCoupon } from '@/demo/demoStore';
-import { formatTime, formatTourDate } from '@/shared/lib/date';
+import { formatDotDateWeekday, formatTime } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
+import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
 import { CodeInput } from '@/shared/ui/CodeInput';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { InfoCard } from '@/shared/ui/InfoCard';
 import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
 import { TopBar } from '@/shared/ui/TopBar';
@@ -25,10 +34,11 @@ function cleanCode(raw: string | null): string {
 
 /**
  * 사장님 쿠폰 사용 처리(owner-s03 · owner-a03). 6자리 코드를 조회하고 사용 가능(USABLE)이면 사용 처리한다.
- * 오류 카드의 문구는 `couponNotice`가 정하고, 서버가 준 상태만 그린다(시간 판단은 서버).
+ * 같은 주소(`/owner/coupons/redeem`)가 세 모습이다 — 입력과 조회(O02), 사용 완료(O07), 오류(O08). 오류 카드의 문구는
+ * `couponNotice`가 정하고, 서버가 준 상태만 그린다(시간 판단은 서버).
  */
 export function CouponRedeemPage() {
-  const [params] = useSearchParams();
+  const [params, setParams] = useSearchParams();
   const { key: locationKey } = useLocation();
   const urlCode = cleanCode(params.get('code'));
   const [code, setCode] = useState(urlCode);
@@ -85,19 +95,42 @@ export function CouponRedeemPage() {
   function reset() {
     setCode('');
     redeem.reset();
+    // `?code=`로 들어왔다면 지운다 — 새로 고침해도 같은 코드로 되돌아가지 않게.
+    if (params.has('code')) {
+      setParams(
+        (prev) => {
+          const next = new URLSearchParams(prev);
+          next.delete('code');
+          return next;
+        },
+        { replace: true },
+      );
+    }
+  }
+
+  if (redeemed) {
+    return <Redeemed result={redeemed} onReset={reset} />;
+  }
+  if (notice) {
+    return <Rejected notice={notice} onReset={reset} />;
   }
 
   return (
     <>
-      <TopBar title="쿠폰 사용 처리" />
-      <Page>
-        <StatusChip>6자리 번호 입력</StatusChip>
-        <div className="mt-4">
+      <TopBar title="쿠폰 사용 처리" back="/owner/store" />
+      <Page className={BOTTOM_ACTION_PAGE}>
+        <PageHeading
+          as="h2"
+          title={'쿠폰 코드를 입력하면\n바로 확인할 수 있어요.'}
+          description="학생이 보여주는 6자리 숫자를 입력해요."
+          className="mt-3"
+        />
+        <div className="mt-8">
           <CodeInput value={code} onChange={setCode} />
         </div>
         {fillableCode !== null ? (
           <Button
-            className="mt-2"
+            className="mt-2 self-start"
             variant="ghost"
             size="sm"
             disabled={code === fillableCode}
@@ -107,53 +140,144 @@ export function CouponRedeemPage() {
           </Button>
         ) : null}
 
-        <div className="mt-4" aria-live="polite">
+        <div className="mt-6" aria-live="polite">
           {lookup.isLoading ? (
-            <Skeleton className="h-32" />
+            <Skeleton className="h-40 rounded-xl" />
           ) : lookupFailure ? (
             <ErrorState error={lookupFailure} onRetry={() => void lookup.refetch()} />
-          ) : redeemed ? (
-            <InfoCard
-              title="사용 완료"
-              description={`사용 시각 ${redeemed.coupon.usedAt ? formatTime(redeemed.coupon.usedAt) : ''} 기록 · 중복 사용 불가`}
-            >
-              <p className="text-base font-bold text-ink">
-                이번 탐방으로 온 학생 {redeemed.tourVisitorCount}명
-              </p>
-            </InfoCard>
-          ) : notice ? (
-            <InfoCard title={notice.title} description={notice.description} />
           ) : data ? (
-            <InfoCard title="쿠폰 확인 결과">
-              <ul className="flex flex-col gap-1 text-sm text-ink">
-                <li>탐방일 {formatTourDate(data.tourStartsAt)}</li>
-                <li>혜택 {data.discount}</li>
-                <li>학생 {data.studentName}</li>
-                <li className="font-bold">내 가게 쿠폰</li>
-              </ul>
-            </InfoCard>
+            <LookupCard lookup={data} />
           ) : null}
         </div>
 
-        <div className="mt-4 flex flex-col gap-2">
-          {redeemed ? null : (
-            <Button
-              disabled={!canRedeem}
-              loading={redeem.isPending}
-              hint={
-                data === undefined && notice === null
-                  ? { reason: '6자리 코드를 조회하면 사용 처리할 수 있어요.' }
-                  : undefined
-              }
-              onClick={handleRedeem}
-            >
-              사용 처리
-            </Button>
-          )}
-          <Button variant="secondary" onClick={reset}>
-            다른 코드 입력
+        <p className="mt-6 text-[13px] text-muted">쿠폰은 한 번만 사용할 수 있어요.</p>
+
+        <BottomAction>
+          <Button
+            disabled={!canRedeem}
+            loading={redeem.isPending}
+            hint={
+              data === undefined
+                ? { reason: '6자리 코드를 조회하면 사용 처리할 수 있어요.' }
+                : undefined
+            }
+            onClick={handleRedeem}
+          >
+            사용 처리하기
           </Button>
-        </div>
+        </BottomAction>
+      </Page>
+    </>
+  );
+}
+
+/** O02 조회 카드: 칩 · 상점 · 혜택(brand 19/Bold) · 구분선 · `{탐방 제목} · {MM.DD (요일)}`. */
+function LookupCard({ lookup }: { lookup: CouponLookup }) {
+  return (
+    <section className="rounded-xl bg-surface p-5">
+      <StatusChip tone="success">{couponStateLabel(lookup.state, lookup.usedAt)}</StatusChip>
+      <h3 className="mt-3 truncate text-[17px] font-bold text-ink">{lookup.storeName}</h3>
+      <p className="mt-2 text-[19px] leading-[1.4] font-bold text-brand">{lookup.discount}</p>
+      <p className="mt-4 truncate border-t border-border pt-4 text-[13px] text-muted">
+        {lookup.tourTitle} · {formatDotDateWeekday(lookup.tourStartsAt)}
+      </p>
+    </section>
+  );
+}
+
+/** O07: 사용 처리 성공. 2A-R13 — 시연의 상권 효과 장면이라 `이번 탐방으로 온 학생 {n}명`을 카드 아래에 남긴다. */
+function Redeemed({ result, onReset }: { result: RedeemResult; onReset(): void }) {
+  const { coupon } = result;
+  return (
+    <>
+      <TopBar title="쿠폰 사용 처리 완료" back="/owner/store" />
+      <Page className={BOTTOM_ACTION_PAGE}>
+        <PageHeading
+          as="h2"
+          title="쿠폰 사용이 완료됐어요."
+          description="학생에게 사용 완료를 안내해 주세요."
+          className="mt-3"
+        />
+        <section className="mt-6 rounded-xl bg-brand-soft p-5">
+          <span
+            aria-hidden
+            className="flex size-11 items-center justify-center rounded-full bg-surface text-brand"
+          >
+            <Check className="size-6" strokeWidth={2.5} />
+          </span>
+          <h3 className="mt-3 text-xl leading-snug font-bold text-ink">쿠폰 처리 성공</h3>
+          <p className="mt-1 text-[13px] text-muted">
+            중복 사용 방지를 위해 사용 완료 상태로 저장했어요.
+          </p>
+        </section>
+        <section className="mt-3 rounded-xl bg-surface p-5">
+          <StatusChip tone="success">사용 완료</StatusChip>
+          <h3 className="mt-3 truncate text-[19px] leading-[1.4] font-bold text-ink">
+            {coupon.storeName}
+          </h3>
+          <p className="mt-1 text-[13px] text-muted">
+            {coupon.discount} · 코드 {formatCouponCode(coupon.code)}
+          </p>
+          {coupon.usedAt ? (
+            <p className="mt-2 text-[13px] text-muted">
+              {formatDotDateWeekday(coupon.usedAt)} · {formatTime(coupon.usedAt)} 사용
+            </p>
+          ) : null}
+        </section>
+        <p className="mt-4 px-1 text-[13px] font-bold text-ink">
+          이번 탐방으로 온 학생 {result.tourVisitorCount}명
+        </p>
+
+        <BottomAction>
+          <Button onClick={onReset}>다른 쿠폰 확인하기</Button>
+        </BottomAction>
+      </Page>
+    </>
+  );
+}
+
+/** O08: 조회 · 사용 처리 오류. 카드 문구는 1단계 `couponNotice`의 제목 · 설명이다. */
+function Rejected({ notice, onReset }: { notice: CouponNotice; onReset(): void }) {
+  return (
+    <>
+      <TopBar title="쿠폰 오류 · 만료" back="/owner/store" />
+      <Page className={BOTTOM_ACTION_PAGE}>
+        <PageHeading
+          as="h2"
+          title="코드를 다시 확인해 주세요."
+          description="해당 쿠폰을 사용할 수 없는 상태예요."
+          className="mt-3"
+        />
+        <section role="alert" className="mt-6 rounded-xl bg-brand-soft p-5">
+          <span
+            aria-hidden
+            className="flex size-11 items-center justify-center rounded-full bg-danger-soft text-xl font-bold text-danger"
+          >
+            !
+          </span>
+          <h3 className="mt-3 text-xl leading-snug font-bold text-ink">{notice.title}</h3>
+          <p className="mt-1 text-[13px] text-muted">{notice.description}</p>
+        </section>
+        <p className="mt-3 rounded-lg bg-danger-soft px-4 py-3 text-xs text-danger">
+          확인 항목: 코드 6자리 · 사용 여부 · 탐방 당일 유효 여부
+        </p>
+        <button
+          type="button"
+          onClick={onReset}
+          className="mt-3 flex min-h-14 w-full items-center justify-between gap-3 rounded-lg bg-surface px-4 py-3 text-left"
+        >
+          <span className="min-w-0">
+            <span className="block text-[15px] font-bold text-ink">다른 코드 입력하기</span>
+            <span className="mt-0.5 block text-xs text-muted">
+              학생에게 새 코드를 확인해 주세요.
+            </span>
+          </span>
+          <ChevronRight aria-hidden className="size-4 shrink-0 text-ink" />
+        </button>
+
+        <BottomAction>
+          <Button onClick={onReset}>다시 입력하기</Button>
+        </BottomAction>
       </Page>
     </>
   );

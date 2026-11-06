@@ -8,6 +8,7 @@ import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
+import { MyStorePage } from '@/pages/owner/MyStorePage';
 import { CancelApplicationPage } from '@/pages/student/CancelApplicationPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
 import { ApplyPage } from '@/pages/student/ApplyPage';
@@ -211,14 +212,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/owner/store',
-                    element: (
-                      <PlaceholderPage
-                        title="내 가게 · 제휴 할인"
-                        wireframe="owner-s02"
-                        showLogout // Task 11이 내 가게 화면으로 바꿀 때까지 사장님이 막히지 않게
-                        action={{ label: '쿠폰 사용 처리', to: '/owner/coupons/redeem' }}
-                      />
-                    ),
+                    element: <MyStorePage />,
                   },
                   {
                     path: '/owner/store/connect',

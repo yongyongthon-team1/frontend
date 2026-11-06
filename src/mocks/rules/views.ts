@@ -8,6 +8,7 @@ import type { GuardianStatus, Me } from '@/features/auth/model';
 import type { University } from '@/features/campuses/model';
 import { computeCouponState, type Coupon } from '@/features/coupons/model';
 import { slotTimes, type Course, type CourseStop } from '@/features/courses/model';
+import { computePartnershipState, type MyStore } from '@/features/stores/model';
 import { shortUniversityName, type TourDetail, type TourSummary } from '@/features/tours/model';
 import { COURSE_CRITERIA } from '@/mocks/ai/course';
 import { mockNow } from '@/mocks/clock';
@@ -17,6 +18,7 @@ import type {
   CourseStopRow,
   DB,
   GuardianConsentRow,
+  StoreRow,
   TourRow,
   UniversityRow,
 } from '@/mocks/db/schema';
@@ -320,5 +322,39 @@ export function toCoupon(db: DB, coupon: CouponRow, now: Date): Coupon {
     expiresAt: coupon.expiresAt,
     usedAt: coupon.usedAt,
     reviewWritten: db.reviews.some((r) => r.couponId === coupon.id),
+  };
+}
+
+/**
+ * 내 가게. 제휴는 가게당 "지금 쓰는" 1건이다 — 운영 중(ACTIVE) 우선, 없으면 예정(SCHEDULED), 그다음 가장 최근에
+ * 끝난 것(ENDED). 같은 상태가 여럿이면 id가 큰 것(나중에 등록한 것)이다. `state`는 오늘(서울)과 기간으로 계산한다.
+ */
+export function toMyStore(db: DB, store: StoreRow, now: Date): MyStore {
+  const rank = { ACTIVE: 0, SCHEDULED: 1, ENDED: 2 } as const;
+  const [current] = db.partnerships
+    .filter((p) => p.storeId === store.id)
+    .map((p) => ({ p, state: computePartnershipState(p, now) }))
+    .sort(
+      (a, b) =>
+        rank[a.state] - rank[b.state] ||
+        (a.state === 'SCHEDULED'
+          ? a.p.startDate.localeCompare(b.p.startDate)
+          : b.p.endDate.localeCompare(a.p.endDate)) ||
+        b.p.id - a.p.id,
+    );
+  return {
+    id: store.id,
+    name: store.name,
+    address: store.address,
+    category: store.category,
+    partnership: current
+      ? {
+          id: current.p.id,
+          discount: current.p.discountDescription,
+          startDate: current.p.startDate,
+          endDate: current.p.endDate,
+          state: current.state,
+        }
+      : null,
   };
 }

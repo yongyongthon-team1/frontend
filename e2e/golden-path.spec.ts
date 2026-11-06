@@ -139,9 +139,10 @@ for (const { title, link, present } of VARIANTS) {
       await panel.getByRole('button', { name: '쿠폰 가게 사장님으로 전환' }).click();
     }
     await expect(page.getByLabel('6자리 쿠폰 코드')).toHaveValue(code);
-    await expect(page.getByText('내 가게 쿠폰')).toBeVisible();
+    await expect(page.getByText('사용 가능', { exact: true })).toBeVisible();
     await checkRoleBadge('사장님 화면');
-    await page.getByRole('button', { name: '사용 처리' }).click();
+    await page.getByRole('button', { name: '사용 처리하기' }).click();
+    await expect(page.getByText('쿠폰 사용이 완료됐어요.')).toBeVisible();
     await expect(page.getByText('이번 탐방으로 온 학생 1명')).toBeVisible();
   });
 }

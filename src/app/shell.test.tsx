@@ -126,14 +126,10 @@ describe('레이아웃', () => {
     expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).toBeNull();
   });
 
-  it('자리 화면: 문구 · 와이어프레임 코드, 사장님 가게 자리에는 쿠폰 사용 처리 링크', async () => {
-    await renderApp('/owner/store', { as: 'owner' });
+  it('자리 화면: 문구 · 와이어프레임 코드', async () => {
+    await renderApp('/owner/store/connect', { as: 'owner' });
     expect(await screen.findByText('MVP 2단계에서 열려요.')).toBeInTheDocument();
-    expect(screen.getByText('와이어프레임: owner-s02')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '쿠폰 사용 처리' })).toHaveAttribute(
-      'href',
-      '/owner/coupons/redeem',
-    );
+    expect(screen.getByText('와이어프레임: owner-a01')).toBeInTheDocument();
   });
 });
 

@@ -34,6 +34,9 @@ const CONTRACT = [
   'POST /api/demo/reset',
 ];
 
+/** 계약 3-2절(P1 엔드포인트, 동결 대상 아님) 중 목업이 있는 것. 2B가 행을 더한다. */
+const P1 = ['GET /api/owner/store'];
+
 describe('registry', () => {
   it('도메인 일부만 고르면 그 핸들러만', () => {
     expect(selectHandlers(['auth']).length).toBe(handlersByDomain.auth.length);
@@ -48,9 +51,16 @@ describe('registry', () => {
     expect(selectHandlers([])).toEqual([]);
   });
 
-  it('계약 표의 29개 엔드포인트를 메서드 · 경로 그대로 모두 등록한다', () => {
+  it('계약 표의 29개 엔드포인트와 P1 엔드포인트 1개를 메서드 · 경로 그대로 모두 등록한다', () => {
     const registered = selectHandlers('all').map((h) => `${h.info.method} ${String(h.info.path)}`);
     expect(CONTRACT).toHaveLength(29);
-    expect([...registered].sort()).toEqual([...CONTRACT].sort());
+    expect(P1).toHaveLength(1);
+    expect([...registered].sort()).toEqual([...CONTRACT, ...P1].sort());
+  });
+
+  it('stores 도메인이 P1 엔드포인트를 가진다', () => {
+    expect(
+      selectHandlers(['stores']).map((h) => `${h.info.method} ${String(h.info.path)}`),
+    ).toEqual(P1);
   });
 });

@@ -8,6 +8,7 @@ import type { LoginResponse, Me } from '@/features/auth/model';
 import type { Insight, University } from '@/features/campuses/model';
 import type { Coupon, CouponLookup, RedeemResult } from '@/features/coupons/model';
 import type { Course } from '@/features/courses/model';
+import type { MyStore } from '@/features/stores/model';
 import type { RecommendationResult, TourDetail, TourSummary } from '@/features/tours/model';
 import { COURSE_CRITERIA } from '@/mocks/ai/course';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
@@ -778,5 +779,29 @@ describe('demo', () => {
       request('/demo/reset', { method: 'POST', body: { checkpoint: 'DONE' } }),
     ).rejects.toMatchObject({ status: 400, code: 'VALIDATION' });
     expect(await request<MyApplication[]>('/me/applications')).toHaveLength(1);
+  });
+});
+
+describe('사장님 내 가게 (GET /owner/store)', () => {
+  it('사장님: 내 가게 · 제휴, 가게가 없으면 404 STORE_NOT_LINKED, 사장님이 아니면 403', async () => {
+    await login('owner1@demo.kr');
+    expect(await request<MyStore>('/owner/store')).toMatchObject({
+      id: 1,
+      name: '서천 밥상',
+      partnership: { discount: '식사 금액 10% 할인', state: 'ACTIVE' },
+    });
+
+    mutate((db) => {
+      db.stores.find((s) => s.id === 1)!.ownerId = null;
+    });
+    await expect(request('/owner/store')).rejects.toMatchObject({
+      status: 404,
+      code: 'STORE_NOT_LINKED',
+    });
+
+    await login('student@demo.kr');
+    await expect(request('/owner/store')).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+    configureHttp({ getToken: () => null });
+    await expect(request('/owner/store')).rejects.toMatchObject({ status: 401 });
   });
 });

@@ -182,9 +182,10 @@ describe('시연 패널', () => {
     await user.click(screen.getByRole('button', { name: '쿠폰 가게 사장님으로 전환' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/owner/coupons/redeem'));
     expect(await screen.findByLabelText('6자리 쿠폰 코드')).toHaveValue(code);
-    // 그 쿠폰을 발급한 가게의 사장님이라 조회 결과가 "내 가게 쿠폰"이다.
-    expect(await screen.findByText('쿠폰 확인 결과')).toBeInTheDocument();
-    expect(screen.getByText('내 가게 쿠폰')).toBeInTheDocument();
+    // 그 쿠폰을 발급한 가게의 사장님이라 "다른 가게 쿠폰" 오류 없이 사용 가능한 쿠폰 카드가 보인다.
+    expect(await screen.findByText('사용 가능')).toBeInTheDocument();
+    expect(screen.getByText('서천 밥상')).toBeInTheDocument();
+    expect(screen.queryByText('만료되었거나 다른 가게 쿠폰')).toBeNull();
   });
 
   it.each([
@@ -277,6 +278,13 @@ describe('발표 모드', () => {
     await user.click(within(panel()).getByRole('button', { name: '사장님' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/owner/store'));
     expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: DEMO_EMAILS.owner });
+    // 도착지 `/owner/store`가 자리 화면이 아니라 O01(내 가게)을 그린다.
+    expect(
+      await screen.findByRole('heading', {
+        level: 1,
+        name: /학생들이 가게를\s*더 쉽게 찾고 있어요\./,
+      }),
+    ).toBeInTheDocument();
     expect(await screen.findByText('사장님 화면')).toBeInTheDocument();
     expect(screen.queryByText('고교생 화면')).toBeNull();
   });
@@ -299,7 +307,8 @@ describe('발표 모드', () => {
     expect(router.state.location.search).toBe(`?code=${coupon.code}`);
     expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: DEMO_STORE_OWNERS[2] });
     expect(await screen.findByLabelText('6자리 쿠폰 코드')).toHaveValue(coupon.code);
-    expect(await screen.findByText('내 가게 쿠폰')).toBeInTheDocument();
+    expect(await screen.findByText('사용 가능')).toBeInTheDocument();
+    expect(screen.getByText('카페 모래시계')).toBeInTheDocument();
     expect(screen.getByText('사장님 화면')).toBeInTheDocument();
   });
 
