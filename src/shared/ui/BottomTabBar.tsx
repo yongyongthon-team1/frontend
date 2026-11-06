@@ -18,7 +18,7 @@ export function BottomTabBar({ tabs }: { tabs: TabItem[] }) {
   return (
     <nav
       aria-label="주요 메뉴"
-      className="flex h-[var(--tabbar-h)] shrink-0 items-start border-t border-border bg-bg pt-1"
+      className="flex h-[var(--tabbar-h)] shrink-0 items-stretch border-t border-border bg-surface"
     >
       {tabs.map((tab) => {
         const { to, label, icon: Icon } = tab;
@@ -29,12 +29,12 @@ export function BottomTabBar({ tabs }: { tabs: TabItem[] }) {
             to={to}
             aria-current={active ? 'page' : undefined}
             className={cn(
-              'flex min-h-11 flex-1 items-center justify-center gap-1.5 text-base',
-              active ? 'font-bold text-ink' : 'font-medium text-muted',
+              'flex min-h-11 min-w-0 flex-1 flex-col items-center justify-center gap-1 text-xs',
+              active ? 'font-bold text-brand' : 'font-medium text-muted',
             )}
           >
-            <Icon aria-hidden className="size-5" />
-            <span>{label}</span>
+            <Icon aria-hidden className="size-[22px]" />
+            <span className="max-w-full truncate px-1">{label}</span>
           </Link>
         );
       })}

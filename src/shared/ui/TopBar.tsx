@@ -20,12 +20,12 @@ export function TopBar({ title, back, right }: TopBarProps) {
           type="button"
           aria-label="뒤로 가기"
           onClick={() => (typeof back === 'string' ? navigate(back) : navigate(-1))}
-          className="-ml-3 flex size-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface"
+          className="-ml-2.5 flex size-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-neutral-100"
         >
           <ChevronLeft aria-hidden className="size-6" />
         </button>
       ) : null}
-      <h1 className="min-w-0 flex-1 truncate text-xl font-bold text-ink">{title}</h1>
+      <h1 className="min-w-0 flex-1 truncate text-lg font-bold text-ink">{title}</h1>
       {right ? <div className="flex shrink-0 items-center gap-1">{right}</div> : null}
     </header>
   );

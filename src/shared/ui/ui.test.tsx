@@ -17,13 +17,20 @@ import { CodeInput } from './CodeInput';
 import { ConfirmDialog } from './ConfirmDialog';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
+import { FilterChips } from './FilterChips';
+import { HeroCard } from './HeroCard';
 import { Illustration } from './Illustration';
 import { InfoCard } from './InfoCard';
 import { KeywordChips } from './KeywordChips';
+import { ListRow } from './ListRow';
+import { NumberedList } from './NumberedList';
 import { Page } from './Page';
+import { PageHeading } from './PageHeading';
+import { SegmentedTabs } from './SegmentedTabs';
 import { Select } from './Select';
 import { Skeleton } from './Skeleton';
 import { StatusChip } from './StatusChip';
+import { StepList } from './StepList';
 import { Textarea } from './Textarea';
 import { TextField } from './TextField';
 import { TopBar } from './TopBar';
@@ -583,5 +590,219 @@ describe('BrandMark', () => {
   it('icon: 접근 이름 UNIRO인 이미지', () => {
     render(<BrandMark variant="icon" />);
     expect(screen.getByRole('img', { name: 'UNIRO' })).toBeInTheDocument();
+  });
+});
+
+describe('Button V2 변형', () => {
+  it('danger: 위험 색 버튼으로 그려지고 클릭된다', async () => {
+    const onClick = vi.fn();
+    render(
+      <Button variant="danger" onClick={onClick}>
+        신청 취소 확정
+      </Button>,
+    );
+    const button = screen.getByRole('button', { name: '신청 취소 확정' });
+    expect(button).toHaveClass('bg-danger');
+    await userEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('soft: 카드 안 작은 버튼. 접근 이름에 화살표가 섞이지 않는다', () => {
+    render(<Button variant="soft">코스 확인하기</Button>);
+    const button = screen.getByRole('button', { name: '코스 확인하기' });
+    expect(button).toHaveClass('bg-brand-soft');
+    expect(button).toHaveClass('h-9');
+  });
+
+  it('primary는 brand 배경 · 높이 56 토큰', () => {
+    render(<Button>다음</Button>);
+    const button = screen.getByRole('button', { name: '다음' });
+    expect(button).toHaveClass('bg-brand');
+    expect(button.className).toContain('h-[var(--btn-h)]');
+  });
+
+  it('size="sm"은 높이 44(min-h-11)', () => {
+    render(
+      <Button size="sm" variant="secondary">
+        다시 시도
+      </Button>,
+    );
+    expect(screen.getByRole('button', { name: '다시 시도' })).toHaveClass('min-h-11');
+  });
+});
+
+describe('V2 StatusChip · InfoCard tone · TextField label', () => {
+  it('StatusChip tone: success는 success-soft 바탕, neutral은 neutral-100 바탕', () => {
+    const { rerender } = render(<StatusChip tone="success">참여 확정</StatusChip>);
+    expect(screen.getByText('참여 확정').closest('div')).toHaveClass('bg-success-soft');
+    rerender(<StatusChip>승인 대기</StatusChip>);
+    expect(screen.getByText('승인 대기').closest('div')).toHaveClass('bg-neutral-100');
+  });
+
+  it('InfoCard tone: brand는 brand-soft, local은 local-soft, muted는 neutral-100', () => {
+    const { container, rerender } = render(<InfoCard title="왜 추천했나요?" tone="brand" />);
+    expect(container.firstChild).toHaveClass('bg-brand-soft');
+    rerender(<InfoCard title="동네" tone="local" />);
+    expect(container.firstChild).toHaveClass('bg-local-soft');
+    rerender(<InfoCard title="흐린" muted />);
+    expect(container.firstChild).toHaveClass('bg-neutral-100');
+    rerender(<InfoCard title="기본" />);
+    expect(container.firstChild).toHaveClass('bg-surface');
+    expect(container.firstChild).not.toHaveClass('border');
+  });
+
+  it('TextField showLabel: 보이는 라벨이 입력에 연결된다', () => {
+    render(<TextField label="이메일" showLabel />);
+    expect(screen.getByText('이메일')).toBeInTheDocument();
+    expect(screen.getByLabelText('이메일')).toBeInstanceOf(HTMLInputElement);
+  });
+});
+
+describe('ListRow', () => {
+  it('to가 있으면 행 전체가 링크 하나', () => {
+    render(
+      <MemoryRouter>
+        <ListRow
+          to="/tours/1"
+          eyebrow="경희대학교 국제캠퍼스"
+          title="디자인 전공자의 하루"
+          meta="11.12 · 나와 잘 맞아요"
+          metaTone="brand"
+        />
+      </MemoryRouter>,
+    );
+    const links = screen.getAllByRole('link');
+    expect(links).toHaveLength(1);
+    expect(links[0]).toHaveAttribute('href', '/tours/1');
+    expect(links[0]).toHaveTextContent('디자인 전공자의 하루');
+    expect(screen.getByText('11.12 · 나와 잘 맞아요')).toHaveClass('text-brand');
+  });
+
+  it('to가 없으면 링크 없이 내용만, right가 오른쪽에 온다', () => {
+    render(
+      <MemoryRouter>
+        <ListRow title="소프트웨어 전공 탐방" right={<span>승인 대기</span>} />
+      </MemoryRouter>,
+    );
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    expect(screen.getByText('소프트웨어 전공 탐방')).toBeInTheDocument();
+    expect(screen.getByText('승인 대기')).toBeInTheDocument();
+  });
+});
+
+describe('SegmentedTabs', () => {
+  const tabs = [
+    { value: 'upcoming', label: '예정된 탐방' },
+    { value: 'past', label: '지난 탐방' },
+  ];
+
+  it('tablist · tab · aria-selected', () => {
+    render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="upcoming" onChange={() => {}} />);
+    expect(screen.getByRole('tablist', { name: '탐방 구분' })).toBeInTheDocument();
+    expect(screen.getAllByRole('tab')).toHaveLength(2);
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveAttribute(
+      'aria-selected',
+      'true',
+    );
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute(
+      'aria-selected',
+      'false',
+    );
+  });
+
+  it('탭을 누르면 onChange(value), 방향키로도 옮긴다', async () => {
+    const onChange = vi.fn();
+    render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="upcoming" onChange={onChange} />);
+    await userEvent.click(screen.getByRole('tab', { name: '지난 탐방' }));
+    expect(onChange).toHaveBeenLastCalledWith('past');
+    screen.getByRole('tab', { name: '예정된 탐방' }).focus();
+    await userEvent.keyboard('{ArrowRight}');
+    expect(onChange).toHaveBeenLastCalledWith('past');
+  });
+});
+
+describe('FilterChips', () => {
+  const chips = [
+    { value: 'all', label: '전체' },
+    { value: 'design', label: '디자인' },
+    { value: 'khu', label: '경희대', kind: 'school' as const },
+  ];
+
+  it('radiogroup · radio, 선택된 칩은 aria-checked', () => {
+    render(<FilterChips label="추천 필터" chips={chips} value="all" onChange={() => {}} />);
+    expect(screen.getByRole('radiogroup', { name: '추천 필터' })).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(3);
+    expect(screen.getByRole('radio', { name: '전체' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '디자인' })).not.toBeChecked();
+  });
+
+  it('칩을 누르면 onChange(value)', async () => {
+    const onChange = vi.fn();
+    render(<FilterChips label="추천 필터" chips={chips} value="all" onChange={onChange} />);
+    await userEvent.click(screen.getByRole('radio', { name: '경희대' }));
+    expect(onChange).toHaveBeenCalledWith('khu');
+  });
+});
+
+describe('StepList · NumberedList', () => {
+  it('StepList: 번호 붙은 단계, 현재 단계만 aria-current="step"', () => {
+    render(<StepList steps={['신청 접수', '가이드 승인 대기', '승인 후 코스 확인']} current={0} />);
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent('01 신청 접수');
+    expect(items[0]).toHaveAttribute('aria-current', 'step');
+    expect(items[1]).not.toHaveAttribute('aria-current');
+    expect(items[2]).toHaveTextContent('03');
+  });
+
+  it('StepList: current가 없으면 aria-current가 없다', () => {
+    render(<StepList steps={['하나', '둘']} />);
+    expect(document.querySelector('[aria-current]')).toBeNull();
+  });
+
+  it('NumberedList: 항목 수만큼, 마지막은 local 색', () => {
+    render(<NumberedList items={['캠퍼스 둘러보기', '전공 수업 이야기', '동네 카페 질문']} />);
+    const items = screen.getAllByRole('listitem');
+    expect(items).toHaveLength(3);
+    expect(items[0]).toHaveTextContent('1');
+    expect(items[2]).toHaveTextContent('동네 카페 질문');
+    expect(items[2].querySelector('span')).toHaveClass('bg-local-soft');
+    expect(items[0].querySelector('span')).toHaveClass('bg-brand-soft');
+  });
+});
+
+describe('HeroCard · PageHeading', () => {
+  it('HeroCard: eyebrow · 제목 · 일러스트 · 자식', () => {
+    const { container } = render(
+      <HeroCard
+        eyebrow="경희대학교 국제캠퍼스"
+        title={'전공자와 함께\n캠퍼스를 걸어요'}
+        illustration="campus"
+      >
+        <p>자식</p>
+      </HeroCard>,
+    );
+    expect(screen.getByText('경희대학교 국제캠퍼스')).toBeInTheDocument();
+    expect(screen.getByText(/전공자와 함께/)).toBeInTheDocument();
+    expect(screen.getByText('자식')).toBeInTheDocument();
+    const img = container.querySelector('img');
+    expect(img?.getAttribute('src')).toContain('campus');
+    expect(container.firstChild).toHaveClass('bg-brand-soft');
+  });
+
+  it('HeroCard tone local은 local-soft 바탕', () => {
+    const { container } = render(<HeroCard title="동네" illustration="cafe" tone="local" />);
+    expect(container.firstChild).toHaveClass('bg-local-soft');
+  });
+
+  it('PageHeading: h1과 설명', () => {
+    render(<PageHeading title={'내 탐방'} description="신청한 탐방을 확인해요." />);
+    expect(screen.getByRole('heading', { level: 1, name: '내 탐방' })).toBeInTheDocument();
+    expect(screen.getByText('신청한 탐방을 확인해요.')).toBeInTheDocument();
+  });
+
+  it('PageHeading: 줄바꿈 문자를 보존하고 설명은 선택', () => {
+    render(<PageHeading title={'3개의 탐방을\n추천해요.'} />);
+    expect(screen.getByRole('heading', { level: 1 })).toHaveClass('whitespace-pre-line');
   });
 });

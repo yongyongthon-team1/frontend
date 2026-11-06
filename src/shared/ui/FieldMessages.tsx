@@ -13,12 +13,12 @@ export function FieldMessages({
   return (
     <>
       {error ? (
-        <p id={errorId} role="alert" className="mt-1.5 px-1 text-sm text-danger">
+        <p id={errorId} role="alert" className="mt-1.5 px-1 text-[13px] text-danger">
           {error}
         </p>
       ) : null}
       {hint ? (
-        <p id={hintId} className="mt-1.5 px-1 text-sm text-muted">
+        <p id={hintId} className="mt-1.5 px-1 text-[13px] text-muted">
           {hint}
         </p>
       ) : null}

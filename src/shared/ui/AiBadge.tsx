@@ -6,9 +6,9 @@ export function AiBadge({ children }: { children?: ReactNode }) {
     <span
       role="group"
       aria-label="AI 결과"
-      className="inline-flex items-center gap-1 rounded-full bg-accent/10 px-2.5 py-1 text-xs font-semibold text-ink"
+      className="inline-flex items-center gap-1 min-h-[27px] rounded-pill bg-brand-soft px-3 py-1 text-xs font-bold text-brand"
     >
-      <span aria-hidden className="text-accent">
+      <span aria-hidden className="text-brand">
         ✦
       </span>
       {children}

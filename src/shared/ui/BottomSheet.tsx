@@ -29,15 +29,15 @@ export function BottomSheet({ open, onOpenChange, title, children }: BottomSheet
           aria-describedby={undefined}
           className={cn(
             position,
-            'inset-x-0 bottom-0 z-50 max-h-[85%] animate-sheet-in overflow-y-auto rounded-t-lg bg-bg px-[var(--gutter)] pt-3 pb-8 motion-reduce:animate-none',
+            'inset-x-0 bottom-0 z-50 max-h-[85%] animate-sheet-in overflow-y-auto rounded-t-xl bg-surface px-[var(--gutter)] pt-3 pb-8 motion-reduce:animate-none',
           )}
         >
-          <div aria-hidden className="mx-auto mb-3 h-1 w-10 rounded-full bg-border" />
+          <div aria-hidden className="mx-auto mb-3 h-1 w-10 rounded-full bg-neutral-300" />
           <div className="mb-3 flex items-center justify-between gap-2">
             <Dialog.Title className="text-lg font-bold text-ink">{title}</Dialog.Title>
             <Dialog.Close
               aria-label="닫기"
-              className="-mr-3 flex size-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-surface"
+              className="-mr-3 flex size-11 shrink-0 items-center justify-center rounded-full text-ink hover:bg-neutral-100"
             >
               <X aria-hidden className="size-5" />
             </Dialog.Close>

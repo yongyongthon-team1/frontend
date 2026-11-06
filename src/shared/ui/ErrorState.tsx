@@ -12,8 +12,11 @@ function errorCode(error: unknown): string | undefined {
 
 export function ErrorState({ error, onRetry }: { error: unknown; onRetry?(): void }) {
   return (
-    <div role="alert" className="flex flex-col items-center gap-3 px-5 py-12 text-center">
-      <p className="text-base font-semibold text-ink">{errorMessage(errorCode(error))}</p>
+    <div
+      role="alert"
+      className="flex flex-col items-center gap-3 rounded-xl bg-surface px-5 py-8 text-center"
+    >
+      <p className="text-[15px] font-bold text-ink">{errorMessage(errorCode(error))}</p>
       {onRetry ? (
         <Button variant="secondary" size="sm" onClick={onRetry}>
           다시 시도

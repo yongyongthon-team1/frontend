@@ -1,4 +1,4 @@
-import { Loader2 } from 'lucide-react';
+import { ChevronRight, Loader2 } from 'lucide-react';
 import { useId, type ComponentProps } from 'react';
 import { Link } from 'react-router';
 import { cn } from '@/shared/lib/cn';
@@ -40,7 +40,8 @@ export function Button({
       {...rest}
     >
       {loading ? <Loader2 aria-hidden className="size-4 animate-spin" /> : null}
-      {children}
+      {variant === 'soft' ? <span className="min-w-0 truncate">{children}</span> : children}
+      {variant === 'soft' ? <ChevronRight aria-hidden className="size-4 shrink-0" /> : null}
     </button>
   );
 
@@ -50,14 +51,14 @@ export function Button({
     <div className={cn('flex flex-col gap-2', size === 'lg' ? 'w-full' : 'items-start')}>
       {button}
       {hasReason ? (
-        <p id={reasonId} className="px-1 text-sm text-muted">
+        <p id={reasonId} className="px-1 text-[13px] text-muted">
           {hint.reason}
         </p>
       ) : null}
       {hint.action ? (
         <Link
           to={hint.action.to}
-          className="inline-flex min-h-11 items-center self-start px-1 text-sm font-bold text-accent underline underline-offset-2"
+          className="inline-flex min-h-11 items-center self-start px-1 text-sm font-bold text-brand underline underline-offset-2"
         >
           {hint.action.label}
         </Link>

@@ -23,7 +23,7 @@ export function KeywordChips({
         <li
           key={keyword}
           className={cn(
-            'rounded-full bg-surface px-3 py-1.5 text-sm font-semibold text-ink',
+            'inline-flex h-[31px] items-center rounded-pill bg-brand-soft px-3 text-xs font-bold text-brand',
             scroll && 'shrink-0 whitespace-nowrap',
           )}
         >

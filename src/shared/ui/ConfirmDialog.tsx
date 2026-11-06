@@ -48,12 +48,14 @@ export function ConfirmDialog({
           role="alertdialog"
           className={cn(
             position,
-            'inset-x-[var(--gutter)] top-1/2 z-50 -translate-y-1/2 animate-fade-in rounded-lg bg-bg p-5 motion-reduce:animate-none',
+            'inset-x-[var(--gutter)] top-1/2 z-50 -translate-y-1/2 animate-fade-in rounded-xl bg-surface p-5 motion-reduce:animate-none',
           )}
         >
           <Dialog.Title className="text-lg font-bold text-ink">{title}</Dialog.Title>
-          <Dialog.Description className="mt-2 text-sm text-muted">{description}</Dialog.Description>
-          <div className="mt-5 flex gap-2">
+          <Dialog.Description className="mt-2 text-[13px] text-muted">
+            {description}
+          </Dialog.Description>
+          <div className="mt-5 flex gap-3">
             <Dialog.Close asChild>
               <Button variant="secondary" className="min-w-0 flex-1" disabled={pending}>
                 {cancelLabel}

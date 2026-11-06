@@ -36,7 +36,7 @@ export function CodeInput({
       onChange={handleChange}
       className={cn(
         fieldClass,
-        'h-[var(--field-h)] text-center text-2xl font-bold tracking-[0.4em] tabular-nums',
+        'h-[var(--field-h)] text-center text-2xl font-bold tracking-[0.4em] tabular-nums placeholder:text-2xl',
       )}
     />
   );
