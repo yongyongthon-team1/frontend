@@ -88,6 +88,11 @@ describe('내 탐방 · 지난 탐방 (H09)', () => {
     expect(screen.getByText('지금까지 다녀온 캠퍼스를 모아봤어요.')).toBeInTheDocument();
     expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute('aria-selected', 'true');
     expect(await screen.findByText('아직 지난 탐방이 없어요.')).toBeInTheDocument();
+    // 탭 ↔ 패널 연결: 선택된 탭이 패널을 가리키고 패널의 이름은 그 탭이다.
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute(
+      'aria-controls',
+      screen.getByRole('tabpanel', { name: '지난 탐방' }).id,
+    );
   });
 
   it('탭을 바꾸면 주소(?tab=past)가 따라 바뀐다', async () => {

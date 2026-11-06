@@ -62,6 +62,20 @@ export function formatDotDateWeekday(iso: string): string {
   return `${formatDotDate(iso)} (${seoulParts(iso).weekday})`;
 }
 
+/** `11월 12일 목요일` — V2 가이드 홈 카드의 날짜. */
+export function formatLongDate(iso: string): string {
+  const p = seoulParts(iso);
+  return `${p.month}월 ${p.day}일 ${p.weekday}요일`;
+}
+
+/** `오후 2시` · `오후 2시 30분` · `오전 10시` — 분이 0이면 생략한다. */
+export function formatAmPm(iso: string): string {
+  const p = seoulParts(iso);
+  const hour12 = p.hour % 12 === 0 ? 12 : p.hour % 12;
+  const minute = p.minute === 0 ? '' : ` ${p.minute}분`;
+  return `${p.hour < 12 ? '오전' : '오후'} ${hour12}시${minute}`;
+}
+
 /** `11.12 (목) 14:00~16:30` — V2 탐방 상세의 일정. 종료가 없으면 시작 시각만. */
 export function formatDotDateTimeRange(startIso: string, endIso: string | null): string {
   const start = formatTime(startIso);

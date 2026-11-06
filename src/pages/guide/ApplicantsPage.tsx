@@ -1,25 +1,37 @@
-import { useState } from 'react';
+import { useId, useState } from 'react';
 import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
-import { APPLICATION_STATUS_LABEL, type Applicant } from '@/features/applications/model';
+import {
+  APPLICATION_STATUS_LABEL,
+  coursePathFor,
+  type Applicant,
+} from '@/features/applications/model';
 import { useApplicantsBoard, useApprove, useReject } from '@/features/applications/queries';
-import { TOUR_STATUS_LABEL } from '@/features/tours/model';
 import { errorMessage } from '@/shared/lib/errors';
-import { Badge } from '@/shared/ui/Badge';
+import type { Tone } from '@/shared/lib/types';
+import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
+import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { InfoCard } from '@/shared/ui/InfoCard';
 import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
 import { TopBar } from '@/shared/ui/TopBar';
 
-const BACK = '/guide/tours';
+const BACK = '/guide';
+
+const STATUS_TONE: Record<Applicant['status'], Tone> = {
+  PENDING: 'info',
+  APPROVED: 'success',
+  REJECTED: 'neutral',
+  CANCELED: 'neutral',
+};
 
 /**
- * 신청자 관리(guide-s03). 승인 · 거절 요청이 하나라도 진행 중이면 모든 승인 · 거절 버튼을 잠가 요청이 겹치지 않게 한다.
- * 남은 자리 · 코스 상태는 서버가 준 보드 값을 그대로 그린다.
+ * 신청자 승인(G02 · guide-s03). 승인 · 거절 요청이 하나라도 진행 중이면 모든 승인 · 거절 버튼을 잠가 요청이 겹치지 않게 한다.
+ * 남은 자리 · 코스 상태는 서버가 준 보드 값을 그대로 쓴다.
  */
 export function ApplicantsPage() {
   const tourId = Number(useParams().tourId);
@@ -39,10 +51,9 @@ export function ApplicantsPage() {
             <ErrorState error={query.error} onRetry={() => void query.refetch()} />
           ) : (
             <>
-              <Skeleton className="h-12" />
-              <Skeleton className="mt-4 h-24" />
-              <Skeleton className="mt-3 h-32" />
-              <Skeleton className="mt-3 h-32" />
+              <Skeleton className="h-[72px] w-3/4" />
+              <Skeleton className="mt-4 h-[110px] rounded-xl" />
+              <Skeleton className="mt-3 h-[110px] rounded-xl" />
             </>
           )}
         </Page>
@@ -53,6 +64,7 @@ export function ApplicantsPage() {
   const { tour, counts, applicants, course } = board;
   const busy = approve.isPending || reject.isPending;
   const noSeats = counts.remaining === 0;
+  const coursePath = coursePathFor(tour.id, course?.status ?? null, counts.approved);
 
   function onApprove(applicantId: number) {
     approve.mutate(applicantId, {
@@ -78,20 +90,20 @@ export function ApplicantsPage() {
   return (
     <>
       <TopBar title="신청자 관리" back={BACK} />
-      <Page>
-        <StatusChip>
-          {tour.title} · {TOUR_STATUS_LABEL[tour.status]}
-        </StatusChip>
+      <Page className={BOTTOM_ACTION_PAGE}>
+        <PageHeading
+          as="h2"
+          title={
+            counts.pending > 0
+              ? `학생 ${counts.pending}명이\n승인을 기다려요.`
+              : '신청자를 모두 확인했어요.'
+          }
+          description="참가 이유를 읽고 함께할 학생을 선택해요."
+        />
 
-        <div className="mt-4 flex flex-col gap-3">
-          <InfoCard
-            title={`모집 정원 ${tour.capacity}명 중 ${counts.approved}명 승인`}
-            description={`대기 ${counts.pending}명 · 승인 ${counts.approved}명 · 남은 자리 ${counts.remaining}명`}
-            muted
-          />
-
+        <div className="mt-5 flex flex-col gap-3">
           {applicants.length === 0 ? (
-            <p className="py-6 text-center text-sm text-muted">아직 신청한 학생이 없어요.</p>
+            <EmptyState title="아직 신청한 학생이 없어요." />
           ) : (
             applicants.map((applicant) => (
               <ApplicantCard
@@ -106,27 +118,24 @@ export function ApplicantsPage() {
           )}
         </div>
 
-        <div className="mt-6">
+        <BottomAction>
+          <p className="mb-3 text-center text-xs text-muted">
+            승인하면 학생에게 오픈채팅 링크가 공개돼요.
+          </p>
           {course === null ? (
             counts.approved === 0 ? (
               <Button disabled hint={{ reason: '승인한 신청자가 있어야 코스를 만들 수 있어요.' }}>
-                AI 코스 만들기
+                승인 완료 후 코스 만들기
               </Button>
             ) : (
-              <Button onClick={() => navigate(`/guide/tours/${tour.id}/course/draft?generate=1`)}>
-                AI 코스 만들기
-              </Button>
+              <Button onClick={() => navigate(coursePath)}>승인 완료 후 코스 만들기</Button>
             )
-          ) : course.status === 'CONFIRMED' ? (
-            <Button onClick={() => navigate(`/guide/tours/${tour.id}/course/confirmed`)}>
-              확정 코스 보기
-            </Button>
           ) : (
-            <Button onClick={() => navigate(`/guide/tours/${tour.id}/course/edit`)}>
-              코스 이어서 편집
+            <Button onClick={() => navigate(coursePath)}>
+              {course.status === 'CONFIRMED' ? '확정 코스 보기' : '코스 이어서 편집'}
             </Button>
           )}
-        </div>
+        </BottomAction>
       </Page>
 
       <ConfirmDialog
@@ -157,34 +166,58 @@ function ApplicantCard({
   onApprove(): void;
   onReject(): void;
 }) {
-  const grade = applicant.grade ? `고${applicant.grade}` : '학년 미입력';
+  const noSeatsId = useId();
+  const pending = applicant.status === 'PENDING';
+  const quote = `“ ${applicant.grade ? `고${applicant.grade} · ` : ''}${applicant.motivation} ”`;
   return (
-    <article className="rounded-lg border border-border bg-bg p-5">
-      <div className="flex items-start justify-between gap-2">
-        <h2 className="text-base font-bold text-ink">
-          {`${applicant.userName} · ${grade} · ${APPLICATION_STATUS_LABEL[applicant.status]}`}
+    <article className="rounded-xl bg-surface p-5">
+      <div className="flex items-center gap-3">
+        <span
+          aria-hidden
+          className="flex size-11 shrink-0 items-center justify-center rounded-full bg-neutral-100 text-base font-bold text-muted"
+        >
+          {applicant.userName.slice(0, 1)}
+        </span>
+        <h2 className="min-w-0 flex-1 truncate text-[17px] font-bold text-ink">
+          {applicant.userName}
         </h2>
-        {applicant.verified ? <Badge tone="success">✓ 인증</Badge> : null}
+        {pending ? (
+          <div className="w-[104px] shrink-0">
+            <Button
+              variant="soft"
+              disabled={busy || noSeats}
+              aria-describedby={noSeats ? noSeatsId : undefined}
+              onClick={onApprove}
+            >
+              승인하기
+            </Button>
+          </div>
+        ) : (
+          <StatusChip tone={STATUS_TONE[applicant.status]} className="shrink-0">
+            {APPLICATION_STATUS_LABEL[applicant.status]}
+          </StatusChip>
+        )}
       </div>
-      <p className="mt-2 text-sm text-muted">{`“${applicant.motivation}”`}</p>
-
-      {applicant.status === 'PENDING' ? (
-        <div className="mt-4 flex items-start gap-2">
-          <Button
-            size="sm"
-            disabled={busy || noSeats}
-            hint={noSeats ? { reason: '남은 자리가 없어요.' } : undefined}
-            onClick={onApprove}
-          >
-            승인
-          </Button>
-          <Button size="sm" variant="secondary" disabled={busy} onClick={onReject}>
-            거절
-          </Button>
-        </div>
-      ) : null}
-      {applicant.status === 'APPROVED' ? (
-        <p className="mt-3 text-sm font-semibold text-ink">오픈채팅 링크가 공개된 상태예요.</p>
+      <p className="mt-3 border-t border-border pt-3 text-[13px] break-words text-muted">{quote}</p>
+      {pending ? (
+        <>
+          {noSeats ? (
+            <p id={noSeatsId} className="mt-1 text-[13px] text-muted">
+              남은 자리가 없어요.
+            </p>
+          ) : null}
+          <div className="mt-1 flex justify-end">
+            <Button
+              variant="ghost"
+              size="sm"
+              disabled={busy}
+              onClick={onReject}
+              className="text-[13px]"
+            >
+              거절하기
+            </Button>
+          </div>
+        </>
       ) : null}
     </article>
   );

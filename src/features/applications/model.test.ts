@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TourSummary } from '@/features/tours/model';
 import {
+  coursePathFor,
   guideCoursePath,
   groupMyApplications,
   pickFocusTour,
@@ -138,4 +139,18 @@ describe('guideCoursePath', () => {
     expect(guideCoursePath(guideTour({ id: 4, counts: counts(0) }))).toBe(
       '/guide/tours/4/applicants',
     ));
+});
+
+describe('coursePathFor', () => {
+  it('코스 확정 → 확정 점검 (승인 수와 무관)', () =>
+    expect(coursePathFor(4, 'CONFIRMED', 0)).toBe('/guide/tours/4/course/confirm'));
+
+  it('코스 초안 → 편집', () =>
+    expect(coursePathFor(4, 'DRAFT', 2)).toBe('/guide/tours/4/course/edit'));
+
+  it('코스 없음 + 승인 1명 이상 → 초안 생성', () =>
+    expect(coursePathFor(4, null, 1)).toBe('/guide/tours/4/course/draft?generate=1'));
+
+  it('코스 없음 + 승인 0명 → 신청자 보기', () =>
+    expect(coursePathFor(4, null, 0)).toBe('/guide/tours/4/applicants'));
 });

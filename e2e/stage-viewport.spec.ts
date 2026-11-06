@@ -64,10 +64,10 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
 
     test('② 코스 초안: 지점 카드 3개', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&checkpoint=APPROVED&as=guide');
-      // 가이드 첫 화면 /guide는 자리 화면이다(Task 9가 홈으로 채운다) — 개설한 탐방 목록을 거쳐 간다.
+      // 가이드 첫 화면 /guide(G01) → 맨 아래 `내가 개설한 탐방`(G06) → `신청자 관리하기`(G02) → 코스 만들기.
       await page.getByRole('link', { name: '내가 개설한 탐방' }).click();
-      await page.getByRole('link', { name: '신청자 보기' }).first().click();
-      await page.getByRole('button', { name: 'AI 코스 만들기' }).click();
+      await page.getByRole('link', { name: '신청자 관리하기' }).first().click();
+      await page.getByRole('button', { name: '승인 완료 후 코스 만들기' }).click();
       await expect(page.getByRole('heading', { name: '2시간 30분 추천 코스' })).toBeVisible();
 
       // 지점 카드는 제목(heading)이 있는 목록 항목이다(관심사 칩은 제목이 없다).

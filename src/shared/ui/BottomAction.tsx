@@ -12,3 +12,6 @@ export function BottomAction({ children }: { children: ReactNode }) {
 
 /** `BottomAction`을 쓰는 `Page`의 클래스: 상단 바를 뺀 높이를 채우고 아래 여백은 BottomAction이 가진다. */
 export const BOTTOM_ACTION_PAGE = 'flex min-h-[calc(100%-var(--topbar-h))] flex-col pb-0';
+
+/** 상단 바가 없는 탭 첫 화면용: 화면 높이를 채우고 위 여백 24 · 아래 여백은 BottomAction이 가진다. */
+export const BOTTOM_ACTION_PAGE_TAB_ROOT = 'flex min-h-full flex-col pt-6 pb-0';

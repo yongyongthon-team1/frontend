@@ -28,6 +28,7 @@ import { NumberedList } from './NumberedList';
 import { Page } from './Page';
 import { PageHeading } from './PageHeading';
 import { SegmentedTabs } from './SegmentedTabs';
+import { segmentedPanelProps } from './segmentedPanel';
 import { Select } from './Select';
 import { Skeleton } from './Skeleton';
 import { StatusChip } from './StatusChip';
@@ -740,6 +741,7 @@ function StatefulTabs({ onChange }: { onChange(value: string): void }) {
   const [value, setValue] = useState('upcoming');
   return (
     <SegmentedTabs
+      id="t"
       label="탐방 구분"
       tabs={[
         { value: 'upcoming', label: '예정된 탐방' },
@@ -780,7 +782,9 @@ describe('SegmentedTabs', () => {
   ];
 
   it('tablist · tab · aria-selected', () => {
-    render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="upcoming" onChange={() => {}} />);
+    render(
+      <SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="upcoming" onChange={() => {}} />,
+    );
     expect(screen.getByRole('tablist', { name: '탐방 구분' })).toBeInTheDocument();
     expect(screen.getAllByRole('tab')).toHaveLength(2);
     expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveAttribute(
@@ -795,7 +799,9 @@ describe('SegmentedTabs', () => {
 
   it('탭을 누르면 onChange(value)', async () => {
     const onChange = vi.fn();
-    render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="upcoming" onChange={onChange} />);
+    render(
+      <SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="upcoming" onChange={onChange} />,
+    );
     await userEvent.click(screen.getByRole('tab', { name: '지난 탐방' }));
     expect(onChange).toHaveBeenLastCalledWith('past');
   });
@@ -819,13 +825,31 @@ describe('SegmentedTabs', () => {
   });
 
   it('value가 어느 탭에도 없으면 첫 탭이 Tab 정지점이다', () => {
-    render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="none" onChange={() => {}} />);
+    render(<SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="none" onChange={() => {}} />);
     expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveAttribute('tabindex', '0');
     expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute('tabindex', '-1');
   });
 
+  it('선택된 탭만 패널을 가리키고, 패널은 그 탭이 이름이 된다', () => {
+    render(
+      <>
+        <SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="past" onChange={() => {}} />
+        <div {...segmentedPanelProps('t', 'past')}>지난 목록</div>
+      </>,
+    );
+    const past = screen.getByRole('tab', { name: '지난 탐방' });
+    expect(past).toHaveAttribute('id', 't-tab-past');
+    expect(past).toHaveAttribute('aria-controls', 't-panel-past');
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).not.toHaveAttribute('aria-controls');
+    const panel = screen.getByRole('tabpanel', { name: '지난 탐방' });
+    expect(panel).toHaveAttribute('id', 't-panel-past');
+    expect(panel).toHaveTextContent('지난 목록');
+  });
+
   it('긴 라벨의 말줄임은 안쪽 span에서 일어난다', () => {
-    render(<SegmentedTabs label="탐방 구분" tabs={tabs} value="upcoming" onChange={() => {}} />);
+    render(
+      <SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="upcoming" onChange={() => {}} />,
+    );
     const tab = screen.getByRole('tab', { name: '예정된 탐방' });
     expect(tab.querySelector('span > span')).toHaveClass('truncate');
     expect(tab.querySelector('span')).not.toHaveClass('truncate');

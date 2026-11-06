@@ -80,17 +80,16 @@ for (const { title, link, present } of VARIANTS) {
 
     // 가이드: 김민지 승인 → AI 코스 초안 → 둘째 지점을 아래로 → 확정(쿠폰 발급)
     await switchRole('가이드');
-    // 가이드 첫 화면은 /guide(자리 화면 — Task 9가 홈으로 채운다). 개설한 탐방 목록으로 들어간다.
-    await expect(page.getByRole('heading', { name: '내 탐방', exact: true })).toBeVisible();
+    // 가이드 첫 화면은 /guide(가이드 홈 G01): 이번 탐방 카드의 `신청자 확인하기`로 신청자 승인 화면에 들어간다.
+    await expect(page.getByRole('heading', { name: /이번 주, .+ 탐방을/ })).toBeVisible();
     await checkRoleBadge('가이드 화면');
-    await page.getByRole('link', { name: '내가 개설한 탐방' }).click();
-    await expect(page.getByRole('heading', { name: '내가 개설한 탐방' })).toBeVisible();
-    await page.getByRole('link', { name: '신청자 보기' }).first().click();
+    await page.getByRole('link', { name: '신청자 확인하기' }).first().click();
     // 승인 토스트에도 이름이 들어가므로 신청자 카드(article) 안에서 찾는다.
     const applicant = page.locator('article', { hasText: '김민지' });
-    await applicant.getByRole('button', { name: '승인', exact: true }).click();
+    await applicant.getByRole('button', { name: '승인하기', exact: true }).click();
     await expect(applicant).toContainText('승인됨');
-    await page.getByRole('button', { name: 'AI 코스 만들기' }).click();
+    // 승인 뒤 코스가 아직 없으니 이 버튼이 곧바로 초안 생성(`?generate=1`)으로 이어진다.
+    await page.getByRole('button', { name: '승인 완료 후 코스 만들기' }).click();
     await expect(page.getByText('2시간 30분 추천 코스')).toBeVisible();
     await page.getByRole('button', { name: '코스 수정하기' }).click();
     const moveDown = page.getByRole('button', { name: /아래로 이동/ }).nth(1);

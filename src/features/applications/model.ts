@@ -46,12 +46,21 @@ export function pickFocusTour(tours: GuideTourSummary[]): GuideTourSummary | nul
   return focus;
 }
 
-/** 그 탐방의 코스로 가는 길: 확정 → 확정 점검, 초안 → 편집, 코스 없음 → 승인자가 있으면 초안 생성, 없으면 신청자 보기. */
+/** 탐방의 코스로 가는 길: 확정 → 확정 점검, 초안 → 편집, 코스 없음 → 승인자가 있으면 초안 생성, 없으면 신청자 보기. */
+export function coursePathFor(
+  tourId: number,
+  courseStatus: CourseStatus | null,
+  approved: number,
+): string {
+  const base = `/guide/tours/${tourId}`;
+  if (courseStatus === 'CONFIRMED') return `${base}/course/confirm`;
+  if (courseStatus === 'DRAFT') return `${base}/course/edit`;
+  return approved >= 1 ? `${base}/course/draft?generate=1` : `${base}/applicants`;
+}
+
+/** `coursePathFor`를 가이드 탐방 요약으로 부른다. */
 export function guideCoursePath(tour: GuideTourSummary): string {
-  const base = `/guide/tours/${tour.id}`;
-  if (tour.courseStatus === 'CONFIRMED') return `${base}/course/confirm`;
-  if (tour.courseStatus === 'DRAFT') return `${base}/course/edit`;
-  return tour.counts.approved >= 1 ? `${base}/course/draft?generate=1` : `${base}/applicants`;
+  return coursePathFor(tour.id, tour.courseStatus, tour.counts.approved);
 }
 
 export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {

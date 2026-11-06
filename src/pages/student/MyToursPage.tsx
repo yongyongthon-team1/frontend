@@ -12,6 +12,7 @@ import { ErrorState } from '@/shared/ui/ErrorState';
 import { Page } from '@/shared/ui/Page';
 import { PageHeading } from '@/shared/ui/PageHeading';
 import { SegmentedTabs } from '@/shared/ui/SegmentedTabs';
+import { segmentedPanelProps } from '@/shared/ui/segmentedPanel';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
 
@@ -160,74 +161,82 @@ export function MyToursPage() {
       <BrandMark variant="wordmark" />
       <PageHeading title={heading.title} description={heading.description} className="mt-5" />
       <div className="mt-5">
-        <SegmentedTabs tabs={TABS} value={tab} onChange={onTab} label="내 탐방 구분" />
+        <SegmentedTabs
+          id="my-tours"
+          tabs={TABS}
+          value={tab}
+          onChange={onTab}
+          label="내 탐방 구분"
+        />
       </div>
 
-      {/* 다시 불러오다 실패해도 이미 받은 목록은 그대로 보인다(판정 24) — 오류 화면은 받은 데이터가 없을 때만. */}
-      {groups === null ? (
-        query.isError ? (
-          <div className="mt-6">
-            <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-          </div>
-        ) : (
-          <>
-            <Skeleton className="mt-6 h-6 w-1/3" />
-            <Skeleton className="mt-3 h-[180px] rounded-xl" />
-            <Skeleton className="mt-3 h-[100px] rounded-xl" />
-          </>
-        )
-      ) : tab === 'upcoming' ? (
-        groups.upcoming.length === 0 && groups.pending.length === 0 ? (
+      <div {...segmentedPanelProps('my-tours', tab)}>
+        {/* 다시 불러오다 실패해도 이미 받은 목록은 그대로 보인다(판정 24) — 오류 화면은 받은 데이터가 없을 때만. */}
+        {groups === null ? (
+          query.isError ? (
+            <div className="mt-6">
+              <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+            </div>
+          ) : (
+            <>
+              <Skeleton className="mt-6 h-6 w-1/3" />
+              <Skeleton className="mt-3 h-[180px] rounded-xl" />
+              <Skeleton className="mt-3 h-[100px] rounded-xl" />
+            </>
+          )
+        ) : tab === 'upcoming' ? (
+          groups.upcoming.length === 0 && groups.pending.length === 0 ? (
+            <div className="mt-6">
+              <EmptyState
+                title="아직 신청한 탐방이 없어요."
+                action={{ label: '추천받으러 가기', to: '/' }}
+              />
+            </div>
+          ) : (
+            <>
+              {groups.upcoming.length > 0 ? (
+                <section>
+                  <SectionTitle count={groups.upcoming.length}>다가오는 탐방</SectionTitle>
+                  <ul className="flex flex-col gap-3">
+                    {groups.upcoming.map((app) => (
+                      <li key={app.id}>
+                        <UpcomingCard app={app} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+              {groups.pending.length > 0 ? (
+                <section>
+                  <SectionTitle>승인 대기</SectionTitle>
+                  <ul className="flex flex-col gap-3">
+                    {groups.pending.map((app) => (
+                      <li key={app.id}>
+                        <PendingCard app={app} />
+                      </li>
+                    ))}
+                  </ul>
+                </section>
+              ) : null}
+            </>
+          )
+        ) : groups.past.length === 0 ? (
           <div className="mt-6">
             <EmptyState
-              title="아직 신청한 탐방이 없어요."
+              title="아직 지난 탐방이 없어요."
               action={{ label: '추천받으러 가기', to: '/' }}
             />
           </div>
         ) : (
-          <>
-            {groups.upcoming.length > 0 ? (
-              <section>
-                <SectionTitle count={groups.upcoming.length}>다가오는 탐방</SectionTitle>
-                <ul className="flex flex-col gap-3">
-                  {groups.upcoming.map((app) => (
-                    <li key={app.id}>
-                      <UpcomingCard app={app} />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-            {groups.pending.length > 0 ? (
-              <section>
-                <SectionTitle>승인 대기</SectionTitle>
-                <ul className="flex flex-col gap-3">
-                  {groups.pending.map((app) => (
-                    <li key={app.id}>
-                      <PendingCard app={app} />
-                    </li>
-                  ))}
-                </ul>
-              </section>
-            ) : null}
-          </>
-        )
-      ) : groups.past.length === 0 ? (
-        <div className="mt-6">
-          <EmptyState
-            title="아직 지난 탐방이 없어요."
-            action={{ label: '추천받으러 가기', to: '/' }}
-          />
-        </div>
-      ) : (
-        <ul className="mt-5 flex flex-col gap-3">
-          {groups.past.map((app) => (
-            <li key={app.id}>
-              <PastCard app={app} />
-            </li>
-          ))}
-        </ul>
-      )}
+          <ul className="mt-5 flex flex-col gap-3">
+            {groups.past.map((app) => (
+              <li key={app.id}>
+                <PastCard app={app} />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </Page>
   );
 }

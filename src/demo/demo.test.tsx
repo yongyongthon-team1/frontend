@@ -103,7 +103,9 @@ describe('시연 패널', () => {
       const stopEmails = useDemoStore.subscribe((s) => demoEmails.push(s.activeDemoEmail));
 
       await user.click(screen.getByRole('button', { name: '가이드' }));
-      await screen.findByRole('link', { name: '내가 개설한 탐방' }); // /guide 자리 화면(Task 9가 G01로 채운다)
+      // 가이드 홈(G01)이 그려졌다: 제목과 맨 아래 링크.
+      await screen.findByRole('heading', { level: 1, name: /이번 주, .+ 탐방을/ });
+      expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toBeInTheDocument();
       stopRouter();
       stopTokens();
       stopEmails();
@@ -155,8 +157,10 @@ describe('시연 패널', () => {
       await user.click(screen.getByRole('button', { name: '사장님' }));
       await waitFor(() => expect(router.state.location.pathname).toBe('/guide'));
       expect(logins.count).toBe(1);
-      // 늦춘 요청이 다음 테스트까지 남지 않게 새 화면의 데이터를 받을 때까지 기다린다(다음 테스트는 목업 DB · 세션을 새로 만든다).
-      expect(await screen.findByRole('link', { name: '내가 개설한 탐방' })).toBeInTheDocument();
+      // 늦춘 요청이 다음 테스트까지 남지 않게 새 화면(G01)의 데이터를 받을 때까지 기다린다(다음 테스트는 목업 DB · 세션을 새로 만든다).
+      expect(
+        await screen.findByRole('heading', { name: /이번 주, .+ 탐방을/ }),
+      ).toBeInTheDocument();
     });
   });
 

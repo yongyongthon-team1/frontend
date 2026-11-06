@@ -4,7 +4,9 @@ import {
   circled,
   endOfSeoulDay,
   formatDuration,
+  formatLongDate,
   formatMonthDay,
+  formatAmPm,
   formatDotDate,
   formatDotDateTimeRange,
   formatDotDateWeekday,
@@ -32,6 +34,17 @@ describe('date', () => {
       '11.12 (목) 14:00~16:30',
     );
     expect(formatDotDateTimeRange('2026-11-12T14:00:00+09:00', null)).toBe('11.12 (목) 14:00');
+  });
+  it('긴 날짜 (V2 가이드 홈)', () => {
+    expect(formatLongDate('2026-11-12T14:00:00+09:00')).toBe('11월 12일 목요일');
+    expect(formatLongDate('2026-11-14T00:30:00+09:00')).toBe('11월 14일 토요일');
+  });
+  it('오전 · 오후 시각 (분이 0이면 생략)', () => {
+    expect(formatAmPm('2026-11-12T14:00:00+09:00')).toBe('오후 2시');
+    expect(formatAmPm('2026-11-12T14:30:00+09:00')).toBe('오후 2시 30분');
+    expect(formatAmPm('2026-11-12T10:00:00+09:00')).toBe('오전 10시');
+    expect(formatAmPm('2026-11-12T12:05:00+09:00')).toBe('오후 12시 5분');
+    expect(formatAmPm('2026-11-12T00:00:00+09:00')).toBe('오전 12시');
   });
   it('짧은 날짜', () => expect(formatShortDate('2026-11-15T14:00:00+09:00')).toBe('11/15(일)'));
   it('시각', () => expect(formatTime('2026-11-15T05:00:00Z')).toBe('14:00'));
