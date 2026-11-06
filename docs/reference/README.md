@@ -9,6 +9,7 @@
 | [user-flow.md](user-flow.md) | 역할별 유저 플로우(F-C0 ~ F-A1) | 노션 `유저 플로우` |
 | [erd.md](erd.md) | ERD 초안 19개 테이블 + 상태값 요약 | 노션 `Backend > ERD 초안` |
 | [wireframes.md](wireframes.md) | 와이어프레임 36장 인벤토리 + 화면 이미지(`wireframes/*.png`) | 피그잼 `용용톤2026_Design` |
+| [design-v2.md](design-v2.md) | **하이파이 V2(UNIRO)** 41장 색인 · 토큰 · 문구 + 화면 이미지(`design-v2/*.png`). V2가 있는 화면은 와이어보다 앞선다(결정 0010) | 피그마 개발용 Design 파일(원본 FigJam `용용톤2026_Design (복사)`) |
 | [hackathon.md](hackathon.md) | 해커톤 규정 · 심사 기준 · 팀 일정 · 회의록 요점 | 해커톤 안내 페이지, 팀 홈 |
 
 - 노션 팀 홈(일정 캘린더 · 보드): https://app.notion.com/p/1-405e0c1995d6800997a6f50af8225e2e
