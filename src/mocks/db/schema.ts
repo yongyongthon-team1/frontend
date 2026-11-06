@@ -8,7 +8,7 @@ import type { TourStatus } from '@/features/tours/model';
 // DATE는 `YYYY-MM-DD`, DATETIME은 `+09:00` ISO 8601 문자열이다.
 // `id`가 users.id를 가리키는 테이블(프로필 · 인증 · 동의)은 ERD 그대로 `id`가 사용자 ID다.
 
-export const MOCK_DB_VERSION = 2;
+export const MOCK_DB_VERSION = 3;
 
 export type StudentVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type GuardianConsentStatus = 'PENDING' | 'AGREED' | 'REJECTED';
@@ -58,6 +58,7 @@ export interface GuardianConsentRow {
   id: number;
   guardianName: string;
   guardianEmail: string;
+  /** ERD는 해시지만 목업은 평문 토큰이다(고정 시연 토큰 `DEMO_CONSENT_TOKENS`). */
   tokenHash: string | null;
   status: GuardianConsentStatus;
   expiresAt: string | null;
@@ -104,6 +105,8 @@ export interface TourRow {
   id: number;
   guideId: number;
   universityId: number;
+  /** 가이드가 정한 탐방 이름. null이면 "대학 + 학과 + 탐방"으로 만든다. */
+  title: string | null;
   startsAt: string;
   endsAt: string | null;
   capacity: number;
@@ -167,6 +170,8 @@ export interface PartnershipRow {
   id: number;
   storeId: number;
   discountDescription: string;
+  /** 사용 조건(예: `탐방 당일 · 1회 사용 가능`). 비우면 null. */
+  condition: string | null;
   startDate: string;
   endDate: string;
   createdAt: string;

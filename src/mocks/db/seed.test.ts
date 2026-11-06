@@ -1,7 +1,17 @@
 import { describe, expect, it } from 'vitest';
 import { computeCouponState } from '@/features/coupons/model';
-import { DEMO_EMAILS, DEMO_MOTIVATION, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
+import { getLandingPath } from '@/features/auth/landing';
+import { toMe } from '@/mocks/rules/views';
+import {
+  DEMO_BUSINESS,
+  DEMO_CONSENT_TOKENS,
+  DEMO_EMAILS,
+  DEMO_MOTIVATION,
+  DEMO_P1_ACCOUNTS,
+  DEMO_STORE_OWNERS,
+} from '@/shared/config/demoAccounts';
 import { distanceMeters } from './geo';
+import { MOCK_DOC_SAMPLE } from './files';
 import { createSeed, DEMO_TOUR_ID, DEMO_UNIVERSITY_ID } from './seed';
 import type { DB } from './schema';
 
@@ -187,9 +197,9 @@ describe('createSeed', () => {
   it('프로필 · 인증 · 동의의 id는 사용자 id와 같다', () => {
     const db = createSeed(today);
     const role = (id: number) => db.users.find((u) => u.id === id)?.role;
-    expect(db.studentProfiles.map((p) => role(p.id))).toEqual(Array(8).fill('HIGH_SCHOOL'));
-    expect(db.guideProfiles.map((p) => role(p.id))).toEqual(Array(5).fill('UNIVERSITY'));
-    expect(db.businessVerifications.map((p) => role(p.id))).toEqual(Array(4).fill('OWNER'));
+    expect(db.studentProfiles.map((p) => role(p.id))).toEqual(Array(11).fill('HIGH_SCHOOL'));
+    expect(db.guideProfiles.map((p) => role(p.id))).toEqual(Array(7).fill('UNIVERSITY'));
+    expect(db.businessVerifications.map((p) => role(p.id))).toEqual(Array(5).fill('OWNER'));
     expect(db.verifications.every((v) => role(v.id) !== undefined)).toBe(true);
     expect(
       db.verifications
@@ -208,7 +218,7 @@ describe('createSeed', () => {
     expect(db.guardianConsents.find((c) => c.id === id('student@demo.kr'))!.status).toBe('AGREED');
     expect(db.guardianConsents.some((c) => c.id === id('newbie@demo.kr'))).toBe(false);
     expect(db.businessVerifications.every((b) => b.isVerified)).toBe(true);
-    expect(db.businessVerifications).toHaveLength(4);
+    expect(db.businessVerifications).toHaveLength(5);
   });
 
   it('가이드 학과: 탐방 제목의 근거', () => {
@@ -343,6 +353,264 @@ describe('createSeed', () => {
       '중앙도서관',
       '학생회관',
     ]);
+  });
+});
+
+describe('P1 상태 계정(시드 v3)', () => {
+  const db = createSeed(today);
+  const user = (email: string) => db.users.find((u) => u.email === email)!;
+  const verificationOf = (email: string) => db.verifications.find((v) => v.id === user(email).id);
+  const consentOf = (email: string) => db.guardianConsents.find((c) => c.id === user(email).id);
+  const landing = (email: string) => getLandingPath(toMe(db, user(email).id, today));
+  const stamp = (key: string, hhmm: string) => `${key}T${hhmm}:00+09:00`;
+
+  it('운영자(18) 뒤에 새 계정 8명이 이 순서로 이어진다', () => {
+    expect(db.users[17].email).toBe('admin@demo.kr');
+    expect(db.users.slice(18).map((u) => [u.id, u.email, u.name, u.role])).toEqual([
+      [19, 'rejected@demo.kr', '윤서아', 'HIGH_SCHOOL'],
+      [20, 'waiting@demo.kr', '강하린', 'HIGH_SCHOOL'],
+      [21, 'expired@demo.kr', '임채원', 'HIGH_SCHOOL'],
+      [22, 'guide-new@demo.kr', '윤가온', 'UNIVERSITY'],
+      [23, 'guide-pending@demo.kr', '한도윤', 'UNIVERSITY'],
+      [24, 'guide-rejected@demo.kr', '서지안', 'UNIVERSITY'],
+      [25, 'owner-new@demo.kr', '정해린', 'OWNER'],
+      [26, 'owner-nostore@demo.kr', '윤가람', 'OWNER'],
+    ]);
+  });
+
+  it('윤서아: 반려 · 동의 거부 · 첫 화면 /verify', () => {
+    expect(verificationOf('rejected@demo.kr')).toMatchObject({
+      status: 'REJECTED',
+      rejectionReason: '학생증 사진이 흐려서 학교 이름을 읽을 수 없어요.',
+      submittedAt: stamp('2026-11-12', '20:00'),
+      reviewedAt: stamp('2026-11-13', '10:00'),
+      documentUrl: null,
+    });
+    expect(consentOf('rejected@demo.kr')).toMatchObject({
+      status: 'REJECTED',
+      tokenHash: DEMO_CONSENT_TOKENS.rejected,
+      guardianName: '윤서아 보호자',
+      guardianEmail: 'guardian-19@demo.kr',
+    });
+    expect(db.studentProfiles.find((p) => p.id === 19)).toMatchObject({
+      highSchoolName: '수원영통고등학교',
+      grade: 2,
+      interestedMajor: '시각디자인',
+    });
+    expect(landing('rejected@demo.kr')).toBe('/verify');
+  });
+
+  it('강하린: 심사 중 · 동의 대기(요청 어제 22:45, 만료 +7일) · 첫 화면 /', () => {
+    expect(verificationOf('waiting@demo.kr')).toMatchObject({
+      status: 'PENDING',
+      documentUrl: MOCK_DOC_SAMPLE.HIGH_SCHOOL,
+      submittedAt: stamp('2026-11-14', '22:40'),
+    });
+    expect(consentOf('waiting@demo.kr')).toMatchObject({
+      status: 'PENDING',
+      tokenHash: DEMO_CONSENT_TOKENS.valid,
+      createdAt: stamp('2026-11-14', '22:45'),
+      expiresAt: stamp('2026-11-21', '22:45'),
+      guardianName: '강하린 보호자',
+      guardianEmail: 'guardian-20@demo.kr',
+    });
+    expect(db.studentProfiles.find((p) => p.id === 20)).toMatchObject({
+      highSchoolName: '수원영통고등학교',
+      grade: 2,
+      interestedMajor: '경영학',
+    });
+    expect(toMe(db, 20, today).guardianStatus).toBe('PENDING');
+    expect(landing('waiting@demo.kr')).toBe('/');
+  });
+
+  it('임채원: 재학 승인 · 동의 링크 만료 · 첫 화면 /verify', () => {
+    expect(verificationOf('expired@demo.kr')).toMatchObject({
+      status: 'APPROVED',
+      reviewedAt: stamp('2026-11-06', '09:00'),
+    });
+    expect(consentOf('expired@demo.kr')).toMatchObject({
+      status: 'PENDING',
+      tokenHash: DEMO_CONSENT_TOKENS.expired,
+      expiresAt: stamp('2026-11-14', '09:00'),
+      guardianName: '임채원 보호자',
+      guardianEmail: 'guardian-21@demo.kr',
+    });
+    expect(db.studentProfiles.find((p) => p.id === 21)).toMatchObject({
+      highSchoolName: '용인홍천고등학교',
+      grade: 3,
+      interestedMajor: '통번역',
+    });
+    expect(toMe(db, 21, today).guardianStatus).toBe('EXPIRED');
+    expect(landing('expired@demo.kr')).toBe('/verify');
+  });
+
+  it('오지호: 사진 · 제출 어제 21:30 · 동의 완료 토큰', () => {
+    expect(verificationOf('pending@demo.kr')).toMatchObject({
+      status: 'PENDING',
+      documentUrl: MOCK_DOC_SAMPLE.HIGH_SCHOOL,
+      submittedAt: stamp('2026-11-14', '21:30'),
+    });
+    expect(consentOf('pending@demo.kr')).toMatchObject({
+      status: 'AGREED',
+      tokenHash: DEMO_CONSENT_TOKENS.agreed,
+    });
+  });
+
+  it('동의 토큰은 네 개이고 서로 다르다. 기존 동의 완료 행은 토큰이 없다', () => {
+    expect(DEMO_CONSENT_TOKENS).toEqual({
+      valid: 'demo-consent-valid',
+      expired: 'demo-consent-expired',
+      rejected: 'demo-consent-rejected',
+      agreed: 'demo-consent-agreed',
+    });
+    const tokens = db.guardianConsents.map((c) => c.tokenHash).filter((t) => t !== null);
+    expect([...tokens].sort()).toEqual(Object.values(DEMO_CONSENT_TOKENS).sort());
+    expect(consentOf('student@demo.kr')!.tokenHash).toBeNull();
+  });
+
+  it('윤가온: 인증 기록도 프로필도 없다 · /guide/verify', () => {
+    expect(verificationOf('guide-new@demo.kr')).toBeUndefined();
+    expect(db.guideProfiles.some((p) => p.id === 22)).toBe(false);
+    expect(landing('guide-new@demo.kr')).toBe('/guide/verify');
+  });
+
+  it('한도윤: 심사 중 · 단국대 · 프로필 학과 없음 · 이 태스크에서는 /guide/me', () => {
+    expect(verificationOf('guide-pending@demo.kr')).toMatchObject({
+      status: 'PENDING',
+      universityId: 3,
+      highSchoolName: null,
+      documentUrl: MOCK_DOC_SAMPLE.UNIVERSITY,
+      submittedAt: stamp('2026-11-14', '18:05'),
+    });
+    expect(db.guideProfiles.find((p) => p.id === 23)).toMatchObject({
+      universityId: 3,
+      major: null,
+      introduction: null,
+    });
+    expect(landing('guide-pending@demo.kr')).toBe('/guide/me');
+  });
+
+  it('서지안: 반려 · 명지대 · 프로필 있음 · /guide/verify', () => {
+    expect(verificationOf('guide-rejected@demo.kr')).toMatchObject({
+      status: 'REJECTED',
+      universityId: 4,
+      rejectionReason:
+        '학생증 사진이 흐려 학교 이름을 확인할 수 없어요. 밝은 곳에서 다시 찍어 올려 주세요.',
+      documentUrl: null,
+      reviewedAt: stamp('2026-11-14', '16:00'),
+    });
+    expect(db.guideProfiles.find((p) => p.id === 24)).toMatchObject({
+      universityId: 4,
+      major: '기계공학과',
+      introduction: '기계공학과 실험 수업과 동아리 생활을 편하게 이야기해 드릴게요.',
+    });
+    expect(landing('guide-rejected@demo.kr')).toBe('/guide/verify');
+  });
+
+  it('사장님 둘: 사업자 인증 전 · 가게 연결 전', () => {
+    expect(db.businessVerifications.some((b) => b.id === 25)).toBe(false);
+    expect(db.stores.some((s) => s.ownerId === 25)).toBe(false);
+    expect(landing('owner-new@demo.kr')).toBe('/owner/verify');
+    expect(db.businessVerifications.find((b) => b.id === 26)).toMatchObject({
+      isVerified: true,
+      verifiedAt: stamp('2026-11-14', '09:00'),
+    });
+    expect(db.stores.some((s) => s.ownerId === 26)).toBe(false);
+    expect(landing('owner-nostore@demo.kr')).toBe('/owner/store/connect');
+  });
+
+  it('기존 계정의 첫 화면은 그대로다', () => {
+    expect(landing('student@demo.kr')).toBe('/');
+    expect(landing('newbie@demo.kr')).toBe('/verify');
+    expect(landing('guide@demo.kr')).toBe('/guide');
+    expect(landing('owner1@demo.kr')).toBe('/owner/store');
+    expect(landing('admin@demo.kr')).toBe('/admin/verifications');
+  });
+
+  it('운영자 대기열(START): 한도윤 → 오지호 → 강하린 (제출 오래된 순)', () => {
+    const queue = db.verifications
+      .filter((v) => v.status === 'PENDING')
+      .sort((a, b) => Date.parse(a.submittedAt) - Date.parse(b.submittedAt))
+      .map((v) => db.users.find((u) => u.id === v.id)!.name);
+    expect(queue).toEqual(['한도윤', '오지호', '강하린']);
+  });
+
+  it('처리 내역: 서지안 → 윤서아 → 임채원 → 기존 승인 11건(모두 임채원보다 먼저 처리됨)', () => {
+    const processed = db.verifications
+      .filter((v) => v.reviewedAt !== null)
+      .sort((a, b) => Date.parse(b.reviewedAt!) - Date.parse(a.reviewedAt!));
+    const names = processed.map((v) => db.users.find((u) => u.id === v.id)!.name);
+    expect(names.slice(0, 3)).toEqual(['서지안', '윤서아', '임채원']);
+    expect(processed).toHaveLength(14);
+    const stamps = processed.map((v) => Date.parse(v.reviewedAt!));
+    expect(new Set(stamps.slice(0, 3)).size).toBe(3);
+    const existing = processed.slice(3);
+    expect(existing.every((v) => v.status === 'APPROVED')).toBe(true);
+    for (const v of existing) expect(Date.parse(v.reviewedAt!)).toBeLessThan(stamps[2]);
+  });
+
+  it('DEMO_P1_ACCOUNTS: 열 개, 이메일이 모두 시드에 있다', () => {
+    expect(DEMO_P1_ACCOUNTS.map((a) => a.email)).toEqual([
+      'newbie@demo.kr',
+      'waiting@demo.kr',
+      'rejected@demo.kr',
+      'expired@demo.kr',
+      'pending@demo.kr',
+      'guide-new@demo.kr',
+      'guide-pending@demo.kr',
+      'guide-rejected@demo.kr',
+      'owner-new@demo.kr',
+      'owner-nostore@demo.kr',
+    ]);
+    for (const a of DEMO_P1_ACCOUNTS) {
+      expect(db.users.some((u) => u.email === a.email)).toBe(true);
+      expect(a.label.length).toBeGreaterThan(0);
+    }
+    expect(DEMO_EMAILS).toMatchObject({
+      unverifiedGuide: 'guide-new@demo.kr',
+      ownerUnverified: 'owner-new@demo.kr',
+      ownerNoStore: 'owner-nostore@demo.kr',
+    });
+  });
+
+  it('DEMO_BUSINESS: 세 항목 모두 번호 · 대표자명 · 개업일을 갖는다', () => {
+    expect(DEMO_BUSINESS.match).toEqual({
+      businessNumber: '123-45-67890',
+      representativeName: '정해린',
+      openingDate: '2021-03-02',
+    });
+    expect(DEMO_BUSINESS.mismatch.businessNumber).toBe('111-11-11111');
+    expect(DEMO_BUSINESS.closed.businessNumber).toBe('999-99-99999');
+    for (const entry of Object.values(DEMO_BUSINESS)) {
+      expect(entry.representativeName.length).toBeGreaterThan(0);
+      expect(entry.openingDate).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    }
+    // 불일치: 번호는 알려져 있지만 대표자명 또는 개업일이 일치 항목과 다르다.
+    expect(
+      DEMO_BUSINESS.mismatch.representativeName !== DEMO_BUSINESS.match.representativeName ||
+        DEMO_BUSINESS.mismatch.openingDate !== DEMO_BUSINESS.match.openingDate,
+    ).toBe(true);
+  });
+
+  it('후보 상점 5 · 6은 주인이 없는 일반 상점이다', () => {
+    expect(db.stores.filter((s) => s.id >= 5).map((s) => [s.id, s.ownerId])).toEqual([
+      [5, null],
+      [6, null],
+    ]);
+  });
+
+  it('견본 학생증 경로', () => {
+    expect(MOCK_DOC_SAMPLE).toEqual({
+      HIGH_SCHOOL: '/mock-docs/student-id-hs.svg',
+      UNIVERSITY: '/mock-docs/student-id-univ.svg',
+    });
+  });
+
+  it('탐방 · 제휴의 새 칸: title · condition은 null, 제휴 1~4만 사용 조건', () => {
+    expect(db.tours.every((t) => t.title === null)).toBe(true);
+    expect(db.partnerships.map((p) => p.condition)).toEqual(
+      Array(4).fill('탐방 당일 · 1회 사용 가능'),
+    );
   });
 });
 

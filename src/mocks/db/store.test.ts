@@ -29,14 +29,17 @@ describe('getDb', () => {
   it('옛 버전이면(모양이 온전해도) 시드로 복구하고 저장소도 덮어쓴다', () => {
     const old = { ...createSeed(mockNow()), version: MOCK_DB_VERSION - 1 };
     old.users[0].name = '옛-마커';
+    old.users = old.users.filter((u) => u.email !== 'waiting@demo.kr'); // v2 저장본에는 없던 계정
     localStorage.setItem(MOCK_DB_KEY, JSON.stringify(old));
     clearDbCache();
     const db = getDb();
     expect(db.version).toBe(MOCK_DB_VERSION);
     expect(db.users[0].name).not.toBe('옛-마커');
+    expect(db.users.some((u) => u.email === 'waiting@demo.kr')).toBe(true);
     const stored = JSON.parse(localStorage.getItem(MOCK_DB_KEY)!);
     expect(stored.version).toBe(MOCK_DB_VERSION);
     expect(stored.users[0].name).not.toBe('옛-마커');
+    expect(stored.users.some((u: { email: string }) => u.email === 'waiting@demo.kr')).toBe(true);
   });
 
   it('버전만 맞고 모양이 틀려도 시드로 복구', () => {

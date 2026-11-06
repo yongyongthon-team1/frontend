@@ -6,6 +6,8 @@ export type PartnershipState = 'ACTIVE' | 'SCHEDULED' | 'ENDED';
 export interface Partnership {
   id: number;
   discount: string;
+  /** 사용 조건. 없으면 null. */
+  condition: string | null;
   /** `YYYY-MM-DD` */
   startDate: string;
   /** `YYYY-MM-DD` */

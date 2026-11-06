@@ -2,6 +2,12 @@
 
 export const MOCK_FILE_PREFIX = 'mock-file:';
 
+/** 시드 계정의 정적 견본 학생증(`public/mock-docs`, "견본" 표시 + 가상 이름). 새로고침해도 남는다. */
+export const MOCK_DOC_SAMPLE = {
+  HIGH_SCHOOL: '/mock-docs/student-id-hs.svg',
+  UNIVERSITY: '/mock-docs/student-id-univ.svg',
+} as const;
+
 const files = new Map<string, Blob>();
 const urls = new Map<string, string>();
 let counter = 0;

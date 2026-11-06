@@ -26,6 +26,14 @@ describe('buildTourSummary', () => {
     });
   });
 
+  it('탐방 이름(title)이 있으면 그 값을, null이면 파생 제목을 쓴다', () => {
+    const db = createSeed(today);
+    expect(db.tours[0].title).toBeNull();
+    expect(buildTourSummary(db, db.tours[0]).title).toBe('경희대 국제캠퍼스 산업디자인학과 탐방');
+    db.tours[0].title = '디자인 작업실 탐방';
+    expect(buildTourSummary(db, db.tours[0]).title).toBe('디자인 작업실 탐방');
+  });
+
   it('본교는 캠퍼스를 생략하고 한국외대는 줄여 쓴다', () => {
     const db = createSeed(today);
     const title = (tourId: number) =>

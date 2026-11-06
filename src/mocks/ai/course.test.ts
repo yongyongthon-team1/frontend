@@ -38,6 +38,7 @@ function addStore(
       id: partnershipId,
       storeId: s.id,
       discountDescription: '음료 500원 할인',
+      condition: null,
       startDate: '2026-11-01',
       endDate: '2026-11-30',
       createdAt: '2026-09-16T09:00:00+09:00',

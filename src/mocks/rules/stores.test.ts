@@ -22,6 +22,7 @@ describe('내 가게 조회 (GET /owner/store)', () => {
       partnership: {
         id: 1,
         discount: '식사 금액 10% 할인',
+        condition: '탐방 당일 · 1회 사용 가능',
         startDate: expect.stringMatching(/^\d{4}-\d\d-\d\d$/),
         endDate: expect.stringMatching(/^\d{4}-\d\d-\d\d$/),
         state: 'ACTIVE',

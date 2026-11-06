@@ -7,6 +7,7 @@
 ### 한 일
 
 - MVP 2B Task 1: P1 목업 · 테스트 기반을 깔았다. 목업 오류가 입력 칸별 `fieldErrors`를 싣고(`fieldError(칸, 문구?, 코드?, 상태?)`), multipart 본문을 `readForm` · `formFile`로 읽으며, 업로드한 사진은 `src/mocks/db/files.ts`(참조 `mock-file:…`, 시연 초기화가 비움)에 둔다. 에러 코드 5개(`COMPLETE_BEFORE_TOUR_DATE` · `COURSE_STOP_DUPLICATE` · `COURSE_STOP_LIMIT` · `BIZ_NOT_VERIFIED` · `ADDRESS_NOT_FOUND`)를 더하고 `BIZ_CLOSED` 문구를 다음 행동이 있게 고쳤다. 업로드 제한 60초(`UPLOAD_TIMEOUT_MS`), 본문 없는 413은 `FILE_TOO_LARGE`. 테스트는 전역 `FormData` · `File` · `Blob`을 Node 구현으로 바꾼다(jsdom `File`을 담은 FormData는 `Request.formData()`가 끝나지 않는다; React가 부르는 `new FormData(폼 요소)`는 jsdom이 읽도록 감쌌다. 그 폼 요소 경로의 파일 항목은 이름 · 형식만 있고 내용이 비어 있으니 시험에서 내용을 읽지 않는다) + `server.events` 리스너 정리 + `testImage()`. `registry.test.ts`는 `P1_CONTRACT`로, 자리 화면 문구는 `곧 열려요.`(`/owner/report`와 `/explore`만 남을 예정)로 바꿨다. 정리 대상: 2B 뒤 `PlaceholderPage`의 `showLogout`은 쓸 곳이 없어진다.
+- MVP 2B Task 2: 목업 시드를 v3로 올렸다(`MOCK_DB_VERSION = 3`, 옛 저장본은 새 시드로 바뀐다). 운영자 뒤에 P1 상태 계정 8명(윤서아 · 강하린 · 임채원 · 윤가온 · 한도윤 · 서지안 · 정해린 · 윤가람)과 고정 보호자 동의 토큰 4개(`DEMO_CONSENT_TOKENS`), 데모 사업자 번호 3종(`DEMO_BUSINESS`), 시연 패널용 `DEMO_P1_ACCOUNTS`, 견본 학생증 SVG 2장(`public/mock-docs`, `MOCK_DOC_SAMPLE`)을 더했다. 탐방 행에 `title`, 제휴 행에 `condition` 칸이 생겼다(탐방 요약 제목은 `title ?? 파생 제목`). 운영자 대기열은 한도윤 → 오지호 → 강하린, 처리 내역은 서지안 → 윤서아 → 임채원 → 기존 승인 11건이다. 체크포인트 정의는 그대로다.
 
 ## 2026-11-06
 

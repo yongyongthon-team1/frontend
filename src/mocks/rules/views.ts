@@ -352,6 +352,7 @@ export function toMyStore(db: DB, store: StoreRow, now: Date): MyStore {
       ? {
           id: current.p.id,
           discount: current.p.discountDescription,
+          condition: current.p.condition,
           startDate: current.p.startDate,
           endDate: current.p.endDate,
           state: current.state,

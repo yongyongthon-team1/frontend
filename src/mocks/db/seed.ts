@@ -1,18 +1,22 @@
 import { approveApplication, applyToTour } from '@/mocks/rules/applications';
 import { confirmCourse, createDraft } from '@/mocks/rules/courses';
 import {
+  DEMO_CONSENT_TOKENS,
   DEMO_MOTIVATION,
   DEMO_SEED_PASSWORD,
   type SeedCheckpoint,
 } from '@/shared/config/demoAccounts';
 import { addDaysKey, endOfSeoulDay, seoulDateAt, seoulDateKey } from '@/shared/lib/date';
+import { MOCK_DOC_SAMPLE } from './files';
 import {
   MOCK_DB_VERSION,
   type ApplicationRow,
   type CouponRow,
   type DB,
+  type GuardianConsentRow,
   type ReviewRow,
   type TourRow,
+  type VerificationRow,
 } from './schema';
 
 // 체크포인트 타입은 시연 도구와 같이 쓰려고 공용 설정에 있다(기존 import 경로를 위해 다시 내보낸다).
@@ -165,14 +169,20 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
   }
 
   // ── 사용자와 역할별 프로필 ─────────────────────────────────────────────
+  /** 재학 인증 · 보호자 동의 행의 기본값에 덮어쓸 칸(P1 상태 계정이 쓴다). */
+  interface SeedExtras {
+    verification?: Partial<Omit<VerificationRow, 'id'>>;
+    consent?: Partial<Omit<GuardianConsentRow, 'id'>>;
+  }
   const student = (
     email: string,
     name: string,
     school: string,
     grade: number,
     major: string | null,
-    verification: 'APPROVED' | 'PENDING' | 'NONE',
-    consent: 'AGREED' | 'NONE',
+    verification: 'APPROVED' | 'PENDING' | 'REJECTED' | 'NONE',
+    consent: 'AGREED' | 'PENDING' | 'REJECTED' | 'NONE',
+    extras: SeedExtras = {},
   ) => {
     const u = add(db.users, {
       email,
@@ -201,19 +211,21 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
         submittedAt: stamp(-55),
         reviewedAt: verification === 'APPROVED' ? stamp(-54) : null,
         reviewedBy: verification === 'APPROVED' ? ADMIN_ID : null,
+        ...extras.verification,
       });
     }
-    if (consent === 'AGREED') {
+    if (consent !== 'NONE') {
       db.guardianConsents.push({
         id: u.id,
         guardianName: `${name} 보호자`,
         guardianEmail: `guardian-${u.id}@demo.kr`,
         tokenHash: null,
-        status: 'AGREED',
+        status: consent,
         expiresAt: stamp(-50),
-        agreedAt: stamp(-54, '12:00'),
+        agreedAt: consent === 'AGREED' ? stamp(-54, '12:00') : null,
         createdAt: stamp(-55),
         updatedAt: stamp(-54, '12:00'),
+        ...extras.consent,
       });
     }
     return u;
@@ -273,14 +285,25 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
     'APPROVED',
     'AGREED',
   );
-  student('pending@demo.kr', '오지호', '수원영통고등학교', 1, '사회복지', 'PENDING', 'AGREED');
+  student('pending@demo.kr', '오지호', '수원영통고등학교', 1, '사회복지', 'PENDING', 'AGREED', {
+    verification: { documentUrl: MOCK_DOC_SAMPLE.HIGH_SCHOOL, submittedAt: stamp(-1, '21:30') },
+    consent: {
+      tokenHash: DEMO_CONSENT_TOKENS.agreed,
+      createdAt: stamp(-1, '21:35'),
+      expiresAt: stamp(6, '21:35'),
+      agreedAt: stamp(-1, '21:50'),
+      updatedAt: stamp(-1, '21:50'),
+    },
+  });
 
   const guide = (
     email: string,
     name: string,
     universityId: number,
-    major: string,
-    introduction: string,
+    major: string | null,
+    introduction: string | null,
+    verification: 'APPROVED' | 'PENDING' | 'REJECTED' | 'NONE' = 'APPROVED',
+    extras: { verification?: SeedExtras['verification']; profile?: boolean } = {},
   ) => {
     const u = add(db.users, {
       email,
@@ -290,25 +313,30 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
       createdAt: created,
       updatedAt: created,
     });
-    db.guideProfiles.push({
-      id: u.id,
-      universityId,
-      major,
-      introduction,
-      createdAt: created,
-      updatedAt: created,
-    });
-    db.verifications.push({
-      id: u.id,
-      highSchoolName: null,
-      universityId,
-      documentUrl: null,
-      status: 'APPROVED',
-      rejectionReason: null,
-      submittedAt: stamp(-58),
-      reviewedAt: stamp(-57),
-      reviewedBy: ADMIN_ID,
-    });
+    if (extras.profile !== false) {
+      db.guideProfiles.push({
+        id: u.id,
+        universityId,
+        major,
+        introduction,
+        createdAt: created,
+        updatedAt: created,
+      });
+    }
+    if (verification !== 'NONE') {
+      db.verifications.push({
+        id: u.id,
+        highSchoolName: null,
+        universityId,
+        documentUrl: null,
+        status: verification,
+        rejectionReason: null,
+        submittedAt: stamp(-58),
+        reviewedAt: verification === 'APPROVED' ? stamp(-57) : null,
+        reviewedBy: verification === 'APPROVED' ? ADMIN_ID : null,
+        ...extras.verification,
+      });
+    }
     return u;
   };
   const guideKhu = guide(
@@ -381,6 +409,92 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
   if (admin.id !== ADMIN_ID)
     throw new Error('시드 사용자 순서가 바뀌었다: 운영자 ID가 ADMIN_ID와 다르다');
 
+  // ── P1 상태 계정 8명(운영자 뒤, 이 순서). 인증 · 동의 · 가게 연결의 각 상태를 보여 준다 ───────────
+  student(
+    'rejected@demo.kr',
+    '윤서아',
+    '수원영통고등학교',
+    2,
+    '시각디자인',
+    'REJECTED',
+    'REJECTED',
+    {
+      verification: {
+        rejectionReason: '학생증 사진이 흐려서 학교 이름을 읽을 수 없어요.',
+        submittedAt: stamp(-3, '20:00'),
+        reviewedAt: stamp(-2, '10:00'),
+        reviewedBy: ADMIN_ID,
+      },
+      consent: {
+        tokenHash: DEMO_CONSENT_TOKENS.rejected,
+        createdAt: stamp(-3, '20:05'),
+        expiresAt: stamp(4, '20:05'),
+        updatedAt: stamp(-3, '21:00'),
+      },
+    },
+  );
+  student('waiting@demo.kr', '강하린', '수원영통고등학교', 2, '경영학', 'PENDING', 'PENDING', {
+    verification: { documentUrl: MOCK_DOC_SAMPLE.HIGH_SCHOOL, submittedAt: stamp(-1, '22:40') },
+    consent: {
+      tokenHash: DEMO_CONSENT_TOKENS.valid,
+      createdAt: stamp(-1, '22:45'),
+      expiresAt: stamp(6, '22:45'),
+      updatedAt: stamp(-1, '22:45'),
+    },
+  });
+  student('expired@demo.kr', '임채원', '용인홍천고등학교', 3, '통번역', 'APPROVED', 'PENDING', {
+    verification: { submittedAt: stamp(-10), reviewedAt: stamp(-9) },
+    consent: {
+      tokenHash: DEMO_CONSENT_TOKENS.expired,
+      createdAt: stamp(-8),
+      expiresAt: stamp(-1),
+      updatedAt: stamp(-8),
+    },
+  });
+  guide('guide-new@demo.kr', '윤가온', 2, null, null, 'NONE', { profile: false });
+  guide('guide-pending@demo.kr', '한도윤', 3, null, null, 'PENDING', {
+    verification: { documentUrl: MOCK_DOC_SAMPLE.UNIVERSITY, submittedAt: stamp(-1, '18:05') },
+  });
+  guide(
+    'guide-rejected@demo.kr',
+    '서지안',
+    4,
+    '기계공학과',
+    '기계공학과 실험 수업과 동아리 생활을 편하게 이야기해 드릴게요.',
+    'REJECTED',
+    {
+      verification: {
+        rejectionReason:
+          '학생증 사진이 흐려 학교 이름을 확인할 수 없어요. 밝은 곳에서 다시 찍어 올려 주세요.',
+        submittedAt: stamp(-3, '14:00'),
+        reviewedAt: stamp(-1, '16:00'),
+        reviewedBy: ADMIN_ID,
+      },
+    },
+  );
+  add(db.users, {
+    email: 'owner-new@demo.kr',
+    password: DEMO_SEED_PASSWORD,
+    name: '정해린',
+    role: 'OWNER',
+    createdAt: created,
+    updatedAt: created,
+  });
+  const ownerNoStore = add(db.users, {
+    email: 'owner-nostore@demo.kr',
+    password: DEMO_SEED_PASSWORD,
+    name: '윤가람',
+    role: 'OWNER',
+    createdAt: created,
+    updatedAt: created,
+  });
+  db.businessVerifications.push({
+    id: ownerNoStore.id,
+    isVerified: true,
+    verifiedAt: stamp(-1),
+    updatedAt: stamp(-1),
+  });
+
   // ── 탐방 ────────────────────────────────────────────────────────────
   const tour = (
     guideId: number,
@@ -397,6 +511,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
     add(db.tours, {
       guideId,
       universityId,
+      title: null,
       startsAt: seoulDateAt(startDay, from),
       endsAt: seoulDateAt(startDay, to),
       capacity,
@@ -575,6 +690,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
     add(db.partnerships, {
       storeId: store.id,
       discountDescription: s.discount,
+      condition: '탐방 당일 · 1회 사용 가능',
       startDate: rel(-30),
       endDate: rel(90),
       createdAt: created,
