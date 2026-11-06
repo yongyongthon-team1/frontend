@@ -1,11 +1,10 @@
 import { ChevronRight } from 'lucide-react';
 import type { ReactNode } from 'react';
 import { Link, useNavigate, useParams } from 'react-router';
-import type { ApplicationStatus } from '@/features/applications/model';
+import { isUpcomingTour, STUDENT_APPLICATION_STATUS } from '@/features/applications/model';
 import { useMyApplication } from '@/features/applications/queries';
 import { campusLabel } from '@/features/tours/model';
 import { formatDotDateWeekday, formatTimeRange } from '@/shared/lib/date';
-import type { Tone } from '@/shared/lib/types';
 import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
 import { ErrorState } from '@/shared/ui/ErrorState';
@@ -15,14 +14,6 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
 import { toneTextClass } from '@/shared/ui/tone';
 import { TopBar } from '@/shared/ui/TopBar';
-
-// 가이드 승인 상태 한 단어. 칩과 상태 행이 같은 문구 · 색을 쓴다.
-const STATUS: Record<ApplicationStatus, { label: string; chipTone: Tone; textTone: Tone }> = {
-  APPROVED: { label: '참여 확정', chipTone: 'success', textTone: 'success' },
-  PENDING: { label: '승인 대기', chipTone: 'neutral', textTone: 'info' },
-  REJECTED: { label: '신청 거절', chipTone: 'danger', textTone: 'danger' },
-  CANCELED: { label: '취소됨', chipTone: 'neutral', textTone: 'neutral' },
-};
 
 function LinkRow({ title, description }: { title: string; description: string }) {
   return (
@@ -76,14 +67,17 @@ export function MyTourDetailPage() {
   }
 
   const { tour } = app;
-  const status = STATUS[app.status];
-  const active = app.status === 'PENDING' || app.status === 'APPROVED';
+  const status = STUDENT_APPLICATION_STATUS[app.status];
+  const live = app.status === 'PENDING' || app.status === 'APPROVED';
+  // 취소 UI(버튼 · 무효화 안내)는 아직 끝나지 않은 탐방의 살아 있는 신청에만. 이 분류가 내 탐방 목록의 예정 탭과 같다
+  // (`groupMyApplications`) — 뒤로 가기도 온 탭으로 돌아간다.
+  const active = live && isUpcomingTour(tour);
   // 코스는 승인된 신청자에게만 열린다(서버도 승인 대기 신청에는 코스를 주지 않는다).
   const courseOpen = app.status === 'APPROVED' && app.courseStatus === 'CONFIRMED';
 
   return (
     <>
-      <TopBar title="신청 내역 상세" back="/my-tours" />
+      <TopBar title="신청 내역 상세" back={active ? '/my-tours' : '/my-tours?tab=past'} />
       <Page className={active ? BOTTOM_ACTION_PAGE : undefined}>
         <PageHeading as="h2" title="신청 내역" description="참여 일정을 확인하고 준비해 주세요." />
 
@@ -117,7 +111,7 @@ export function MyTourDetailPage() {
             </a>
           ) : null}
 
-          {active ? (
+          {live && (active || courseOpen) ? (
             courseOpen ? (
               <Link to={`/my-tours/${app.id}/course`} className={rowClass}>
                 <LinkRow title="코스 보기" description="캠퍼스 · 전공 Q&A · 로컬 상점" />

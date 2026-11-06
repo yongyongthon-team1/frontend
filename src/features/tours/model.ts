@@ -175,12 +175,12 @@ export function applyButtonState(
 }
 
 /**
- * 탐방 소개를 V2 `이런 경험을 해요` 번호 목록의 항목으로 나눈다. 줄바꿈 · `·` · 마침표로 나누고 빈 조각은 버리며
- * 최대 3개다. 한 덩어리뿐이면 그 한 개다.
+ * 탐방 소개를 V2 `이런 경험을 해요` 번호 목록의 항목으로 나눈다. 줄바꿈 · `·` · 마침표(뒤에 공백이나 끝이 오는 것만 — `3.5시간` ·
+ * 주소는 자르지 않는다)로 나누고 빈 조각은 버리며 최대 3개다. 한 덩어리뿐이면 그 한 개다.
  */
 export function tourHighlights(introduction: string): string[] {
   return introduction
-    .split(/[\n·.]/)
+    .split(/\n|·|\.(?=\s|$)/)
     .map((part) => part.trim())
     .filter((part) => part !== '')
     .slice(0, 3);

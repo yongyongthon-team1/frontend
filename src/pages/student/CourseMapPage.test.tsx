@@ -98,6 +98,8 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     );
     const meal = await screen.findByRole('button', { name: /서천 밥상/ });
     expect(within(meal).getByText('양이 넉넉한 학생 단골 밥집 · 50분')).toBeInTheDocument();
+    // 가이드 한줄평에는 AI 표시가 없다.
+    expect(within(meal).queryByText('AI 추천 이유:')).not.toBeInTheDocument();
     expect(within(meal).getByText('공공데이터 기반 추천 · 쿠폰 사용 가능')).toBeInTheDocument();
 
     const cafeReason = getDb().courseStops.find(
@@ -105,6 +107,9 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     )!.recommendationReason!;
     const cafe = screen.getByRole('button', { name: /카페 모래시계/ });
     expect(within(cafe).getByText(`${cafeReason} · 30분`)).toBeInTheDocument();
+    // AI 추천 이유에는 ✦(장식)와 화면 낭독기용 표시가 붙는다.
+    expect(within(cafe).getByText('AI 추천 이유:')).toBeInTheDocument();
+    expect(within(cafe).getByText('✦')).toHaveAttribute('aria-hidden', 'true');
     expect(within(cafe).getByText('공공데이터 기반 추천 · 쿠폰 사용 가능')).toBeInTheDocument();
   });
 
@@ -196,6 +201,31 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     ).toBeInTheDocument();
     expect(courseGets).toBe(0);
   });
+
+  it.each([
+    ['REJECTED', '신청 거절', 'bg-danger-soft'],
+    ['CANCELED', '취소됨', 'bg-neutral-100'],
+  ] as const)(
+    '%s 신청은 참여 확정 · 코스 확정 대기 문구 없이 상태 칩과 신청 내역 링크만',
+    async (status, chipLabel, chipBg) => {
+      const { id } = await openCourseMap('CONFIRMED', (applicationId) => {
+        mutate((db) => {
+          db.applications.find((a) => a.id === applicationId)!.status = status;
+        });
+      });
+      expect(await screen.findByText('이 신청으로는 코스를 볼 수 없어요.')).toBeInTheDocument();
+      expect(screen.getByText(chipLabel).closest('div')).toHaveClass(chipBg);
+      expect(screen.queryByText('참여 확정')).not.toBeInTheDocument();
+      expect(screen.queryByText('코스 확정을 기다려요')).not.toBeInTheDocument();
+      expect(screen.queryByText('가이드 승인을 기다리고 있어요')).not.toBeInTheDocument();
+      expect(screen.queryByRole('list')).not.toBeInTheDocument(); // 진행 단계 표시 없음
+      expect(screen.getByRole('link', { name: '신청 내역 보기' })).toHaveAttribute(
+        'href',
+        `/my-tours/${id}`,
+      );
+      expect(screen.queryByRole('link', { name: '내 쿠폰 확인하기' })).not.toBeInTheDocument();
+    },
+  );
 
   it('그 밖의 403(FORBIDDEN)은 준비 중', async () => {
     server.use(

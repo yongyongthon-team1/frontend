@@ -23,7 +23,7 @@ describe('tourTitle', () => {
 });
 
 describe('tourHighlights', () => {
-  it('줄 3개는 3개로 나눈다', () =>
+  it('줄바꿈과 가운뎃점(·)으로 나누고 4번째부터는 버린다', () =>
     expect(
       tourHighlights('캠퍼스 둘러보기\n전공 수업·학교생활 이야기\n동네 카페에서 질문하기'),
     ).toEqual(['캠퍼스 둘러보기', '전공 수업', '학교생활 이야기']));
@@ -34,13 +34,20 @@ describe('tourHighlights', () => {
     ]));
 
   it('빈 줄과 빈 조각은 무시하고 최대 3개', () =>
-    expect(tourHighlights('\n 가 \n\n나. 다 .라\n마\n')).toEqual(['가', '나', '다']));
+    expect(tourHighlights('\n 가 \n\n나. 다 . 라\n마\n')).toEqual(['가', '나', '다']));
 
   it('마침표로도 나눈다', () =>
     expect(tourHighlights('작업실을 봐요. 학생 식당에서 밥을 먹어요.')).toEqual([
       '작업실을 봐요',
       '학생 식당에서 밥을 먹어요',
     ]));
+
+  it('숫자 사이의 소수점과 주소 안의 마침표는 나누지 않는다', () => {
+    expect(tourHighlights('3.5시간 동안 걸어요. 문의는 open.kakao.com/o/abc 로 해요.')).toEqual([
+      '3.5시간 동안 걸어요',
+      '문의는 open.kakao.com/o/abc 로 해요',
+    ]);
+  });
 
   it('내용이 없으면 빈 목록', () => expect(tourHighlights(' \n ')).toEqual([]));
 });

@@ -76,6 +76,20 @@ export function guideCoursePath(tour: GuideTourSummary): string {
   return coursePathFor(tour.id, tour.courseStatus, tour.counts.approved);
 }
 
+/**
+ * 학생이 보는 신청 상태(H06 · H10 · H14): 칩 문구 · 칩 색 · 상태 행 글자색. 화면마다 따로 쓰면 어긋나므로(예: 거절된
+ * 신청이 "참여 확정"으로 보임) 한 곳에 둔다.
+ */
+export const STUDENT_APPLICATION_STATUS: Record<
+  ApplicationStatus,
+  { label: string; chipTone: Tone; textTone: Tone }
+> = {
+  APPROVED: { label: '참여 확정', chipTone: 'success', textTone: 'success' },
+  PENDING: { label: '승인 대기', chipTone: 'neutral', textTone: 'info' },
+  REJECTED: { label: '신청 거절', chipTone: 'danger', textTone: 'danger' },
+  CANCELED: { label: '취소됨', chipTone: 'neutral', textTone: 'neutral' },
+};
+
 export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
   PENDING: '승인 대기',
   APPROVED: '승인됨',
@@ -100,7 +114,7 @@ export function groupMyApplications(apps: MyApplication[]): MyApplicationGroups 
   const pending: MyApplication[] = [];
   const past: MyApplication[] = [];
   for (const app of apps) {
-    const open = app.tour.status === 'RECRUITING' || app.tour.status === 'CLOSED';
+    const open = isUpcomingTour(app.tour);
     if (open && app.status === 'APPROVED') upcoming.push(app);
     else if (open && app.status === 'PENDING') pending.push(app);
     else past.push(app);

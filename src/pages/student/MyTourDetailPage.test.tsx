@@ -105,4 +105,49 @@ describe('신청 내역 상세 (H10)', () => {
       expect(screen.queryByText(/진행 상태/)).not.toBeInTheDocument();
     },
   );
+
+  it.each(['COMPLETED', 'CANCELED'] as const)(
+    '%s 탐방의 승인된 신청은 취소 버튼 · 무효화 안내가 없고, 뒤로 가기는 지난 탐방 탭이다',
+    async (tourStatus) => {
+      const { router, user } = await renderApp('/my-tours?tab=past', {
+        as: 'student',
+        checkpoint: 'CONFIRMED',
+      });
+      const id = findApplicationId(STUDENT, 1);
+      mutate((db) => {
+        db.tours.find((t) => t.id === 1)!.status = tourStatus;
+      });
+      await router.navigate(`/my-tours/${id}`);
+      expect(await screen.findByText('가이드 승인 상태')).toBeInTheDocument();
+      expect(screen.getAllByText('참여 확정')).toHaveLength(2);
+      expect(screen.queryByRole('button', { name: '신청 취소하기' })).not.toBeInTheDocument();
+      expect(screen.queryByText('탐방 날짜가 되어 취소할 수 없어요.')).not.toBeInTheDocument();
+      expect(screen.queryByText(/신청을 취소하면/)).not.toBeInTheDocument();
+
+      await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
+      expect(router.state.location.pathname).toBe('/my-tours');
+      expect(router.state.location.search).toBe('?tab=past');
+    },
+  );
+
+  it('거절된 신청의 뒤로 가기도 지난 탐방 탭이다(탐방은 아직 모집 중이어도)', async () => {
+    const { router, user } = await renderApp('/', { as: 'student', checkpoint: 'CONFIRMED' });
+    const id = findApplicationId(STUDENT, 1);
+    mutate((db) => {
+      db.applications.find((a) => a.id === id)!.status = 'REJECTED';
+    });
+    await router.navigate(`/my-tours/${id}`);
+    await screen.findByText('가이드 승인 상태'); // 불러오는 동안의 뒤로 가기는 예정 탭이다
+    await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
+    expect(router.state.location.search).toBe('?tab=past');
+  });
+
+  it('진행 예정 탐방의 신청은 뒤로 가기가 예정된 탐방 탭이다', async () => {
+    const { router, user } = await renderApp('/', { as: 'student', checkpoint: 'APPLIED' });
+    await router.navigate(`/my-tours/${findApplicationId(STUDENT, 1)}`);
+    await screen.findByText('가이드 승인 상태');
+    await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
+    expect(router.state.location.pathname).toBe('/my-tours');
+    expect(router.state.location.search).toBe('');
+  });
 });

@@ -1,7 +1,7 @@
 import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
 import { Link, useParams } from 'react-router';
-import type { MyApplication } from '@/features/applications/model';
+import { STUDENT_APPLICATION_STATUS, type MyApplication } from '@/features/applications/model';
 import { useMyApplication } from '@/features/applications/queries';
 import { useMyCoupons } from '@/features/coupons/queries';
 import { CourseStepBar } from '@/features/courses/components/CourseStepBar';
@@ -31,12 +31,41 @@ const NOT_READY_CODES = new Set(['COURSE_NOT_READY', 'FORBIDDEN']);
 const PREPARING_STEPS = ['참여 신청 승인', '하고 싶은 것 취합', '가이드가 코스 초안 검토 · 확정'];
 
 /**
- * 코스 준비 중(V2 H14). 승인 대기 신청과 코스가 아직 확정되지 않은 신청이 같은 레이아웃을 쓰고, 카드 문구와 단계
- * 표시만 다르다.
+ * 코스 준비 중(V2 H14). 승인 대기 신청과 코스가 아직 확정되지 않은 승인 신청이 같은 레이아웃을 쓰고, 카드 문구와 단계
+ * 표시만 다르다. 거절 · 취소된 신청은 "기다린다"는 문구 없이 신청 상태 칩과 신청 내역 링크만 보인다.
  */
 function CoursePreparing({ app }: { app: MyApplication }) {
   const { tour } = app;
+  const status = STUDENT_APPLICATION_STATUS[app.status];
   const awaitingApproval = app.status === 'PENDING';
+  const closed = app.status === 'REJECTED' || app.status === 'CANCELED';
+  const tourCard = (
+    <section className="mt-3 rounded-xl bg-surface p-5">
+      <StatusChip tone={status.chipTone}>{status.label}</StatusChip>
+      <h3 className="mt-3 text-xl leading-snug font-bold text-ink">{tour.title}</h3>
+      <p className="mt-2 text-[13px] text-muted">
+        {`${campusLabel(tour.universityName, tour.campusName)} · ${formatDotDateWeekday(tour.startsAt)}`}
+      </p>
+    </section>
+  );
+
+  if (closed) {
+    return (
+      <>
+        <TopBar title="코스 보기" back={`/my-tours/${app.id}`} />
+        <Page>
+          <PageHeading as="h2" title="이 신청으로는 코스를 볼 수 없어요." className="mt-3" />
+          {tourCard}
+          <div className="mt-4">
+            <Link to={`/my-tours/${app.id}`} className={buttonClass('secondary')}>
+              신청 내역 보기
+            </Link>
+          </div>
+        </Page>
+      </>
+    );
+  }
+
   return (
     <>
       <TopBar title="코스 준비 중" back={`/my-tours/${app.id}`} />
@@ -65,15 +94,7 @@ function CoursePreparing({ app }: { app: MyApplication }) {
           </p>
         </section>
 
-        <section className="mt-3 rounded-xl bg-surface p-5">
-          <StatusChip tone={awaitingApproval ? 'neutral' : 'success'}>
-            {awaitingApproval ? '승인 대기' : '참여 확정'}
-          </StatusChip>
-          <h3 className="mt-3 text-xl leading-snug font-bold text-ink">{tour.title}</h3>
-          <p className="mt-2 text-[13px] text-muted">
-            {`${campusLabel(tour.universityName, tour.campusName)} · ${formatDotDateWeekday(tour.startsAt)}`}
-          </p>
-        </section>
+        {tourCard}
 
         <div className="mt-3">
           <StepList steps={PREPARING_STEPS} current={awaitingApproval ? 0 : 2} />
@@ -93,8 +114,9 @@ export function CourseMapPage() {
   const applicationId = Number(useParams().applicationId);
   const appQuery = useMyApplication(applicationId);
   const { data: app } = appQuery;
-  const awaitingApproval = app?.status === 'PENDING';
-  const courseQuery = useCourse(app === undefined || awaitingApproval ? undefined : app.tour.id);
+  // 승인 대기 · 거절 · 취소된 신청은 코스를 부르지 않는다(서버도 승인된 신청자에게만 코스를 준다).
+  const courseClosed = app !== undefined && app.status !== 'APPROVED';
+  const courseQuery = useCourse(app === undefined || courseClosed ? undefined : app.tour.id);
   // 쿠폰 목록 오류는 따로 보이지 않는다 — 시트는 "쿠폰 보기" 없이 그려지고, 아래 버튼으로 쿠폰 목록에 갈 수 있다.
   const { data: coupons } = useMyCoupons(applicationId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
@@ -124,7 +146,7 @@ export function CourseMapPage() {
       </>
     );
   }
-  if (app !== undefined && awaitingApproval) return <CoursePreparing app={app} />;
+  if (app !== undefined && courseClosed) return <CoursePreparing app={app} />;
   if (course === undefined && courseQuery.isError) {
     if (app !== undefined && NOT_READY_CODES.has(courseQuery.error.code)) {
       return <CoursePreparing app={app} />;
@@ -177,7 +199,9 @@ export function CourseMapPage() {
                 ? '우리의 탐방 코스'
                 : `우리의 ${formatDuration(tour.startsAt, tour.endsAt)} 코스`}
             </h3>
-            <StatusChip className="shrink-0 bg-surface text-brand">{`${stops.length}개 장소`}</StatusChip>
+            <StatusChip dot={false} className="shrink-0 bg-surface text-brand">
+              {`${stops.length}개 장소`}
+            </StatusChip>
           </div>
           <div className="mt-4">
             <CourseStepBar stops={stops} />

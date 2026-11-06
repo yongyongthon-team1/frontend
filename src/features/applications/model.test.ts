@@ -7,6 +7,7 @@ import {
   guideTourChip,
   isUpcomingTour,
   pickFocusTour,
+  STUDENT_APPLICATION_STATUS,
   type GuideTourSummary,
   type MyApplication,
 } from './model';
@@ -188,5 +189,22 @@ describe('guideTourChip', () => {
       tone: 'neutral',
     });
     expect(guideTourChip(guideTour({ id: 1, status: 'CANCELED' })).label).toBe('취소');
+  });
+});
+
+describe('STUDENT_APPLICATION_STATUS', () => {
+  it('신청 상태마다 칩 문구 · 색이 하나씩 — 참여 확정은 승인된 신청뿐', () => {
+    expect(
+      Object.entries(STUDENT_APPLICATION_STATUS).map(([status, v]) => [
+        status,
+        v.label,
+        v.chipTone,
+      ]),
+    ).toEqual([
+      ['APPROVED', '참여 확정', 'success'],
+      ['PENDING', '승인 대기', 'neutral'],
+      ['REJECTED', '신청 거절', 'danger'],
+      ['CANCELED', '취소됨', 'neutral'],
+    ]);
   });
 });

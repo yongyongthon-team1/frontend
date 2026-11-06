@@ -1,6 +1,10 @@
 import { ChevronRight } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
-import { groupMyApplications, type MyApplication } from '@/features/applications/model';
+import {
+  groupMyApplications,
+  STUDENT_APPLICATION_STATUS,
+  type MyApplication,
+} from '@/features/applications/model';
 import { useMyApplications } from '@/features/applications/queries';
 import { campusLabel } from '@/features/tours/model';
 import { formatDotDateWeekday, formatTimeRange } from '@/shared/lib/date';
@@ -29,6 +33,8 @@ const HEADINGS: Record<Tab, { title: string; description: string }> = {
 };
 
 const dot = ' · ';
+const APPROVED_CHIP = STUDENT_APPLICATION_STATUS.APPROVED;
+const PENDING_CHIP = STUDENT_APPLICATION_STATUS.PENDING;
 
 function SectionTitle({ children, count }: { children: string; count?: number }) {
   return (
@@ -51,7 +57,7 @@ function UpcomingCard({ app }: { app: MyApplication }) {
     <article className="rounded-xl bg-surface p-5">
       <Link to={`/my-tours/${app.id}`} className="block">
         <div className="flex items-center justify-between gap-3">
-          <StatusChip tone="success">참여 확정</StatusChip>
+          <StatusChip tone={APPROVED_CHIP.chipTone}>{APPROVED_CHIP.label}</StatusChip>
           <span className="shrink-0 text-xs text-muted">{formatDotDateWeekday(tour.startsAt)}</span>
         </div>
         <p className="mt-4 truncate text-xl leading-snug font-bold text-ink">{tour.title}</p>
@@ -87,7 +93,7 @@ function PendingCard({ app }: { app: MyApplication }) {
         className="flex items-center gap-3 rounded-xl bg-surface p-5 transition-colors hover:brightness-[0.98]"
       >
         <div className="min-w-0 flex-1">
-          <StatusChip>승인 대기</StatusChip>
+          <StatusChip tone={PENDING_CHIP.chipTone}>{PENDING_CHIP.label}</StatusChip>
           <p className="mt-3 truncate text-xl leading-snug font-bold text-ink">{app.tour.title}</p>
           <p className="mt-1 truncate text-xs text-muted">신청 접수 완료{dot}가이드 승인 대기 중</p>
         </div>
@@ -99,9 +105,12 @@ function PendingCard({ app }: { app: MyApplication }) {
 
 /** 지난 탐방 칩: 탐방이 끝났으면 참여 완료(+ 쿠폰이 있으면 리뷰 작성 가능), 아니면 취소됨 · 신청 거절 · 종료. */
 function pastChips(app: MyApplication): { label: string; tone: Tone }[] {
-  if (app.status === 'REJECTED') return [{ label: '신청 거절', tone: 'neutral' }];
+  // 지난 탐방에서는 거절 · 취소를 조용한 neutral로 보인다(V2 H09) — 문구만 H10과 같은 표를 쓴다.
+  if (app.status === 'REJECTED') {
+    return [{ label: STUDENT_APPLICATION_STATUS.REJECTED.label, tone: 'neutral' }];
+  }
   if (app.status === 'CANCELED' || app.tour.status === 'CANCELED') {
-    return [{ label: '취소됨', tone: 'neutral' }];
+    return [{ label: STUDENT_APPLICATION_STATUS.CANCELED.label, tone: 'neutral' }];
   }
   if (app.status === 'APPROVED' && app.tour.status === 'COMPLETED') {
     return app.couponCount > 0
