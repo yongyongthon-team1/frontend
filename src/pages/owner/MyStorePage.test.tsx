@@ -71,7 +71,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
   });
 
   it('O01-E: 연결된 가게가 없으면(404 STORE_NOT_LINKED) 연결 안내와 내 가게 연결하기', async () => {
-    const { router } = await renderStore((db) => {
+    const { user, router } = await renderStore((db) => {
       unlink(db);
     });
     expect(
@@ -91,14 +91,17 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
       'href',
       '/owner/store/connect',
     );
-    // 도착지는 막다른 곳이 아니다.
-    expect(router.state.location.pathname).toBe('/owner/store');
+    // 도착지는 막다른 곳이 아니다 — 누르면 가게 연결 화면(자리)이 열린다.
+    await user.click(screen.getByRole('link', { name: '내 가게 연결하기' }));
+    expect(router.state.location.pathname).toBe('/owner/store/connect');
+    expect(await screen.findByText('와이어프레임: owner-a01')).toBeInTheDocument();
   });
 
   it('불러오는 동안은 Skeleton, 로그아웃은 그때도 보인다', async () => {
     server.use(http.get('/api/owner/store', () => new Promise<never>(() => {})));
     await renderStore();
     expect(await screen.findByRole('button', { name: '로그아웃' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
     expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
     expect(screen.queryByText('아직 연결된 가게가 없어요.')).not.toBeInTheDocument();
   });

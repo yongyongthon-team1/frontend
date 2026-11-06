@@ -67,4 +67,20 @@ describe('내 가게 조회 (GET /owner/store)', () => {
       state: 'ACTIVE',
     });
   });
+
+  it('날짜 경계는 UTC가 아니라 서울 기준 — UTC 11-14 16:00 = 서울 11-15 01:00이면 11-15에 시작하는 제휴는 운영 중', () => {
+    const rollover = new Date('2026-11-14T16:00:00Z');
+    const p = db.partnerships.find((x) => x.storeId === 1)!;
+    p.startDate = '2026-11-15';
+    p.endDate = '2026-12-31';
+    expect(myStoreOf(db, owner(1), rollover).partnership?.state).toBe('ACTIVE');
+    // 한 시간 전(서울 11-14 23:59)에는 아직 예정이다.
+    expect(myStoreOf(db, owner(1), new Date('2026-11-14T14:59:00Z')).partnership?.state).toBe(
+      'SCHEDULED',
+    );
+    // 종료일이 서울 어제(11-14)면 UTC로는 아직 11-14여도 종료다.
+    p.startDate = '2026-10-01';
+    p.endDate = '2026-11-14';
+    expect(myStoreOf(db, owner(1), rollover).partnership?.state).toBe('ENDED');
+  });
 });
