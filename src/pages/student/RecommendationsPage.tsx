@@ -57,9 +57,18 @@ export function RecommendationsPage() {
       </div>
 
       {recommendations.isError && result === undefined ? (
-        <ErrorState error={recommendations.error} onRetry={() => void recommendations.refetch()} />
+        <>
+          <h1 className="sr-only">추천 탐방</h1>
+          <ErrorState
+            error={recommendations.error}
+            onRetry={() => void recommendations.refetch()}
+          />
+        </>
       ) : result === undefined ? (
-        <AiLoading steps={LOADING_STEPS} />
+        <>
+          <h1 className="sr-only">추천 탐방</h1>
+          <AiLoading steps={LOADING_STEPS} />
+        </>
       ) : (
         <>
           <div className="flex items-start justify-between gap-3">
@@ -102,6 +111,7 @@ export function RecommendationsPage() {
               <div className="mt-4">
                 <FilterChips
                   label="추천 필터"
+                  // FilterChips의 kind는 keyword|school뿐이라 `전체`(all)는 keyword 모양(선택 전 brand-soft)으로 그린다.
                   chips={chips.map(({ value, label, kind }) => ({
                     value,
                     label,

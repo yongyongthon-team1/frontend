@@ -7,6 +7,8 @@ export interface HeroCardProps {
   title: string;
   illustration: IllustrationKind;
   tone?: 'brand' | 'local';
+  // 제목 글자색. 기본 ink, 홈(H01)은 brand-strong.
+  titleTone?: 'ink' | 'brand-strong';
   children?: ReactNode;
   // 글 · 일러스트 줄 아래에 카드 폭 전체로 놓는 자리(H01의 입력칸).
   footer?: ReactNode;
@@ -19,6 +21,7 @@ export function HeroCard({
   title,
   illustration,
   tone = 'brand',
+  titleTone = 'ink',
   children,
   footer,
 }: HeroCardProps) {
@@ -33,7 +36,8 @@ export function HeroCard({
           ) : null}
           <p
             className={cn(
-              'text-xl leading-[1.4] font-bold whitespace-pre-line text-ink',
+              'text-xl leading-[1.4] font-bold whitespace-pre-line',
+              titleTone === 'brand-strong' ? 'text-brand-strong' : 'text-ink',
               eyebrow && 'mt-2',
             )}
           >

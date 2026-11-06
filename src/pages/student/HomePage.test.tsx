@@ -95,6 +95,15 @@ describe('홈 (hs-s03 · H01)', () => {
     expect(within(rows[0]).getByText(/대학교/)).toBeInTheDocument();
   });
 
+  it('입력칸이 포커스를 받으면 감싸는 상자에 포커스 링이 있다(키보드 사용자)', async () => {
+    await renderApp('/', { as: 'student' });
+    const input = await screen.findByLabelText('하고 싶은 것');
+    expect(input.parentElement).toHaveClass(
+      'focus-within:outline-2',
+      'focus-within:outline-accent',
+    );
+  });
+
   it('한글 조합 중 Enter는 막는다 (Review Focus 1)', async () => {
     await renderApp('/', { as: 'student' });
     const input = await screen.findByLabelText('하고 싶은 것');

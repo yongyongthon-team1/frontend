@@ -42,6 +42,7 @@ async function expectRoleBadgeBesideTitle(page: Page, label: string) {
       }>;
       return Array.from(rects, ({ left, right, top, bottom }) => ({ left, right, top, bottom }));
     });
+  expect(lines.length, '화면 제목(h1) 글자 상자').toBeGreaterThan(0);
   const box = await badge.boundingBox();
   if (box === null) throw new Error(`화면에 없는 배지: ${label}`);
   for (const line of lines) {

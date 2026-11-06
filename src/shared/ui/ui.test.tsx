@@ -956,6 +956,13 @@ describe('HeroCard · PageHeading', () => {
     expect(container.querySelector('img')!.parentElement).not.toBe(container.firstChild);
   });
 
+  it('HeroCard: titleTone 기본은 ink, brand-strong을 고를 수 있다', () => {
+    const { rerender } = render(<HeroCard title="제목" illustration="campus" />);
+    expect(screen.getByText('제목')).toHaveClass('text-ink');
+    rerender(<HeroCard title="제목" illustration="campus" titleTone="brand-strong" />);
+    expect(screen.getByText('제목')).toHaveClass('text-brand-strong');
+  });
+
   it('HeroCard tone local은 local-soft 바탕', () => {
     const { container } = render(<HeroCard title="동네" illustration="cafe" tone="local" />);
     expect(container.firstChild).toHaveClass('bg-local-soft');

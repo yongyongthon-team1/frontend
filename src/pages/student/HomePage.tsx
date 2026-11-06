@@ -78,12 +78,14 @@ export function HomePage() {
         <HeroCard
           title={'어떤 전공이\n궁금한가요?'}
           illustration="campus"
+          titleTone="brand-strong"
           footer={
             <>
               <label htmlFor={inputId} className="sr-only">
                 하고 싶은 것
               </label>
-              <div className="flex h-14 items-center gap-2 rounded-lg bg-surface px-4">
+              {/* 입력칸의 기본 윤곽선은 지우고(칸 안이 아니라 흰 상자가 둘러싸 보이게) 상자에 포커스 링을 건다. */}
+              <div className="flex h-14 items-center gap-2 rounded-lg bg-surface px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
                 <Search aria-hidden className="size-4 shrink-0 text-brand" />
                 <input
                   id={inputId}

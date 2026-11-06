@@ -48,6 +48,8 @@ describe('AI 추천 목록 (hs-s04 · H02 · hs-a06 · H13)', () => {
   it('로딩 문구 → 결과(제목 · 설명 · 칩 · 행 · 이유 상자)', async () => {
     await renderApp(`/recommendations?q=${DESIGN_Q}`, { as: 'student' });
     expect(screen.getByText('관심사를 분석하고 있어요')).toBeInTheDocument();
+    // 로딩 중에도 화면 제목(h1)이 있다.
+    expect(screen.getByRole('heading', { level: 1, name: '추천 탐방' })).toBeInTheDocument();
     expect(await screen.findByText('디자인 분야에 관심이 많군요!')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
       /^\d+개의 탐방을 추천해요\.$/,
@@ -61,9 +63,8 @@ describe('AI 추천 목록 (hs-s04 · H02 · hs-a06 · H13)', () => {
   it('제목의 개수는 결과 수', async () => {
     server.use(http.post('/api/recommendations', () => HttpResponse.json(MIXED)));
     await renderApp(`/recommendations?q=${DESIGN_Q}`, { as: 'student' });
-    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      '3개의 탐방을 추천해요.',
-    );
+    await screen.findByText('디자인 분야에 관심이 많군요!');
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('3개의 탐방을 추천해요.');
   });
 
   it('행은 탐방 상세로 가는 링크이고 둘째 줄이 제목, 셋째 줄이 날짜 · 추천 이유(2A-R3)', async () => {
@@ -182,7 +183,9 @@ describe('AI 추천 목록 (hs-s04 · H02 · hs-a06 · H13)', () => {
       }),
     );
     const { user } = await renderApp(`/recommendations?q=${DESIGN_Q}`, { as: 'student' });
-    await user.click(await screen.findByRole('button', { name: '다시 시도' }));
+    const retry = await screen.findByRole('button', { name: '다시 시도' });
+    expect(screen.getByRole('heading', { level: 1, name: '추천 탐방' })).toBeInTheDocument();
+    await user.click(retry);
     expect(await screen.findByText('디자인 분야에 관심이 많군요!')).toBeInTheDocument();
   });
 
