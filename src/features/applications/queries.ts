@@ -67,8 +67,15 @@ export function useCancelMyApplication(
   });
 }
 
-export function useGuideTours(): UseQueryResult<GuideTourSummary[]> {
-  return useQuery({ queryKey: qk.guideTours, queryFn: getGuideTours });
+/** `freshOnMount`: 화면에 들어올 때마다 다시 불러온다(캐시가 신선해도) — 그 값으로 이동을 정하는 화면용. */
+export function useGuideTours(
+  opts: { freshOnMount?: boolean } = {},
+): UseQueryResult<GuideTourSummary[]> {
+  return useQuery({
+    queryKey: qk.guideTours,
+    queryFn: getGuideTours,
+    refetchOnMount: opts.freshOnMount ? 'always' : true,
+  });
 }
 
 export function useApplicantsBoard(tourId: number): UseQueryResult<ApplicantsBoard> {

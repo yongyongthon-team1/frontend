@@ -213,6 +213,7 @@ export const routes: RouteObject[] = [
                       <PlaceholderPage
                         title="내 가게 · 제휴 할인"
                         wireframe="owner-s02"
+                        showLogout // Task 11이 내 가게 화면으로 바꿀 때까지 사장님이 막히지 않게
                         action={{ label: '쿠폰 사용 처리', to: '/owner/coupons/redeem' }}
                       />
                     ),
