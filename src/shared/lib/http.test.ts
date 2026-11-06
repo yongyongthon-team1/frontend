@@ -1,7 +1,7 @@
 import { delay, http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import { server } from '@/mocks/node';
-import { ApiError, configureHttp, request, upload } from './http';
+import { ApiError, configureHttp, request, UPLOAD_TIMEOUT_MS, upload } from './http';
 
 afterEach(() => configureHttp({ getToken: () => null, onUnauthorized: () => {} }));
 
@@ -126,6 +126,32 @@ describe('request', () => {
 });
 
 describe('upload', () => {
+  it('본문 없는 413은 FILE_TOO_LARGE(문구는 표의 것)', async () => {
+    server.use(http.post('/api/files', () => new HttpResponse(null, { status: 413 })));
+    await expect(upload('/files', new FormData())).rejects.toMatchObject({
+      status: 413,
+      code: 'FILE_TOO_LARGE',
+      message: '10MB 이하 이미지만 올릴 수 있어요.',
+    });
+  });
+
+  it('다른 상태의 빈 본문은 지금처럼 UNKNOWN', async () => {
+    server.use(http.post('/api/files', () => new HttpResponse(null, { status: 502 })));
+    await expect(upload('/files', new FormData())).rejects.toMatchObject({
+      status: 502,
+      code: 'UNKNOWN',
+    });
+  });
+
+  it('업로드 제한 시간은 60초이고 upload의 기본값이다', async () => {
+    expect(UPLOAD_TIMEOUT_MS).toBe(60_000);
+    server.use(http.post('/api/files', () => HttpResponse.json({})));
+    const timers = vi.spyOn(globalThis, 'setTimeout');
+    await upload('/files', new FormData());
+    expect(timers).toHaveBeenCalledWith(expect.any(Function), 60_000);
+    timers.mockRestore();
+  });
+
   it('FormData를 보내고 Content-Type을 직접 넣지 않는다', async () => {
     server.use(
       http.post('/api/files', async ({ request: req }) => {

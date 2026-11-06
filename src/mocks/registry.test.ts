@@ -34,8 +34,11 @@ const CONTRACT = [
   'POST /api/demo/reset',
 ];
 
-/** 계약 3-2절(P1 엔드포인트, 동결 대상 아님) 중 목업이 있는 것. 2B가 행을 더한다. */
-const P1 = ['GET /api/owner/store'];
+/** 계약 3-2절(P1 엔드포인트, 동결 대상 아님) 중 목업이 있는 것(쿼리 문자열은 뺀 경로). 2B의 각 API 태스크가 자기 행을 더한다. */
+const P1_CONTRACT: string[] = ['GET /api/owner/store'];
+
+const label = (h: { info: { method: unknown; path: unknown } }) =>
+  `${String(h.info.method)} ${String(h.info.path)}`;
 
 describe('registry', () => {
   it('도메인 일부만 고르면 그 핸들러만', () => {
@@ -51,16 +54,20 @@ describe('registry', () => {
     expect(selectHandlers([])).toEqual([]);
   });
 
-  it('계약 표의 29개 엔드포인트와 P1 엔드포인트 1개를 메서드 · 경로 그대로 모두 등록한다', () => {
-    const registered = selectHandlers('all').map((h) => `${h.info.method} ${String(h.info.path)}`);
+  it('계약 표의 29개 엔드포인트와 P1 엔드포인트를 메서드 · 경로 그대로 모두 등록한다', () => {
+    const registered = selectHandlers('all').map(label);
     expect(CONTRACT).toHaveLength(29);
-    expect(P1).toHaveLength(1);
-    expect([...registered].sort()).toEqual([...CONTRACT, ...P1].sort());
+    expect(P1_CONTRACT.filter((e) => CONTRACT.includes(e))).toEqual([]);
+    expect([...registered].sort()).toEqual([...new Set([...CONTRACT, ...P1_CONTRACT])].sort());
   });
 
-  it('stores 도메인이 P1 엔드포인트를 가진다', () => {
-    expect(
-      selectHandlers(['stores']).map((h) => `${h.info.method} ${String(h.info.path)}`),
-    ).toEqual(P1);
+  it('P1 도메인의 핸들러는 모두 P1_CONTRACT에 있다', () => {
+    const p1Domains = ['stores', 'reviews', 'verification', 'admin'] as const;
+    for (const domain of p1Domains) {
+      for (const handler of selectHandlers([domain])) {
+        expect(P1_CONTRACT, `${domain}: ${label(handler)}`).toContain(label(handler));
+      }
+    }
+    expect(selectHandlers(['stores']).map(label)).toContain('GET /api/owner/store');
   });
 });

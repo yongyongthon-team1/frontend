@@ -2,6 +2,8 @@ import { errorMessage } from './errors';
 
 export const DEFAULT_TIMEOUT_MS = 15_000;
 export const AI_TIMEOUT_MS = 30_000;
+/** 사진 업로드 제한 시간(느린 회선의 10MB). */
+export const UPLOAD_TIMEOUT_MS = 60_000;
 
 export class ApiError extends Error {
   status: number;
@@ -75,6 +77,10 @@ async function toApiError(res: Response): Promise<ApiError> {
         details: isRecord(parsed.details) ? parsed.details : undefined,
       },
     );
+  }
+  // 프록시가 본문 없이 413을 주면 업로드 한도 초과다(계약 6절 18번).
+  if (res.status === 413) {
+    return new ApiError(413, 'FILE_TOO_LARGE', errorMessage('FILE_TOO_LARGE'));
   }
   return new ApiError(res.status, 'UNKNOWN', errorMessage('UNKNOWN'));
 }
@@ -150,6 +156,6 @@ export function upload<T>(
   form: FormData,
   options: Omit<RequestOptions, 'body'> = {},
 ): Promise<T> {
-  const { method = 'POST', headers = {}, timeoutMs = DEFAULT_TIMEOUT_MS, auth = true } = options;
+  const { method = 'POST', headers = {}, timeoutMs = UPLOAD_TIMEOUT_MS, auth = true } = options;
   return send<T>(path, { method, body: form, headers, auth }, timeoutMs);
 }

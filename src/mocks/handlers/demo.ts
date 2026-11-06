@@ -1,5 +1,6 @@
 import { http, HttpResponse } from 'msw';
 import { mockNow } from '@/mocks/clock';
+import { clearMockFiles } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { delayBase } from '@/mocks/latency';
 import { MockApiError } from '@/mocks/rules/errors';
@@ -30,6 +31,7 @@ export const demoHandlers = [
       if (!isCheckpoint(checkpoint)) throw new MockApiError(400, 'VALIDATION');
       const { sessions } = getDb();
       resetDb({ today: mockNow(), checkpoint });
+      clearMockFiles(); // 업로드한 목업 사진은 DB와 함께 초기화한다
       mutate((db) => {
         db.sessions = sessions.filter((s) => db.users.some((u) => u.id === s.userId));
       });

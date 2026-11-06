@@ -127,9 +127,9 @@ describe('레이아웃', () => {
   });
 
   it('자리 화면: 문구 · 와이어프레임 코드', async () => {
-    await renderApp('/owner/store/connect', { as: 'owner' });
-    expect(await screen.findByText('MVP 2단계에서 열려요.')).toBeInTheDocument();
-    expect(screen.getByText('와이어프레임: owner-a01')).toBeInTheDocument();
+    await renderApp('/owner/report', { as: 'owner' });
+    expect(await screen.findByText('곧 열려요.')).toBeInTheDocument();
+    expect(screen.getByText('와이어프레임: owner-s04')).toBeInTheDocument();
   });
 });
 

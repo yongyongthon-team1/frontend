@@ -4,6 +4,7 @@ import type { DB, TourRow, UserRow } from '@/mocks/db/schema';
 import { userIdFromToken } from '@/mocks/db/store';
 import { MockApiError } from '@/mocks/rules/errors';
 import { env } from '@/shared/config/env';
+import type { ErrorCode } from '@/shared/lib/errors';
 
 // 핸들러 공통 도구. 핸들러는 얇게 둔다: 인증 → `mutate(db => 규칙(...))` → views로 DTO.
 
@@ -54,6 +55,48 @@ export async function readBody(request: Request): Promise<Record<string, unknown
   return parsed as Record<string, unknown>;
 }
 
+/**
+ * 입력 칸 하나의 오류. 응답 본문의 `message`는 코드 표 문구이고, 칸 아래에 보일 문구는 `fieldErrors[field]`다.
+ * 문구를 생략하면 기본 문구를 쓴다.
+ */
+export function fieldError(
+  field: string,
+  message = '입력값을 확인해 주세요.',
+  code: ErrorCode = 'VALIDATION',
+  status = 400,
+): MockApiError {
+  return new MockApiError(status, code, undefined, undefined, { [field]: message });
+}
+
+/** multipart 본문. multipart가 아니거나(JSON · 빈 본문 포함) 읽을 수 없으면 400 VALIDATION. */
+export async function readForm(request: Request): Promise<FormData> {
+  if (
+    !(request.headers.get('Content-Type') ?? '').toLowerCase().startsWith('multipart/form-data')
+  ) {
+    throw new MockApiError(400, 'VALIDATION');
+  }
+  try {
+    return await request.formData();
+  } catch {
+    throw new MockApiError(400, 'VALIDATION');
+  }
+}
+
+/**
+ * 폼의 파일 칸. 문자열이거나 없으면 null이다. `instanceof File` 대신 `name` · `type` · `size`가 있는 객체인지 본다 —
+ * 테스트의 jsdom `File`과 Node `File`처럼 realm이 달라도 통과한다.
+ */
+export function formFile(form: FormData, field: string): File | null {
+  const value: unknown = form.get(field);
+  if (typeof value !== 'object' || value === null) return null;
+  const file = value as Partial<File>;
+  return typeof file.name === 'string' &&
+    typeof file.type === 'string' &&
+    typeof file.size === 'number'
+    ? (value as File)
+    : null;
+}
+
 /** 시작 시각 오름차순(같으면 id). 탐방 목록과 가이드 탐방 목록의 순서다. */
 export function byStartsAt(a: TourRow, b: TourRow): number {
   return Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.id - b.id;
@@ -61,7 +104,7 @@ export function byStartsAt(a: TourRow, b: TourRow): number {
 
 type Resolver = (info: { request: Request; params: PathParams }) => Promise<Response>;
 
-/** 규칙이 던진 `MockApiError`를 `{ code, message, details }` 본문과 그 상태 코드로 바꾼다. 다른 오류는 그대로 던진다. */
+/** 규칙이 던진 `MockApiError`를 `{ code, message, details, fieldErrors }` 본문과 그 상태 코드로 바꾼다. 다른 오류는 그대로 던진다. */
 export function withErrors(resolver: Resolver): HttpResponseResolver {
   return async ({ request, params }) => {
     try {
@@ -69,7 +112,12 @@ export function withErrors(resolver: Resolver): HttpResponseResolver {
     } catch (error) {
       if (!(error instanceof MockApiError)) throw error;
       return HttpResponse.json(
-        { code: error.code, message: error.message, details: error.details },
+        {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          fieldErrors: error.fieldErrors,
+        },
         { status: error.status },
       );
     }

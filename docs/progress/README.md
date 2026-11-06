@@ -4,7 +4,7 @@
 
 상태 표기: `⬜` 미착수 · `🟨` 진행 중 · `✅` 완료 · `➖` 해당 없음 · `자리` placeholder 라우트(화면 자리만 있고 내용 없음)
 
-마지막 갱신: 2026-11-06
+마지막 갱신: 2026-11-07
 
 ## 체크포인트
 
@@ -82,18 +82,25 @@
 
 ## API 연동
 
-도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 [`../api/frontend-needs.md`](../api/frontend-needs.md)의 골든 패스 엔드포인트 29개이고, 나머지 P1 화면의 API는 명세가 오면 추가한다. 예외로 P1 `GET /api/owner/store`(계약 3-2절 #26)는 내 가게 화면 때문에 목업을 먼저 만들었다.
+도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 [`../api/frontend-needs.md`](../api/frontend-needs.md)의 골든 패스 엔드포인트 29개와 P1 엔드포인트 27개(3-2절 초안, `#번호`는 그 절의 번호, 동결 대상 아님)다. P1 `GET /api/owner/store`(#26)는 내 가게 화면 때문에 2A에서 목업을 먼저 만들었고, 나머지 P1 행은 MVP 2B의 API 태스크가 목업을 만들 때 ✅로 바꾼다. 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이다.
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
 | auth | `POST /api/auth/login` | hs-s01 로그인 | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `POST /api/auth/logout` | hs-a03 · guide-s01 · `/owner/me` (로그아웃) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `GET /api/me` | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | #1 `POST /api/auth/signup` | hs-a01 회원가입 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| auth | #2 `PUT /api/me/student-profile` | hs-a03 내 정보 수정 `/me/edit` (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| auth | #3 `PUT /api/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | campuses | `GET /api/universities` | hs-s03, guide-s02 | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/universities/:id/insight` | hs-s04, guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `POST /api/recommendations` | hs-s03, hs-s04, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours?status=&universityId=` | `/explore`(P2). 추천 0건 대체 목록(hs-a06)은 `POST /api/recommendations`가 준다 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours/:id` | hs-s05, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | #14 `POST /api/guide/tours` | guide-s02 탐방 개설 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| tours | #15 `GET /api/guide/tours/:id` | guide-s07 탐방 종료 · guide-a04 탐방 취소 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| tours | #16 `POST /api/guide/tours/:id/complete` | guide-s07 탐방 종료 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| tours | #17 `POST /api/guide/tours/:id/cancel` | guide-a04 탐방 취소 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | applications | `POST /api/tours/:id/applications` | hs-a04 | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `GET /api/me/applications` | hs-a05 | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `GET /api/me/applications/:id` | hs-s06, hs-s07 | ⬜ | ✅ | ⬜ | ⬜ |
@@ -109,17 +116,38 @@
 | courses | `DELETE /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | `POST /api/guide/tours/:id/course/confirm` | guide-s05 → guide-s06 | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | `GET /api/tours/:id/course` | hs-s08 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | #18 `GET /api/guide/tours/:id/course/store-candidates` | guide-a03 주변 상점 선택 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | #19 `POST /api/guide/tours/:id/course/stops` | guide-a03 (지점 추가) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| courses | #20 `POST /api/guide/tours/:id/course/stops/:stopId/replace` | guide-a03 (지점 교체) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | coupons | `GET /api/me/coupons?applicationId=` | hs-s09 (목록) | ⬜ | ✅ | ⬜ | ⬜ |
 | coupons | `GET /api/me/coupons/:id` | hs-s09 (상세) | ⬜ | ✅ | ⬜ | ⬜ |
 | coupons | `GET /api/owner/coupons/:code` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
 | coupons | `POST /api/owner/coupons/:code/redeem` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `GET /api/owner/store` | owner-s02 (O01 · O01-E, P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
+| stores | #22 `POST /api/me/business-verification` | owner-s01 사업자 인증 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| stores | #23 `GET /api/owner/store-candidates` | owner-a01 가게 후보 선택 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| stores | #24 `POST /api/owner/store/link` | owner-a01 가게 연결 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| stores | #25 `POST /api/owner/store` | owner-a01 직접 등록 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| stores | #27 `PUT /api/owner/store/partnership` | owner-s02 제휴 설정 `/owner/store/partnership` (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| verification | #4 `GET /api/me/verification` | hs-s02 · guide-a01 인증 현황 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| verification | #5 `POST /api/me/student-verification` | hs-s02 · guide-a01 (사진 업로드) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| verification | #6 `POST /api/me/guardian-consent` | hs-s02 (보호자 동의 요청) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| verification | #7 `GET /api/guardian-consents/:token` | hs-a02 보호자 동의 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| verification | #8 `POST /api/guardian-consents/:token/agree` | hs-a02 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| verification | #9 `POST /api/guardian-consents/:token/reject` | hs-a02 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| admin | #10 `GET /api/admin/student-verifications` | owner-s06 인증 심사 목록 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| admin | #11 `GET /api/admin/student-verifications/:id` | owner-a02 심사 상세 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| admin | #12 `POST /api/admin/student-verifications/:id/approve` | owner-a02 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| admin | #13 `POST /api/admin/student-verifications/:id/reject` | owner-a02 (반려 사유) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| reviews | #21 `POST /api/reviews` | hs-s10 방문 리뷰 작성 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | demo | `GET /api/health` | 시연 패널 | ⬜ | ✅ | ⬜ | ⬜ |
 | demo | `POST /api/demo/reset` | 시연 패널 | ⬜ | ✅ | ⬜ | ⬜ |
 
+- P1 행의 `#번호`는 계약 3-2절 번호다. 목업 사진(재학 인증 업로드)은 메모리에만 있어 새로고침하거나 시연 초기화를 하면 사라진다(운영자 화면은 그때 정적 견본 사진을 보인다, 2B-R9).
+
 ## 팀 요청 · 블로커
 
-설계 9장 18건을 그대로 옮겼다. 팀 전달은 사용자가 하고, 여기서는 전달 여부와 응답을 추적한다. 기한은 설계에 날짜가 있으면 그 날짜이고 없으면 11/8(MVP)이다.
+1~18은 설계 9장 18건을 그대로 옮겼고, 19~23은 MVP 2B에서 더했다. 팀 전달은 사용자가 하고, 여기서는 전달 여부와 응답을 추적한다. 기한은 설계에 날짜가 있으면 그 날짜이고 없으면 11/8(MVP)이다.
 
 | # | 대상 | 요청 | 기한 | 상태 |
 |---|---|---|---|---|
@@ -141,9 +169,15 @@
 | 16 | 사용자 | 카카오맵 JavaScript 키 · Vercel 프로젝트(팀 계정 · 고정 도메인) 준비. 처리: 사용자/팀 준비물. 키가 없어도 코스 지도는 도식 지도로 동작한다(Task 16) | 11/4 | ⬜ |
 | 17 | 사용자 | 비상용 2분 골든 패스 녹화본(11/14). 처리: 팀 | 11/14 | ⬜ |
 | 18 | 기획 · 백엔드 | C-01 "관련 후보 중 제휴 상점 최소 1곳 포함"(설계 4장 결정)을 기획 문서(S-03 · C-01 · 변경 정리)와 백엔드 구현에 반영. 처리: 사용자가 팀에 전달, 목업은 이 규칙으로 구현 | 11/8 | ⬜ |
+| 19 | 백엔드 | P1 엔드포인트 27개(계약 3-2절) 모양에 대한 의견. 동결 대상은 아니고 차이는 프론트 `api.ts`에서 흡수한다(계약 6절 17번). 처리: 목업은 지금 이 모양으로 만든다 | 11/8 | ⬜ |
+| 20 | 백엔드 | 업로드: 서버 · 프록시 본문 한도를 10MB보다 넉넉하게(Spring 기본 1MB), multipart 필드 이름(`document` · `highSchoolName` · `grade` · `universityId`), 넘으면 413(본문 없어도 됨, 프론트는 `FILE_TOO_LARGE`로 취급)(계약 6절 18번). 처리: 배포에서 9~10MB 파일로 직접 잰다 | 11/8 | ⬜ |
+| 21 | 백엔드 | 심사 사진 URL: 짧게 유효한 서명 URL, 안 되면 Bearer로 받는 이미지 바이트 엔드포인트(계약 6절 19번). 처리: 목업은 정적 견본 `/mock-docs/…`로 그린다 | 11/8 | ⬜ |
+| 22 | 백엔드 | 보호자 동의 메일 발송 여부 · 링크 주소 · 유효 기간, 시연용 `demoConsentToken`은 `X-Demo-Key`가 있을 때만(계약 6절 21번). 처리: 목업은 `보호자 페이지 열기` 시연 링크 | 11/8 | ⬜ |
+| 23 | 사용자 · 팀 | 11/6 시연 대본 게이트: 대본에 리뷰 · 상점 교체 · 운영자 심사 · 가입 장면이 들어가면 그 화면을 P0로 올리고 무대 단언을 더한다(2B-R20). 처리: 사용자가 대본 확정 뒤 알려 준다 | 11/6 | ⬜ |
 
 ## 열린 질문
 
+- 리뷰 단계 무대 측정: 방문 리뷰 작성(`/reviews/new`) · 등록 뒤 코스 시트의 AI 요약 갱신이 11/6 대본(팀 요청 23)에 들어가면, 판정 뷰포트 3종에서 별점 · 등록 버튼 · 갱신된 요약이 탭바 위에 보이는지 재서 위 실측표에 행을 더한다.
 - 무대 노트북의 실제 페이지 영역(해상도 · 배율 · 브라우저 UI)이 E2E가 가정한 판정 뷰포트(1366×620 · 1280×600 · 1280×590 @1.5배)보다 작은가? 작으면 골든 패스 화면의 무대 예산(설계 5.7, 본문 약 400px)을 다시 잡는다. V2 적용 뒤 본문 높이 여유는 아래 표다. 팀 요청 15의 운영진 답으로 확인한다.
 
   무대 실측표(2026-11-06, MVP 2A Task 12, 배포 빌드 E2E `stage-viewport`의 `stage-measure` 기록). 기준점은 프레임 위 + 56 = 뷰포트 y 72px(설계 헤더의 452 · 432 · 422와 같은 기준)이다. 코스 · 쿠폰 화면은 상단 바(56px) 하단이고, ① 추천(H02)은 상단 바 없이 자기 뒤로 가기 줄(`pt-2` + `h-12` = 56px)이 같은 선을 만든다. 사용 = 그 선에서 가장 아래 핵심 요소 하단까지, 가용 = 그 선에서 하단 탭 위까지, 여유 = 가용 − 사용(px).

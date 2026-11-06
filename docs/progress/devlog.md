@@ -2,6 +2,12 @@
 
 날짜별로 한 일 · 다음 할 일 · 이슈를 적는다. 작업 세션이 끝날 때 갱신하고, 구현 태스크가 끝나면 그날 항목에 한 줄을 더한다. 현황은 [`README.md`](README.md)의 진척 대시보드에 있다.
 
+## 2026-11-07
+
+### 한 일
+
+- MVP 2B Task 1: P1 목업 · 테스트 기반을 깔았다. 목업 오류가 입력 칸별 `fieldErrors`를 싣고(`fieldError(칸, 문구?, 코드?, 상태?)`), multipart 본문을 `readForm` · `formFile`로 읽으며, 업로드한 사진은 `src/mocks/db/files.ts`(참조 `mock-file:…`, 시연 초기화가 비움)에 둔다. 에러 코드 5개(`COMPLETE_BEFORE_TOUR_DATE` · `COURSE_STOP_DUPLICATE` · `COURSE_STOP_LIMIT` · `BIZ_NOT_VERIFIED` · `ADDRESS_NOT_FOUND`)를 더하고 `BIZ_CLOSED` 문구를 다음 행동이 있게 고쳤다. 업로드 제한 60초(`UPLOAD_TIMEOUT_MS`), 본문 없는 413은 `FILE_TOO_LARGE`. 테스트는 전역 `FormData` · `File` · `Blob`을 Node 구현으로 바꾼다(jsdom `File`을 담은 FormData는 `Request.formData()`가 끝나지 않는다; React가 부르는 `new FormData(폼 요소)`는 jsdom이 읽도록 감쌌다) + `server.events` 리스너 정리 + `testImage()`. `registry.test.ts`는 `P1_CONTRACT`로, 자리 화면 문구는 `곧 열려요.`(`/owner/report`와 `/explore`만 남을 예정)로 바꿨다. 정리 대상: 2B 뒤 `PlaceholderPage`의 `showLogout`은 쓸 곳이 없어진다.
+
 ## 2026-11-06
 
 ### 한 일

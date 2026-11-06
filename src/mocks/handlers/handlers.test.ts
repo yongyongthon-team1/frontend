@@ -1,3 +1,4 @@
+import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
 import type {
   ApplicantsBoard,
@@ -11,8 +12,13 @@ import type { Course } from '@/features/courses/model';
 import type { MyStore } from '@/features/stores/model';
 import type { RecommendationResult, TourDetail, TourSummary } from '@/features/tours/model';
 import { COURSE_CRITERIA } from '@/mocks/ai/course';
+import { getMockFile, putMockFile } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
-import { configureHttp, request } from '@/shared/lib/http';
+import { configureHttp, request, upload } from '@/shared/lib/http';
+import { MockApiError } from '@/mocks/rules/errors';
+import { server } from '@/mocks/node';
+import { testImage } from '@/test/files';
+import { fieldError, formFile, readForm, withErrors } from './util';
 
 // 핸들러를 실제 HTTP 클라이언트로 부른다. 테스트 setup이 전체 핸들러를 건 MSW 서버를 켜고,
 // 지연을 0으로 두고, 매 테스트 전에 오늘 기준 시드(START)로 DB를 되돌린다.
@@ -765,6 +771,12 @@ describe('demo', () => {
     expect(await request<Coupon[]>('/me/coupons')).toHaveLength(2);
   });
 
+  it('시연 초기화는 올려 둔 목업 파일도 지운다', async () => {
+    const ref = putMockFile(testImage());
+    await request('/demo/reset', { method: 'POST' });
+    expect(getMockFile(ref)).toBeNull();
+  });
+
   it('체크포인트 없이 초기화하면 처음 상태', async () => {
     await login('student@demo.kr');
     await request('/tours/1/applications', { method: 'POST', body: { motivation: '궁금해요' } });
@@ -803,5 +815,137 @@ describe('사장님 내 가게 (GET /owner/store)', () => {
     await expect(request('/owner/store')).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
     configureHttp({ getToken: () => null });
     await expect(request('/owner/store')).rejects.toMatchObject({ status: 401 });
+  });
+});
+
+describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
+  it('fieldError: 400 VALIDATION에 코드 표 문구와 fieldErrors 본문', async () => {
+    server.use(
+      http.post(
+        '/api/_probe',
+        withErrors(async () => {
+          throw fieldError('email', '이메일 형식이 맞지 않아요.');
+        }),
+      ),
+    );
+    const res = await fetch('/api/_probe', { method: 'POST' });
+    expect(res.status).toBe(400);
+    expect(await res.json()).toEqual({
+      code: 'VALIDATION',
+      message: '입력값을 다시 확인해 주세요.',
+      fieldErrors: { email: '이메일 형식이 맞지 않아요.' },
+    });
+    await expect(request('/_probe', { method: 'POST' })).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { email: '이메일 형식이 맞지 않아요.' },
+    });
+  });
+
+  it('fieldError: 문구를 생략하면 기본 문구, 코드와 상태를 바꿀 수 있다', async () => {
+    server.use(
+      http.post(
+        '/api/_probe',
+        withErrors(async () => {
+          throw fieldError('email');
+        }),
+      ),
+      http.put(
+        '/api/_probe',
+        withErrors(async () => {
+          throw fieldError('email', '이미 가입된 이메일이에요.', 'EMAIL_DUPLICATE', 409);
+        }),
+      ),
+    );
+    await expect(request('/_probe', { method: 'POST' })).rejects.toMatchObject({
+      status: 400,
+      fieldErrors: { email: '입력값을 확인해 주세요.' },
+    });
+    await expect(request('/_probe', { method: 'PUT' })).rejects.toMatchObject({
+      status: 409,
+      code: 'EMAIL_DUPLICATE',
+      message: '이미 가입된 이메일이에요.',
+      fieldErrors: { email: '이미 가입된 이메일이에요.' },
+    });
+  });
+
+  it('fieldErrors가 없는 MockApiError의 본문에는 fieldErrors가 없다', async () => {
+    server.use(
+      http.post(
+        '/api/_probe',
+        withErrors(async () => {
+          throw new MockApiError(404, 'NOT_FOUND');
+        }),
+      ),
+    );
+    const res = await fetch('/api/_probe', { method: 'POST' });
+    expect(res.status).toBe(404);
+    expect(await res.json()).not.toHaveProperty('fieldErrors');
+  });
+
+  describe('multipart', () => {
+    function useUploadProbe() {
+      server.use(
+        http.post(
+          '/api/_upload',
+          withErrors(async ({ request: req }) => {
+            const form = await readForm(req);
+            const file = formFile(form, 'document');
+            return HttpResponse.json({
+              grade: form.get('grade'),
+              file: file && { name: file.name, type: file.type, size: file.size },
+            });
+          }),
+        ),
+      );
+    }
+
+    it('readForm → formFile: 파일의 이름 · 형식 · 크기와 일반 필드를 읽는다', async () => {
+      useUploadProbe();
+      const form = new FormData();
+      form.append('document', testImage('card.png', { type: 'image/png' }));
+      form.append('grade', '2');
+      expect(await upload('/_upload', form)).toEqual({
+        grade: '2',
+        file: { name: 'card.png', type: 'image/png', size: 4 },
+      });
+    });
+
+    it('파일 칸이 없거나 문자열이면 formFile은 null', async () => {
+      useUploadProbe();
+      const none = new FormData();
+      none.append('grade', '1');
+      expect(await upload('/_upload', none)).toEqual({ grade: '1', file: null });
+      const text = new FormData();
+      text.append('document', '사진 아님');
+      expect(await upload('/_upload', text)).toEqual({ grade: null, file: null });
+    });
+
+    it('JSON 요청은 400 VALIDATION', async () => {
+      useUploadProbe();
+      await expect(
+        request('/_upload', { method: 'POST', body: { document: 'x' } }),
+      ).rejects.toMatchObject({ status: 400, code: 'VALIDATION' });
+    });
+
+    it('본문이 없는 요청도 400 VALIDATION', async () => {
+      useUploadProbe();
+      await expect(request('/_upload', { method: 'POST' })).rejects.toMatchObject({
+        status: 400,
+        code: 'VALIDATION',
+      });
+    });
+
+    it('formFile은 realm이 달라도 name · type · size가 있는 객체면 파일로 본다', () => {
+      const form = new FormData();
+      const foreign = { name: 'a.jpg', type: 'image/jpeg', size: 3 };
+      // FormData.get이 돌려주는 값만 보는 함수라, get만 가진 틀로 시험한다.
+      const fake = {
+        get: (key: string) => (key === 'document' ? foreign : null),
+      } as unknown as FormData;
+      expect(formFile(fake, 'document')).toBe(foreign);
+      expect(formFile(fake, 'other')).toBeNull();
+      expect(formFile(form, 'document')).toBeNull();
+    });
   });
 });

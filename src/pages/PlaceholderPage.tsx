@@ -22,7 +22,7 @@ export function PlaceholderPage({ title, wireframe, showLogout = false }: Placeh
     <>
       <TopBar title={title} back={key === 'default' ? '/' : true} />
       <Page className="flex flex-col gap-3">
-        <EmptyState title={title} description="MVP 2단계에서 열려요." />
+        <EmptyState title={title} description="곧 열려요." />
         {wireframe ? (
           <p className="text-center text-sm text-muted">{`와이어프레임: ${wireframe}`}</p>
         ) : null}
