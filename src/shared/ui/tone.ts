@@ -25,12 +25,3 @@ export const toneBgClass: Record<Tone, string> = {
   warning: 'bg-local-soft',
   danger: 'bg-danger-soft',
 };
-
-// V2 칩 글자색. warning(복숭아)은 연한 바탕 위에서 대비가 낮아 본문색을 쓴다(아이콘 · 점은 tone 색).
-export const toneChipTextClass: Record<Tone, string> = {
-  neutral: 'text-muted',
-  info: 'text-brand',
-  success: 'text-success',
-  warning: 'text-ink',
-  danger: 'text-danger',
-};

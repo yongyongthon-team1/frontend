@@ -31,6 +31,7 @@ import { SegmentedTabs } from './SegmentedTabs';
 import { segmentedPanelProps } from './segmentedPanel';
 import { Select } from './Select';
 import { Skeleton } from './Skeleton';
+import { AiReasonPrefix } from './AiReasonPrefix';
 import { StatusChip } from './StatusChip';
 import { StepList } from './StepList';
 import { Textarea } from './Textarea';
@@ -691,12 +692,56 @@ describe('Button V2 변형', () => {
   });
 });
 
+describe('AiReasonPrefix', () => {
+  it('✦는 장식으로 숨기고 화면 낭독기에는 AI 추천 이유라고 읽힌다', () => {
+    render(
+      <p>
+        <AiReasonPrefix />
+        신청자 2명이 관심 있어요
+      </p>,
+    );
+    expect(screen.getByText('✦')).toHaveAttribute('aria-hidden', 'true');
+    expect(screen.getByText('AI 추천 이유:')).toHaveClass('sr-only');
+    expect(screen.getByText(/신청자 2명/)).toHaveTextContent(/^✦AI 추천 이유: 신청자 2명이/);
+  });
+});
+
 describe('V2 StatusChip · InfoCard tone · TextField label', () => {
   it('StatusChip tone: success는 success-soft 바탕, neutral은 neutral-100 바탕', () => {
     const { rerender } = render(<StatusChip tone="success">참여 확정</StatusChip>);
     expect(screen.getByText('참여 확정').closest('div')).toHaveClass('bg-success-soft');
     rerender(<StatusChip>승인 대기</StatusChip>);
     expect(screen.getByText('승인 대기').closest('div')).toHaveClass('bg-neutral-100');
+  });
+
+  it.each([
+    ['neutral', 'bg-muted'],
+    ['info', 'bg-brand'],
+    ['success', 'bg-success'],
+    ['warning', 'bg-local'],
+    ['danger', 'bg-danger'],
+  ] as const)(
+    'StatusChip %s: 글자는 항상 본문색(ink)이고 색은 점으로 보인다(대비 4.5:1)',
+    (tone, dotClass) => {
+      render(<StatusChip tone={tone}>칩</StatusChip>);
+      const chip = screen.getByText('칩').closest('div');
+      expect(chip).toHaveClass('text-ink');
+      expect(chip).not.toHaveClass('text-success', 'text-danger', 'text-brand', 'text-muted');
+      const marker = chip?.querySelector('[aria-hidden]');
+      expect(marker).toHaveClass(dotClass);
+    },
+  );
+
+  it('StatusChip 아이콘은 tone 색이고 점은 따로 그리지 않는다', () => {
+    render(
+      <StatusChip tone="success" icon={<span data-testid="ic" />}>
+        칩
+      </StatusChip>,
+    );
+    const chip = screen.getByText('칩').closest('div');
+    expect(chip).toHaveClass('text-ink');
+    expect(screen.getByTestId('ic').parentElement).toHaveClass('text-success');
+    expect(chip?.querySelectorAll('[aria-hidden]')).toHaveLength(1);
   });
 
   it('InfoCard tone: brand는 brand-soft, local은 local-soft, muted는 neutral-100', () => {

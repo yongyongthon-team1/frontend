@@ -37,7 +37,7 @@ const ROWS: Array<
     '신청 완료',
     'APPLIED',
     () => '/tours/1/apply/done',
-    '승인 대기 중',
+    '경희대 국제캠퍼스 산업디자인학과 탐방',
     '/api/tours/:id',
     () => qk.tour(1),
   ],
