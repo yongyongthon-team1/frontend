@@ -1,5 +1,6 @@
 import type { CourseStatus } from '@/features/courses/model';
-import type { TourSummary } from '@/features/tours/model';
+import { TOUR_STATUS_LABEL, type TourSummary } from '@/features/tours/model';
+import type { Tone } from '@/shared/lib/types';
 
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
 
@@ -36,14 +37,26 @@ export interface GuideTourSummary extends TourSummary {
   courseStatus: CourseStatus | null;
 }
 
+/** 진행 예정 탐방: 모집 중 · 마감(끝나지 않은 탐방). */
+export function isUpcomingTour(tour: Pick<TourSummary, 'status'>): boolean {
+  return tour.status === 'RECRUITING' || tour.status === 'CLOSED';
+}
+
 /** 가이드 홈 · `코스 편집` 탭이 집중할 탐방: 모집 중 · 마감 중 `startsAt`이 가장 이른 것(없으면 null). */
 export function pickFocusTour(tours: GuideTourSummary[]): GuideTourSummary | null {
   let focus: GuideTourSummary | null = null;
   for (const tour of tours) {
-    if (tour.status !== 'RECRUITING' && tour.status !== 'CLOSED') continue;
+    if (!isUpcomingTour(tour)) continue;
     if (focus === null || Date.parse(tour.startsAt) < Date.parse(focus.startsAt)) focus = tour;
   }
   return focus;
+}
+
+/** 가이드 탐방 카드(G06 · G11)의 상태 칩: 진행 예정은 코스 확정 > 접수 중 · 마감, 지난 탐방은 탐방 상태 이름. */
+export function guideTourChip(tour: GuideTourSummary): { label: string; tone: Tone } {
+  if (!isUpcomingTour(tour)) return { label: TOUR_STATUS_LABEL[tour.status], tone: 'neutral' };
+  if (tour.courseStatus === 'CONFIRMED') return { label: '코스 확정', tone: 'success' };
+  return { label: tour.status === 'RECRUITING' ? '신청 접수 중' : '모집 마감', tone: 'neutral' };
 }
 
 /** 탐방의 코스로 가는 길: 확정 → 확정 점검, 초안 → 편집, 코스 없음 → 승인자가 있으면 초안 생성, 없으면 신청자 보기. */

@@ -42,6 +42,46 @@ describe('신청자 관리 (guide-s03)', () => {
     expect(within(card).queryByRole('button')).not.toBeInTheDocument();
   });
 
+  it('재학 인증을 마친 신청자만 `인증` 칩이 이름 옆에 붙는다', async () => {
+    const { router } = await renderApp('/guide/tours/new', {
+      as: 'guide',
+      checkpoint: 'APPLIED',
+    });
+    mutate((db) => {
+      const idOf = (name: string) => db.users.find((u) => u.name === name)!.id;
+      const status = (name: string, next: 'APPROVED' | 'PENDING') => {
+        const row = db.verifications.find((v) => v.id === idOf(name));
+        if (row) row.status = next;
+      };
+      status('김민지', 'APPROVED');
+      status('최유진', 'PENDING');
+    });
+    await router.navigate('/guide/tours/1/applicants');
+    await screen.findByRole('heading', waiting(2));
+    const minji = minjiCard();
+    expect(within(minji).getByText('인증')).toBeInTheDocument();
+    // 이름 제목의 글자는 그대로다.
+    expect(within(minji).getByRole('heading', { name: '김민지' })).toBeInTheDocument();
+    const yujin = screen.getByRole('heading', { name: '최유진' }).closest('article')!;
+    expect(within(yujin).queryByText('인증')).not.toBeInTheDocument();
+  });
+
+  it('학년이 없으면 따옴표 줄에 `고N · ` 없이 동기만 나온다', async () => {
+    const { router } = await renderApp('/guide/tours/new', {
+      as: 'guide',
+      checkpoint: 'APPLIED',
+    });
+    mutate((db) => {
+      const userId = db.users.find((u) => u.name === '김민지')!.id;
+      db.studentProfiles.find((p) => p.id === userId)!.grade = null;
+    });
+    await router.navigate('/guide/tours/1/applicants');
+    await screen.findByRole('heading', waiting(2));
+    const quote = within(minjiCard()).getByText(/^“ .+ ”$/);
+    expect(quote.textContent).not.toMatch(/고\d/);
+    expect(quote.textContent).toMatch(/^“ \S/);
+  });
+
   it('대기가 없으면 제목이 `신청자를 모두 확인했어요.`', async () => {
     await renderApp('/guide/tours/7/applicants', { as: 'guide' });
     expect(

@@ -1,10 +1,13 @@
 import { ChevronRight } from 'lucide-react';
 import { Link, useSearchParams } from 'react-router';
-import { guideCoursePath, type GuideTourSummary } from '@/features/applications/model';
+import {
+  guideCoursePath,
+  guideTourChip,
+  isUpcomingTour,
+  type GuideTourSummary,
+} from '@/features/applications/model';
 import { useGuideTours } from '@/features/applications/queries';
-import { TOUR_STATUS_LABEL } from '@/features/tours/model';
 import { formatDotDateWeekday } from '@/shared/lib/date';
-import type { Tone } from '@/shared/lib/types';
 import { BrandMark } from '@/shared/ui/BrandMark';
 import { buttonClass } from '@/shared/ui/buttonStyles';
 import { EmptyState } from '@/shared/ui/EmptyState';
@@ -25,27 +28,18 @@ const TABS: { value: Tab; label: string }[] = [
 
 const dot = ' · ';
 
-function isUpcoming(tour: GuideTourSummary): boolean {
-  return tour.status === 'RECRUITING' || tour.status === 'CLOSED';
-}
-
 const startsAtOf = (tour: GuideTourSummary) => Date.parse(tour.startsAt);
 
 /** 진행 예정 탐방은 늘 시작 시각이 이른 것부터 세운다(판정 35 — API 순서나 시연 탐방 id에 기대지 않는다). */
 function orderUpcoming(tours: GuideTourSummary[]): GuideTourSummary[] {
-  return tours.filter(isUpcoming).sort((a, b) => startsAtOf(a) - startsAtOf(b));
+  return tours.filter(isUpcomingTour).sort((a, b) => startsAtOf(a) - startsAtOf(b));
 }
 
 /** 지난 탐방(끝남 · 취소)은 최근 것부터. */
 function orderPast(tours: GuideTourSummary[]): GuideTourSummary[] {
-  return tours.filter((tour) => !isUpcoming(tour)).sort((a, b) => startsAtOf(b) - startsAtOf(a));
-}
-
-function chipOf(tour: GuideTourSummary): { label: string; tone: Tone } {
-  if (!isUpcoming(tour)) return { label: TOUR_STATUS_LABEL[tour.status], tone: 'neutral' };
-  if (tour.courseStatus === 'CONFIRMED') return { label: '코스 확정', tone: 'success' };
-  if (tour.status === 'RECRUITING') return { label: '신청 접수 중', tone: 'neutral' };
-  return { label: '모집 마감', tone: 'neutral' };
+  return tours
+    .filter((tour) => !isUpcomingTour(tour))
+    .sort((a, b) => startsAtOf(b) - startsAtOf(a));
 }
 
 function SoftLink({ to, children }: { to: string; children: string }) {
@@ -58,8 +52,9 @@ function SoftLink({ to, children }: { to: string; children: string }) {
 }
 
 /** 탐방 카드. 코스가 확정이면 코스 확인하기, 아니면 신청자 관리하기. 지난 탐방은 확정 코스가 있을 때만 버튼이 있다. */
-function TourCard({ tour, past }: { tour: GuideTourSummary; past: boolean }) {
-  const chip = chipOf(tour);
+function TourCard({ tour }: { tour: GuideTourSummary }) {
+  const chip = guideTourChip(tour);
+  const past = !isUpcomingTour(tour);
   const confirmed = tour.courseStatus === 'CONFIRMED';
   return (
     <article className="rounded-xl bg-surface p-5">
@@ -153,7 +148,7 @@ function UpcomingList({ tours }: { tours: GuideTourSummary[] }) {
       <ul className="flex flex-col gap-3">
         {tours.map((tour) => (
           <li key={tour.id}>
-            <TourCard tour={tour} past={false} />
+            <TourCard tour={tour} />
           </li>
         ))}
       </ul>
@@ -176,7 +171,7 @@ function PastList({ tours }: { tours: GuideTourSummary[] }) {
     <ul className="flex flex-col gap-3">
       {tours.map((tour) => (
         <li key={tour.id}>
-          <TourCard tour={tour} past />
+          <TourCard tour={tour} />
         </li>
       ))}
     </ul>

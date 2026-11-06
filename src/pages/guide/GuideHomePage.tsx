@@ -1,7 +1,11 @@
 import { ChevronRight } from 'lucide-react';
 import { Link } from 'react-router';
 import { guideTodos } from '@/features/applications/guideHome';
-import { pickFocusTour, type GuideTourSummary } from '@/features/applications/model';
+import {
+  isUpcomingTour,
+  pickFocusTour,
+  type GuideTourSummary,
+} from '@/features/applications/model';
 import { useGuideTours } from '@/features/applications/queries';
 import { campusLabel } from '@/features/tours/model';
 import { formatAmPm, formatDotDateWeekday, formatLongDate } from '@/shared/lib/date';
@@ -16,10 +20,6 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
 
 const dot = ' · ';
-
-function isUpcoming(tour: GuideTourSummary): boolean {
-  return tour.status === 'RECRUITING' || tour.status === 'CLOSED';
-}
 
 /** 화면 맨 아래 링크. `›`는 장식이라 링크 이름은 `내가 개설한 탐방`이다. */
 function AllToursLink() {
@@ -94,7 +94,7 @@ export function GuideHomePage() {
 
   if (focus.counts.total === 0) return <NoApplicants tour={focus} />;
 
-  const upcoming = tours.filter(isUpcoming).length;
+  const upcoming = tours.filter(isUpcomingTour).length;
   const todos = guideTodos(focus);
   return (
     <Page className="flex flex-col pt-6">
@@ -119,7 +119,7 @@ export function GuideHomePage() {
         </p>
         <div className="mt-4 flex items-end justify-between gap-3 border-t border-surface pt-4">
           <Stat value={`${focus.counts.approved}명`} label="승인했어요" />
-          <Stat value={`${focus.remainingSeats}자리`} label="남았어요" />
+          <Stat value={`${Math.max(0, focus.remainingSeats)}자리`} label="남았어요" />
         </div>
       </section>
 
@@ -160,6 +160,8 @@ export function GuideHomePage() {
 
 /** G11: 집중하는 탐방에 아직 신청자가 없을 때. */
 function NoApplicants({ tour }: { tour: GuideTourSummary }) {
+  // V2 G11 문구는 `모집 중`이라 G06 칩(`신청 접수 중`)과 다르다. 마감 탐방이 포커스일 수 있어 상태로 가른다.
+  const chipLabel = tour.status === 'CLOSED' ? '모집 마감' : '모집 중';
   return (
     <Page className={BOTTOM_ACTION_PAGE_TAB_ROOT}>
       <div>
@@ -183,7 +185,7 @@ function NoApplicants({ tour }: { tour: GuideTourSummary }) {
       </section>
 
       <section aria-label="모집 중인 탐방" className="mt-4 rounded-xl bg-surface p-5">
-        <StatusChip>모집 중</StatusChip>
+        <StatusChip>{chipLabel}</StatusChip>
         <h2 className="mt-3 truncate text-[17px] font-bold text-ink">{tour.title}</h2>
         <p className="mt-1 truncate text-[13px] text-muted">
           {formatDotDateWeekday(tour.startsAt)}

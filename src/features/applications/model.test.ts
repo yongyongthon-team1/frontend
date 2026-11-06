@@ -4,6 +4,8 @@ import {
   coursePathFor,
   guideCoursePath,
   groupMyApplications,
+  guideTourChip,
+  isUpcomingTour,
   pickFocusTour,
   type GuideTourSummary,
   type MyApplication,
@@ -153,4 +155,38 @@ describe('coursePathFor', () => {
 
   it('코스 없음 + 승인 0명 → 신청자 보기', () =>
     expect(coursePathFor(4, null, 0)).toBe('/guide/tours/4/applicants'));
+});
+
+describe('isUpcomingTour', () => {
+  it('모집 중 · 마감만 진행 예정', () => {
+    expect(isUpcomingTour({ status: 'RECRUITING' })).toBe(true);
+    expect(isUpcomingTour({ status: 'CLOSED' })).toBe(true);
+    expect(isUpcomingTour({ status: 'COMPLETED' })).toBe(false);
+    expect(isUpcomingTour({ status: 'CANCELED' })).toBe(false);
+  });
+});
+
+describe('guideTourChip', () => {
+  it('진행 예정: 접수 중 · 마감, 코스가 확정이면 코스 확정(success)', () => {
+    expect(guideTourChip(guideTour({ id: 1 }))).toEqual({ label: '신청 접수 중', tone: 'neutral' });
+    expect(guideTourChip(guideTour({ id: 1, status: 'CLOSED' }))).toEqual({
+      label: '모집 마감',
+      tone: 'neutral',
+    });
+    expect(guideTourChip(guideTour({ id: 1, courseStatus: 'CONFIRMED' }))).toEqual({
+      label: '코스 확정',
+      tone: 'success',
+    });
+    expect(guideTourChip(guideTour({ id: 1, courseStatus: 'DRAFT' })).label).toBe('신청 접수 중');
+  });
+
+  it('지난 탐방은 코스가 확정이어도 탐방 상태 이름', () => {
+    expect(
+      guideTourChip(guideTour({ id: 1, status: 'COMPLETED', courseStatus: 'CONFIRMED' })),
+    ).toEqual({
+      label: '완료',
+      tone: 'neutral',
+    });
+    expect(guideTourChip(guideTour({ id: 1, status: 'CANCELED' })).label).toBe('취소');
+  });
 });

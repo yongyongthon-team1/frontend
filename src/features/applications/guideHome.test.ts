@@ -60,6 +60,12 @@ describe('guideTodos', () => {
     });
   });
 
+  it('코스가 확정이어도 대기가 남았으면 신청자 확인이 먼저, 확정 코스 보기가 다음', () => {
+    const todos = guideTodos(tour({ total: 3, pending: 1, approved: 2 }, 'CONFIRMED'));
+    expect(todos.map((t) => t.action.label)).toEqual(['신청자 확인하기', '확정 코스 보기']);
+    expect(todos[1]!.action.to).toBe('/guide/tours/7/course/confirm');
+  });
+
   it('대기도 승인도 없고 코스도 없으면 할 일이 없다', () => {
     expect(guideTodos(tour({ total: 1, pending: 0, approved: 0 }))).toEqual([]);
   });

@@ -90,6 +90,16 @@ describe('가이드 홈 (G01 · G11)', () => {
     expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toBeInTheDocument();
   });
 
+  it('G11: 포커스 탐방이 마감이면 칩이 `모집 마감`', async () => {
+    await renderPatched('/guide', { as: 'guide' }, (db) => {
+      db.tours.find((t) => t.id === 1)!.status = 'COMPLETED';
+      db.tours.find((t) => t.id === 6)!.status = 'CLOSED';
+    });
+    await screen.findByRole('heading', { level: 1, name: '아직 신청자가 없어요.' });
+    expect(screen.getByText('모집 마감')).toBeInTheDocument();
+    expect(screen.queryByText('모집 중')).not.toBeInTheDocument();
+  });
+
   it('진행 예정 탐방이 없으면 빈 상태 + 새 탐방 개설하기', async () => {
     await renderPatched('/guide', { as: 'guide' }, (db) => {
       for (const t of db.tours) {

@@ -22,8 +22,7 @@ import { TopBar } from '@/shared/ui/TopBar';
 
 const BACK = '/guide';
 
-const STATUS_TONE: Record<Applicant['status'], Tone> = {
-  PENDING: 'info',
+const STATUS_TONE: Record<Exclude<Applicant['status'], 'PENDING'>, Tone> = {
   APPROVED: 'success',
   REJECTED: 'neutral',
   CANCELED: 'neutral',
@@ -178,10 +177,15 @@ function ApplicantCard({
         >
           {applicant.userName.slice(0, 1)}
         </span>
-        <h2 className="min-w-0 flex-1 truncate text-[17px] font-bold text-ink">
-          {applicant.userName}
-        </h2>
-        {pending ? (
+        <div className="flex min-w-0 flex-1 items-center gap-2">
+          <h2 className="min-w-0 truncate text-[17px] font-bold text-ink">{applicant.userName}</h2>
+          {applicant.verified ? (
+            <StatusChip tone="success" className="shrink-0">
+              인증
+            </StatusChip>
+          ) : null}
+        </div>
+        {applicant.status === 'PENDING' ? (
           <div className="w-[104px] shrink-0">
             <Button
               variant="soft"
