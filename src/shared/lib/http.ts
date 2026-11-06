@@ -78,7 +78,7 @@ async function toApiError(res: Response): Promise<ApiError> {
       },
     );
   }
-  // 프록시가 본문 없이 413을 주면 업로드 한도 초과다(계약 6절 18번).
+  // JSON `code`가 없는 413(본문 없음 · 프록시의 HTML 오류 쪽)은 업로드 한도 초과다(계약 6절 18번).
   if (res.status === 413) {
     return new ApiError(413, 'FILE_TOO_LARGE', errorMessage('FILE_TOO_LARGE'));
   }

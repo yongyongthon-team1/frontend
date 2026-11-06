@@ -55,14 +55,24 @@ describe('jsdom 업로드 경로(전역 FormData · File이 Node 구현이어도
     expect(await upload('/_upload', form)).toEqual({ name: 'card.pdf', type: 'application/pdf' });
   });
 
-  it('폼 요소로 FormData를 만들어도 된다(React 19가 제출 이벤트에서 부른다)', () => {
+  it('폼 요소로 FormData를 만들어도 된다(React 19가 제출 이벤트에서 부른다). 파일 항목은 이름 · 형식만 있고 내용은 비어 있다', async () => {
+    const user = userEvent.setup({ applyAccept: false });
     const { container } = render(
       <form>
         <input name="title" defaultValue="탐방" />
-        <input type="file" name="document" />
+        <input type="file" name="document" aria-label="사진" />
       </form>,
     );
+    await user.upload(screen.getByLabelText('사진'), testImage('card.png', { type: 'image/png' }));
     const data = new FormData(container.querySelector('form')!);
     expect(data.get('title')).toBe('탐방');
+    const entry = data.get('document') as File;
+    expect(entry).toMatchObject({ name: 'card.png', type: 'image/png', size: 0 });
+  });
+
+  it('원래 jsdom 생성자를 표식에 보관한다(setup이 다시 실행돼도 두 번 바꾸지 않는다)', () => {
+    const original = Reflect.get(globalThis, Symbol.for('ytt.test.jsdomFormData'));
+    expect(typeof original).toBe('function');
+    expect(original).not.toBe(FormData);
   });
 });

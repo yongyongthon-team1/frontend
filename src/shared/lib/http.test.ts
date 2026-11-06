@@ -126,12 +126,31 @@ describe('request', () => {
 });
 
 describe('upload', () => {
-  it('본문 없는 413은 FILE_TOO_LARGE(문구는 표의 것)', async () => {
+  afterEach(() => vi.restoreAllMocks());
+
+  it('JSON code가 없는 413(본문 없음 · 프록시의 HTML 오류)은 FILE_TOO_LARGE(문구는 표의 것)', async () => {
     server.use(http.post('/api/files', () => new HttpResponse(null, { status: 413 })));
     await expect(upload('/files', new FormData())).rejects.toMatchObject({
       status: 413,
       code: 'FILE_TOO_LARGE',
       message: '10MB 이하 이미지만 올릴 수 있어요.',
+    });
+  });
+
+  it('HTML 본문 413도 FILE_TOO_LARGE', async () => {
+    server.use(
+      http.post(
+        '/api/files',
+        () =>
+          new HttpResponse('<html><body>413 Request Entity Too Large</body></html>', {
+            status: 413,
+            headers: { 'Content-Type': 'text/html' },
+          }),
+      ),
+    );
+    await expect(upload('/files', new FormData())).rejects.toMatchObject({
+      status: 413,
+      code: 'FILE_TOO_LARGE',
     });
   });
 
@@ -149,7 +168,6 @@ describe('upload', () => {
     const timers = vi.spyOn(globalThis, 'setTimeout');
     await upload('/files', new FormData());
     expect(timers).toHaveBeenCalledWith(expect.any(Function), 60_000);
-    timers.mockRestore();
   });
 
   it('FormData를 보내고 Content-Type을 직접 넣지 않는다', async () => {

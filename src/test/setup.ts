@@ -10,8 +10,12 @@ import { server } from '@/mocks/node';
 // jsdom의 FormData · File · Blob을 Node(undici) 것으로 바꾼다. jsdom `File`을 담은 FormData는 Node `fetch` →
 // MSW → `Request.formData()` 경로에서 끝나지 않는다(multipart 본문을 직렬화하지 못한다). 생성자는 Node `Response`가
 // 파싱해 주는 multipart에서 꺼낸다(`node:buffer` import 없이).
-{
+// 한계: `new FormData(폼 요소)`의 파일 항목은 이름 · 형식만 있고 내용이 비어 있다(size 0) — 거기서 파일 내용을 읽는 시험은 쓰지 않는다.
+// `isolate: false` 등으로 이 파일이 다시 실행돼도 두 번 바꾸지 않는다(원래 jsdom 생성자를 표식에 둔다. 다시 잡으면 자기 자신을 부른다).
+const SWAPPED = Symbol.for('ytt.test.jsdomFormData');
+if (!Reflect.has(globalThis, SWAPPED)) {
   const JsdomFormData = globalThis.FormData;
+  Reflect.set(globalThis, SWAPPED, JsdomFormData);
   const probe = await new Response(
     '--b\r\nContent-Disposition: form-data; name="f"; filename="f.txt"\r\nContent-Type: text/plain\r\n\r\nx\r\n--b--\r\n',
     { headers: { 'Content-Type': 'multipart/form-data; boundary=b' } },
@@ -25,11 +29,18 @@ import { server } from '@/mocks/node';
     constructor(form?: HTMLFormElement, submitter?: HTMLElement | null) {
       super();
       if (form === undefined) return;
+      // user-event의 `upload`는 요소 래퍼의 `files`만 바꿔서 jsdom의 폼 데이터는 고른 파일을 모른다 — 래퍼의 `files`로 이름 · 형식을 채운다.
+      const picked = new Map<string, File[]>();
+      for (const input of form.querySelectorAll<HTMLInputElement>('input[type="file"][name]')) {
+        picked.set(input.name, Array.from(input.files ?? []));
+      }
       for (const [name, value] of new JsdomFormData(form, submitter)) {
-        this.append(
-          name,
-          typeof value === 'string' ? value : new NodeFile([], value.name, { type: value.type }),
-        );
+        if (typeof value === 'string') {
+          this.append(name, value);
+          continue;
+        }
+        const file = picked.get(name)?.shift() ?? value;
+        this.append(name, new NodeFile([], file.name, { type: file.type }));
       }
     }
   }

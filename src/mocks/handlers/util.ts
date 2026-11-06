@@ -84,13 +84,14 @@ export async function readForm(request: Request): Promise<FormData> {
 
 /**
  * 폼의 파일 칸. 문자열이거나 없으면 null이다. `instanceof File` 대신 `name` · `type` · `size`가 있는 객체인지 본다 —
- * 테스트의 jsdom `File`과 Node `File`처럼 realm이 달라도 통과한다.
+ * 테스트의 jsdom `File`과 Node `File`처럼 realm이 달라도 통과한다. 선택 없이 보낸 파일 칸(브라우저는 이름 `''` · 크기 0으로 보낸다)은 파일이 아니다.
  */
 export function formFile(form: FormData, field: string): File | null {
   const value: unknown = form.get(field);
   if (typeof value !== 'object' || value === null) return null;
   const file = value as Partial<File>;
   return typeof file.name === 'string' &&
+    file.name !== '' &&
     typeof file.type === 'string' &&
     typeof file.size === 'number'
     ? (value as File)

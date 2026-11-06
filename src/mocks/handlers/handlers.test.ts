@@ -921,6 +921,21 @@ describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
       expect(await upload('/_upload', text)).toEqual({ grade: null, file: null });
     });
 
+    it('선택 없이 보낸 파일 칸(이름 빈 값 · 크기 0)은 formFile이 null', async () => {
+      useUploadProbe();
+      const boundary = 'xyz';
+      const body =
+        `--${boundary}\r\nContent-Disposition: form-data; name="document"; filename=""\r\n` +
+        `Content-Type: application/octet-stream\r\n\r\n\r\n--${boundary}\r\n` +
+        `Content-Disposition: form-data; name="grade"\r\n\r\n2\r\n--${boundary}--\r\n`;
+      const res = await fetch('/api/_upload', {
+        method: 'POST',
+        headers: { 'Content-Type': `multipart/form-data; boundary=${boundary}` },
+        body,
+      });
+      expect(await res.json()).toEqual({ grade: '2', file: null });
+    });
+
     it('JSON 요청은 400 VALIDATION', async () => {
       useUploadProbe();
       await expect(
