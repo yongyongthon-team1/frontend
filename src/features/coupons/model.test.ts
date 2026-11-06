@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { computeCouponState, couponNotice, couponStateLabel } from './model';
+import { computeCouponState, couponNotice, couponStateLabel, formatCouponCode } from './model';
 
 const issued = {
   status: 'ISSUED' as const,
@@ -92,4 +92,12 @@ describe('couponNotice (사장님 쿠폰 오류 카드)', () => {
 
   it('오류 코드가 조회 상태보다 먼저다', () =>
     expect(couponNotice({ errorCode: 'COUPON_NOT_FOUND', state: 'USED' })).toEqual(notFound));
+});
+
+describe('formatCouponCode', () => {
+  it('6자리는 3자리씩 끊는다', () => expect(formatCouponCode('824193')).toBe('824 193'));
+  it.each(['', '12345', '1234567', 'abcdef', '824 193'])(
+    '6자리 숫자가 아니면(%j) 그대로 둔다',
+    (code) => expect(formatCouponCode(code)).toBe(code),
+  );
 });

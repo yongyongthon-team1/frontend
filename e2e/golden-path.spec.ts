@@ -118,10 +118,13 @@ for (const { title, link, present } of VARIANTS) {
     await page.getByRole('link', { name: '코스 확인하기', exact: true }).click();
     await expect(page.getByRole('heading', { name: '코스 보기' })).toBeVisible();
     await page.getByRole('link', { name: '내 쿠폰 확인하기' }).click();
-    await page.getByRole('link', { name: /할인/ }).first().click();
+    // 쿠폰이 1장뿐이면 목록이 바로 상세로 넘어간다 — 목록이든 상세든 코드가 보일 때까지 기다린다.
     const couponCode = page.getByTestId('coupon-code');
-    await expect(couponCode).toHaveText(/^\d( \d){5}$/);
-    const code = (await couponCode.innerText()).replace(/ /g, '');
+    const firstCoupon = page.getByRole('link', { name: /할인/ }).first();
+    await expect(couponCode.or(firstCoupon)).toBeVisible();
+    if (!(await couponCode.isVisible())) await firstCoupon.click();
+    await expect(couponCode).toHaveText(/^\d{3} \d{3}$/);
+    const code = (await couponCode.innerText()).replace(/\s/g, '');
     await checkRoleBadge('고교생 화면');
 
     // 사장님: 그 쿠폰을 발급한 가게의 사장님으로 바꾸고 코드를 채운다 → 사용 처리

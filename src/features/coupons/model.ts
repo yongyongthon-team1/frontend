@@ -66,6 +66,11 @@ export function couponStateLabel(state: CouponState, usedAt: string | null): str
   }
 }
 
+/** 쿠폰 코드를 3자리씩 끊어 보인다(`824193` → `824 193`, V2 V11). 6자리 숫자가 아니면 그대로 둔다. */
+export function formatCouponCode(code: string): string {
+  return /^\d{6}$/.test(code) ? `${code.slice(0, 3)} ${code.slice(3)}` : code;
+}
+
 export interface CouponNotice {
   title: string;
   description: string;

@@ -80,17 +80,26 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
       await screenshot(page, 2);
     });
 
-    test('③ 쿠폰 상세: 6자리 코드', async ({ page }) => {
+    test('③ 쿠폰 상세: 쿠폰 코드(3자리씩)', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&checkpoint=CONFIRMED&as=student');
       await page.getByRole('link', { name: '내 탐방', exact: true }).click();
       await page.getByRole('link', { name: '코스 확인하기', exact: true }).click();
       await page.getByRole('link', { name: '내 쿠폰 확인하기' }).click();
-      await expect(page.getByRole('heading', { name: '내 쿠폰' })).toBeVisible();
-      await page.getByRole('main').getByRole('listitem').getByRole('link').first().click();
-
+      // 쿠폰이 1장뿐이면 목록이 바로 상세로 넘어간다 — 목록이든 상세든 코드가 보일 때까지 기다린다.
       const code = page.getByTestId('coupon-code');
-      await expect(code).toHaveText(/^\d( \d){5}$/);
+      const firstCoupon = page.getByRole('main').getByRole('listitem').getByRole('link').first();
+      await expect(code.or(firstCoupon)).toBeVisible();
+      if (!(await code.isVisible())) await firstCoupon.click();
+      await expect(code).toHaveText(/^\d{3} \d{3}$/);
       await expectVisibleWithoutScroll(page, [code]);
+      // 하단에 붙은 버튼 같은 다른 요소가 코드를 덮지 않는다(가운데 점의 맨 위 요소가 코드).
+      const covered = await code.evaluate((el) => {
+        const r = el.getBoundingClientRect();
+        return !el.contains(
+          el.ownerDocument.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2),
+        );
+      });
+      expect(covered, '쿠폰 코드가 다른 요소에 덮이지 않는다').toBe(false);
       await screenshot(page, 3);
     });
   });

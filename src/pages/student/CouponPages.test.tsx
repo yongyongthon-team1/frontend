@@ -6,7 +6,7 @@ import { getDb, mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
 import { redeemCoupon as redeemCouponRule } from '@/mocks/rules/coupons';
 import { DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
-import { formatMonthDay } from '@/shared/lib/date';
+import { formatDotDate } from '@/shared/lib/date';
 import { findApplicationId, renderApp } from '@/test/renderApp';
 
 const STUDENT = 'student@demo.kr';
@@ -22,24 +22,60 @@ describe('쿠폰 목록 · 상세 (hs-s09)', () => {
       as: 'student',
       checkpoint: 'CONFIRMED',
     });
-    await router.navigate(`/my-tours/${findApplicationId(STUDENT, 1)}/coupons`);
+    const applicationId = findApplicationId(STUDENT, 1);
+    await router.navigate(`/my-tours/${applicationId}/coupons`);
     const items = await screen.findAllByRole('link', { name: /할인/ });
     expect(items).toHaveLength(2);
     expect(within(items[0]!).getByText('사용 가능')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/my-tours/${applicationId}/coupons`);
 
     await user.click(items[0]!);
-    expect(await screen.findByTestId('coupon-code')).toHaveTextContent(/^\d( \d){5}$/);
+    expect(await screen.findByTestId('coupon-code')).toHaveTextContent(/^\d{3} \d{3}$/);
+    expect(screen.getByRole('heading', { name: '탐방의 작은 혜택' })).toBeInTheDocument();
+    expect(screen.getByText('함께 둘러볼 동네 가게에서 사용해요.')).toBeInTheDocument();
     expect(screen.getByText('사용 가능')).toBeInTheDocument();
-    expect(screen.getByText('탐방 당일에만 사용 가능')).toBeInTheDocument();
-    expect(screen.getByText('오늘의 로컬 혜택')).toBeInTheDocument();
-    expect(screen.getByText('사장님께 아래 번호를 보여주세요.')).toBeInTheDocument();
-    expect(screen.getByText('사장님이 코드를 입력하면 사용 완료로 바뀌어요.')).toBeInTheDocument();
-    expect(screen.getByText('탐방 취소 시 해당 쿠폰은 자동 만료됩니다.')).toBeInTheDocument();
+    expect(screen.getByText('쿠폰 코드')).toBeInTheDocument();
+    expect(
+      screen.getByText('사장님에게 코드를 보여 주세요. 사용 완료 후 리뷰를 쓸 수 있어요.'),
+    ).toBeInTheDocument();
     const startsAt = getDb().tours.find((t) => t.id === 1)!.startsAt;
     expect(
-      screen.getByText(`쿠폰 1회 사용 / ${formatMonthDay(startsAt)} 당일 만료`),
+      screen.getByText(`${formatDotDate(startsAt)} 탐방 당일에만 사용할 수 있어요.`),
     ).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '코스 지도로 돌아가기' })).toHaveAttribute(
+      'href',
+      `/my-tours/${applicationId}/course`,
+    );
     expect(useDemoStore.getState().lastCoupon?.code).toMatch(/^\d{6}$/);
+  });
+
+  it('상점 이름이 쿠폰 코드보다 앞에 나온다 (판정 23)', async () => {
+    const { router } = await renderApp('/my-tours', { as: 'student', checkpoint: 'CONFIRMED' });
+    const coupon = getDb().coupons.find((c) => c.applicationId === findApplicationId(STUDENT, 1))!;
+    await router.navigate(`/coupons/${coupon.id}`);
+    const code = await screen.findByTestId('coupon-code');
+    const store = screen.getByRole('heading', { level: 3 });
+    expect(store.compareDocumentPosition(code) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+  });
+
+  it('쿠폰이 1장이면 목록에서 바로 상세로 가고, 뒤로 가면 목록이 아니라 그 앞 화면이다', async () => {
+    const { router } = await renderApp('/my-tours', { as: 'student', checkpoint: 'CONFIRMED' });
+    const applicationId = findApplicationId(STUDENT, 1);
+    mutate((db) => {
+      const mine = db.coupons.filter((c) => c.applicationId === applicationId);
+      db.coupons = db.coupons.filter((c) => c !== mine[1]);
+    });
+    const only = getDb().coupons.find((c) => c.applicationId === applicationId)!;
+    await router.navigate(`/my-tours/${applicationId}/course`);
+    await router.navigate(`/my-tours/${applicationId}/coupons`);
+
+    expect(await screen.findByTestId('coupon-code')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/coupons/${only.id}`);
+
+    await act(async () => {
+      await router.navigate(-1);
+    });
+    expect(router.state.location.pathname).toBe(`/my-tours/${applicationId}/course`);
   });
 
   it('발급된 쿠폰이 없으면 안내를 보인다', async () => {
@@ -61,7 +97,7 @@ describe('쿠폰 목록 · 상세 (hs-s09)', () => {
     await router.navigate(`/coupons/${coupon.id}`);
     expect(await screen.findByText('만료')).toBeInTheDocument();
     expect(screen.getByText('이 쿠폰은 더 이상 쓸 수 없어요.')).toBeInTheDocument();
-    expect(screen.getByTestId('coupon-code')).toHaveTextContent(/^\d( \d){5}$/);
+    expect(screen.getByTestId('coupon-code')).toHaveTextContent(/^\d{3} \d{3}$/);
   });
 
   it('사장님이 사용하면 5초 안에 사용 완료로 바뀐다', async () => {
@@ -82,9 +118,17 @@ describe('쿠폰 목록 · 상세 (hs-s09)', () => {
       redeemCouponRule(db, owner.id, last.code, new Date());
     });
     expect(
-      await screen.findByText(/사용 완료 · \d\d:\d\d/, {}, { timeout: 7000 }),
+      await screen.findByRole('heading', { name: '쿠폰을 사용했어요!' }, { timeout: 7000 }),
     ).toBeInTheDocument();
-    expect(screen.getByText('리뷰를 남기면 가게 AI 요약에 반영돼요.')).toBeInTheDocument();
+    expect(screen.getByText('방문한 가게의 경험을 남겨주세요.')).toBeInTheDocument();
+    expect(screen.getByText(/사장님 확인 완료/)).toBeInTheDocument();
+    expect(screen.getByText(/^쿠폰 번호/)).toBeInTheDocument();
+    expect(screen.getByTestId('coupon-code')).toHaveTextContent(/^\d{3} \d{3}$/);
+    expect(screen.getByText('쿠폰은 한 번만 사용할 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '방문 리뷰 작성하기' })).toHaveAttribute(
+      'href',
+      `/reviews/new?couponId=${router.state.location.pathname.split('/').pop()}`,
+    );
   }, 10_000);
 
   it('다시 불러오기가 실패해도 받은 쿠폰 코드는 그대로 보인다', async () => {
