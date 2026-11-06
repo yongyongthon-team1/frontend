@@ -38,7 +38,7 @@ function illustrationFor(category: string): IllustrationKind {
 
 /**
  * 맨 위 줄: 왼쪽 로고, 오른쪽 `로그아웃` 텍스트 버튼(사장님 탭에는 MY가 없다 — 2A-R9). 모든 상태에서 보인다.
- * 발표 모드 배지 · 좁은 화면 시연 패널 토글이 오른쪽 위에 겹치므로 버튼은 그만큼 왼쪽으로 비켜 선다(globals.css `--header-action-clear`, 판정 R13).
+ * 발표 모드 배지 · 좁은 화면 시연 패널 토글이 오른쪽 위에 겹치므로 버튼은 그만큼 왼쪽으로 비켜 선다(globals.css `--header-action-clear`, 실행 판정: 발표 배지가 머리 줄 조작을 가리지 않음).
  */
 function Header() {
   const logout = useLogout();

@@ -1,7 +1,7 @@
 import type { Locator } from '@playwright/test';
 import { expect, test } from './fixtures';
 
-// 시연 도구(발표 모드 역할 배지 · 좁은 화면 시연 패널 토글)가 화면 헤더의 오른쪽 조작을 덮지 않는다(판정 R13).
+// 시연 도구(발표 모드 역할 배지 · 좁은 화면 시연 패널 토글)가 화면 헤더의 오른쪽 조작을 덮지 않는다(실행 판정: 발표 배지가 머리 줄 조작을 가리지 않음).
 // 배지와 토글은 `pointer-events: none`이거나 위에 떠 있어 elementFromPoint로는 겹침을 못 잡으므로, 상자끼리의
 // 겹침(boundingBox)으로 본다. 오른쪽 위 조작은 사장님 내 가게(O01 · O01-E)의 `로그아웃`뿐이다.
 const PRESENT_OWNER = '/?demo=1&mode=mock&reset=1&as=owner&present=1';

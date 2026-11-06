@@ -6,8 +6,8 @@ import type { Tone } from '@/shared/lib/types';
 import { Badge } from '@/shared/ui/Badge';
 import { useDemoStore } from './demoStore';
 
-// V2 톤(칩 바탕 -soft + 같은 색 테두리 · 점). 글자는 본문색이다 — 연한 바탕 위의 success · 복숭아 글자는 대비가 낮아
-// 무대에서 읽히지 않는다(StatusChip의 warning과 같은 판단). 테두리가 있어 콘텐츠 위에 겹쳐도 경계가 보인다(그림자 없음).
+// V2 톤(칩 바탕 -soft + 같은 색 테두리 · 점). 글자는 톤 색이 아니라 본문색(ink)이다 — -soft 바탕 위 대비가
+// success 약 2.7:1 · accent-local 약 1.9:1로 낮아 무대에서 읽히지 않는다. 테두리가 있어 콘텐츠 위에 겹쳐도 경계가 보인다(그림자 없음).
 const ROLE_BADGE: Record<Role, { label: string; tone: Tone }> = {
   HIGH_SCHOOL: { label: '고교생 화면', tone: 'info' },
   UNIVERSITY: { label: '가이드 화면', tone: 'success' },
@@ -26,7 +26,7 @@ const TONE_BORDER: Record<Tone, string> = {
 /**
  * 발표 모드의 역할 배지(설계 5.8 — 관객에게 "지금 가이드 화면"임을 크게 보여 준다). TopBar가 아니라 앱 계층이
  * 프레임 오른쪽 위에 겹쳐 그린다(판정 Task 21 — shared가 demo를 모르게). 위치는 globals.css `.role-badge`.
- * 크기는 무대에서 읽히는 16px 굵은 글씨이고, 골든 패스 화면의 TopBar 제목 글자를 덮지 않는다(e2e/golden-path 발표 모드).
+ * 크기는 무대에서 읽히는 16px 굵은 글씨이고, 화면 제목(h1: TopBar 제목 또는 탭 첫 화면의 PageHeading) 글자를 덮지 않는다(e2e/golden-path 발표 모드).
  */
 export function RoleBadge() {
   const presentMode = useDemoStore((s) => s.presentMode) === true;

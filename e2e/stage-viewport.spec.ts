@@ -20,6 +20,8 @@ async function boxOf(locator: Locator) {
   return box;
 }
 
+const TOPBAR_HEIGHT = 56; // tokens.css --topbar-h
+
 /** 덮임 검사의 표본 점: 요소 상자의 가로 25 · 50 · 75%, 세로 15 · 50 · 85%(판정 R4). */
 const COVER_SAMPLES_X = [0.25, 0.5, 0.75];
 const COVER_SAMPLES_Y = [0.15, 0.5, 0.85];
@@ -37,7 +39,8 @@ async function expectVisibleWithoutScroll(page: Page, targets: Locator[], name: 
   const tabBar = page.getByRole('navigation', { name: '주요 메뉴' });
   await expect(tabBar).toBeVisible();
   const tabBarTop = (await boxOf(tabBar)).y;
-  const mainTop = (await boxOf(page.getByRole('main'))).y;
+  // 기준점은 상단 바 하단(main 상단 + 56) — 세 무대 화면 모두 TopBar가 있다. 가용 높이가 머리 주석의 452 · 432 · 422다.
+  const bodyTop = (await boxOf(page.getByRole('main'))).y + TOPBAR_HEIGHT;
   let lowest = 0;
   for (const target of targets) {
     await expect(target).toBeInViewport({ ratio: 1 });
@@ -70,9 +73,9 @@ async function expectVisibleWithoutScroll(page: Page, targets: Locator[], name: 
       );
     }
   }
-  // 실측 기록(README 무대 실측표의 출처): 본문 시작(main 상단)에서 가장 아래 대상의 하단까지가 사용 높이, 하단 탭 위까지가 가용 높이다.
-  const used = lowest - mainTop;
-  const available = tabBarTop - mainTop;
+  // 실측 기록(README 무대 실측표의 출처): 상단 바 하단에서 가장 아래 대상의 하단까지가 사용 높이, 하단 탭 위까지가 가용 높이다.
+  const used = lowest - bodyTop;
+  const available = tabBarTop - bodyTop;
   test.info().annotations.push({
     type: 'stage-measure',
     description: `${name}: 사용 ${used}px / 가용 ${available}px / 여유 ${available - used}px`,
