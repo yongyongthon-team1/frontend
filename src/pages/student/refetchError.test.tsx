@@ -1,5 +1,5 @@
 import type { QueryKey } from '@tanstack/react-query';
-import { act, screen } from '@testing-library/react';
+import { act, screen, waitFor } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { SeedCheckpoint } from '@/mocks/db/seed';
@@ -78,8 +78,20 @@ const ROWS: Array<
 describe('다시 불러오다 실패해도 받은 데이터는 그대로 보인다 (판정 24)', () => {
   it.each(ROWS)('%s', async (_, checkpoint, path, shown, failingApi, queryKey) => {
     const { router, queryClient } = await renderApp('/my-tours', { as: 'student', checkpoint });
-    await router.navigate(path());
-    expect(await screen.findByText(shown)).toBeInTheDocument();
+    // 시작 화면(/my-tours)의 조회가 끝난 뒤에 옮겨 간다 — 진행 중인 조회와 겹치면 재시도(1초) 때문에 제한 시간을 넘길 수 있다.
+    await waitFor(() => expect(queryClient.isFetching()).toBe(0));
+    // act 안에서 옮겨 도착 화면까지 그린 뒤 찾는다. 안 그러면 시작 화면에 같은 글(예: 내 탐방 목록의 탐방 제목)이 있을 때
+    // 그 요소를 먼저 집었다가 화면이 바뀌면서 문서에서 떨어진다.
+    await act(async () => {
+      await router.navigate(path());
+    });
+    try {
+      expect(await screen.findByText(shown, {}, { timeout: 3000 })).toBeInTheDocument();
+    } catch (error) {
+      // 실패 원인이 보이도록 그 시점의 화면을 남긴다.
+      screen.debug(undefined, 20000);
+      throw error;
+    }
 
     server.use(
       http.get(failingApi, () =>

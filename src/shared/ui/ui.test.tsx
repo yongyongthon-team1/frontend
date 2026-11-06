@@ -825,6 +825,33 @@ describe('ListRow 버튼 모드', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('버튼 안에는 div/p 없이 block span으로만 그린다', () => {
+    render(
+      <ListRow
+        eyebrow="계정"
+        title="로그아웃"
+        meta="이 기기에서 나가요"
+        right={<span>›</span>}
+        onClick={() => {}}
+      />,
+    );
+    const button = screen.getByRole('button', { name: /로그아웃/ });
+    expect(button.querySelector('div, p')).toBeNull();
+    expect(screen.getByText('로그아웃')).toHaveClass('block', 'truncate');
+  });
+
+  it('링크·일반 모드는 div/p로 그대로 그린다', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <ListRow to="/x" title="링크 줄" meta="메타" />
+        <ListRow title="일반 줄" meta="메타" />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('링크 줄').tagName).toBe('P');
+    expect(screen.getByText('일반 줄').tagName).toBe('P');
+    expect(container.querySelectorAll('div > div').length).toBeGreaterThan(0);
+  });
+
   it('disabled면 눌러도 호출되지 않는다', async () => {
     const onClick = vi.fn();
     render(<ListRow title="로그아웃" onClick={onClick} disabled />);
@@ -1180,10 +1207,34 @@ describe('FileField', () => {
     expect(screen.getByRole('alert')).toHaveTextContent('사진을 올려 주세요.');
   });
 
-  it('대화상자 취소(파일 없음)는 onChange를 부르지 않는다', () => {
+  it('대화상자 취소(파일 없음)는 onChange를 부르지 않고 이미 고른 파일은 그대로 둔다', async () => {
     const onChange = setup();
-    fireEvent.change(screen.getByLabelText('학생증 사진'), { target: { files: [] } });
-    expect(onChange).not.toHaveBeenCalled();
+    const input = screen.getByLabelText<HTMLInputElement>('학생증 사진');
+    await fileUser().upload(input, testImage('id.jpg', { size: 820 * 1024 }));
+    expect(onChange).toHaveBeenCalledTimes(1);
+    fireEvent.change(input, { target: { files: [] } });
+    expect(onChange).toHaveBeenCalledTimes(1);
+    expect(screen.getByText('id.jpg · 820KB')).toBeInTheDocument();
+  });
+
+  it('오류 표시는 그림자 없이 테두리색이고 평소에도 테두리가 있어 카드 크기가 같다', () => {
+    const { container, rerender } = render(
+      <FileField label="학생증 사진" accept="image/*" file={null} onChange={() => {}} />,
+    );
+    const card = container.querySelector('.rounded-lg');
+    expect(card).toHaveClass('border', 'border-transparent');
+    rerender(
+      <FileField
+        label="학생증 사진"
+        accept="image/*"
+        file={null}
+        error="사진을 올려 주세요."
+        onChange={() => {}}
+      />,
+    );
+    expect(card).toHaveClass('border', 'border-danger');
+    expect(card).not.toHaveClass('border-transparent');
+    expect(card?.className).not.toMatch(/ring|shadow/);
   });
 
   it('disabled면 입력이 잠긴다', () => {
@@ -1268,6 +1319,12 @@ describe('StarRating · StarDisplay', () => {
   it('StarDisplay: role=img 접근 이름 별점 {value}점', () => {
     render(<StarDisplay value={4} />);
     expect(screen.getByRole('img', { name: '별점 4점' })).toBeInTheDocument();
+  });
+
+  it('StarDisplay: 소수 평균은 내림해서 채운다(4.5는 별 4개), 라벨은 그대로', () => {
+    render(<StarDisplay value={4.5} />);
+    expect(screen.getByRole('img', { name: '별점 4.5점' })).toBeInTheDocument();
+    expect(screen.getAllByTestId('star-filled')).toHaveLength(4);
   });
 });
 

@@ -74,11 +74,12 @@ function StarIcon({ filled, className }: { filled: boolean; className?: string }
 
 /** 읽기 전용 별점(리뷰 목록 등). 화면 낭독기에는 이미지 하나로 `별점 {value}점`이라 읽힌다. */
 export function StarDisplay({ value }: { value: number }) {
-  const rounded = Math.round(value);
+  // 평균 4.5가 별 5개로 보이지 않게 내림한다.
+  const filledCount = Math.floor(value);
   return (
     <span role="img" aria-label={`별점 ${value}점`} className="inline-flex gap-0.5">
       {STARS.map((n) => (
-        <StarIcon key={n} filled={n <= rounded} className="size-4" />
+        <StarIcon key={n} filled={n <= filledCount} className="size-4" />
       ))}
     </span>
   );

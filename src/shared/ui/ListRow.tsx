@@ -27,29 +27,37 @@ export function ListRow({
   onClick,
   disabled,
 }: ListRowProps) {
+  // <button> 안에는 구문 콘텐츠만 둘 수 있어 버튼 모드는 div/p 대신 block span으로 그린다. 링크·div 모드는 그대로.
+  const asButton = !to && !!onClick;
+  const Block = asButton ? 'span' : 'div';
+  const Line = asButton ? 'span' : 'p';
+  const Trailing = asButton ? 'span' : 'div';
+
   const trailing =
     right !== undefined ? (
-      <div className="shrink-0">{right}</div>
+      <Trailing className="shrink-0">{right}</Trailing>
     ) : to ? (
       <ChevronRight aria-hidden className="size-6 shrink-0 text-muted" />
     ) : null;
 
   const content = (
     <>
-      <div className="min-w-0 flex-1">
-        {eyebrow ? <p className="truncate text-xs font-medium text-muted">{eyebrow}</p> : null}
-        <p className="truncate text-[17px] leading-[1.4] font-bold text-ink">{title}</p>
+      <Block className="block min-w-0 flex-1">
+        {eyebrow ? (
+          <Line className="block truncate text-xs font-medium text-muted">{eyebrow}</Line>
+        ) : null}
+        <Line className="block truncate text-[17px] leading-[1.4] font-bold text-ink">{title}</Line>
         {meta ? (
-          <div
+          <Block
             className={cn(
-              'mt-1 truncate text-xs',
+              'mt-1 block truncate text-xs',
               metaTone === 'brand' ? 'font-medium text-brand' : 'text-muted',
             )}
           >
             {meta}
-          </div>
+          </Block>
         ) : null}
-      </div>
+      </Block>
       {trailing}
     </>
   );

@@ -1,7 +1,7 @@
 import { useRef, type ChangeEvent } from 'react';
 import { cn } from '@/shared/lib/cn';
 import { FieldMessages } from './FieldMessages';
-import { useFieldIds } from './fieldStyles';
+import { fieldErrorClass, useFieldIds } from './fieldStyles';
 
 export interface FileFieldProps {
   label: string;
@@ -54,8 +54,9 @@ export function FileField({
     <div className="w-full">
       <div
         className={cn(
-          'rounded-lg bg-surface p-4 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent',
-          error && 'ring-1 ring-danger',
+          'rounded-lg border bg-surface p-4 has-[input:focus-visible]:outline-2 has-[input:focus-visible]:outline-offset-2 has-[input:focus-visible]:outline-accent',
+          // 오류 표시는 입력창과 같은 테두리색. 평소에도 투명 테두리를 둬 상태가 바뀌어도 카드 크기가 같다.
+          error ? fieldErrorClass : 'border-transparent',
         )}
       >
         <label
