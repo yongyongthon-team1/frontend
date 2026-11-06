@@ -8,6 +8,7 @@ import { FrameProvider } from './FrameContext';
 import { AiBadge } from './AiBadge';
 import { AiLoading } from './AiLoading';
 import { Badge } from './Badge';
+import { BrandMark } from './BrandMark';
 import { BottomSheet } from './BottomSheet';
 import { BottomTabBar } from './BottomTabBar';
 import { isTabActive } from './tabActive';
@@ -16,6 +17,7 @@ import { CodeInput } from './CodeInput';
 import { ConfirmDialog } from './ConfirmDialog';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
+import { Illustration } from './Illustration';
 import { InfoCard } from './InfoCard';
 import { KeywordChips } from './KeywordChips';
 import { Page } from './Page';
@@ -539,5 +541,47 @@ describe('ConfirmDialog', () => {
     expect(screen.getByRole('button', { name: '돌아가기' })).toBeDisabled();
     await userEvent.keyboard('{Escape}');
     expect(onOpenChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('Illustration', () => {
+  const kinds = [
+    'campus',
+    'dining',
+    'cafe',
+    'bookshop',
+    'green',
+    'experience',
+    'play',
+    'daily',
+  ] as const;
+
+  it.each(kinds)('%s: 장식 이미지(alt 빈 문자열)를 바로 불러 그린다', (kind) => {
+    const { container } = render(<Illustration kind={kind} className="size-20" />);
+    const img = container.querySelector('img');
+    expect(img).not.toBeNull();
+    expect(img).toHaveAttribute('alt', '');
+    expect(img).toHaveAttribute('src');
+    expect(img?.getAttribute('src')).toContain(kind);
+    expect(img).toHaveClass('size-20');
+    expect(img).toHaveAttribute('decoding', 'async');
+    expect(img).not.toHaveAttribute('loading', 'lazy');
+  });
+
+  it('alt를 주면 접근 이름이 된다', () => {
+    render(<Illustration kind="cafe" alt="동네 카페" />);
+    expect(screen.getByRole('img', { name: '동네 카페' })).toBeInTheDocument();
+  });
+});
+
+describe('BrandMark', () => {
+  it('wordmark: 접근 이름 UNIRO인 이미지', () => {
+    render(<BrandMark variant="wordmark" />);
+    expect(screen.getByRole('img', { name: 'UNIRO' })).toBeInTheDocument();
+  });
+
+  it('icon: 접근 이름 UNIRO인 이미지', () => {
+    render(<BrandMark variant="icon" />);
+    expect(screen.getByRole('img', { name: 'UNIRO' })).toBeInTheDocument();
   });
 });

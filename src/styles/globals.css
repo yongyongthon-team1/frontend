@@ -22,9 +22,22 @@
   --color-backdrop: var(--color-backdrop);
   --color-scrim: var(--color-scrim);
 
+  /* V2 전용 유틸리티(bg-brand, text-brand-strong, bg-brand-soft, bg-local-soft …) */
+  --color-brand: var(--yy-color-brand-primary);
+  --color-brand-strong: var(--yy-color-brand-strong);
+  --color-brand-soft: var(--yy-color-brand-soft);
+  --color-local: var(--yy-color-accent-local);
+  --color-local-soft: var(--yy-color-accent-soft);
+  --color-success-soft: var(--yy-color-success-soft);
+  --color-danger-soft: var(--yy-color-danger-soft);
+  --color-neutral-100: var(--yy-color-neutral-100);
+  --color-neutral-300: var(--yy-color-neutral-300);
+
   --radius-sm: var(--radius-sm);
   --radius-md: var(--radius-md);
   --radius-lg: var(--radius-lg);
+  --radius-xl: var(--radius-xl);
+  --radius-pill: var(--radius-pill);
   --radius-frame: var(--radius-frame);
 
   --font-sans: var(--font-sans);

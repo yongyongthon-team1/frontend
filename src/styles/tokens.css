@@ -1,34 +1,56 @@
 /*
- * 디자인 토큰 — 이 파일의 값만 바꾸면 앱 전체 스타일이 바뀐다(결정 0003).
- * 하이파이 디자인이 오면 아래 값을 교체한다. 컴포넌트에는 색 값(HEX)을 직접 쓰지 않는다.
- * Tailwind 유틸리티(bg-surface, text-muted, rounded-md …)로 연결하는 곳은 globals.css의 @theme다.
+ * 디자인 토큰 — 이 파일의 값만 바꾸면 앱 전체 스타일이 바뀐다(결정 0003 · 0010).
+ * --yy-* 는 하이파이 V2(UNIRO) 토큰 이름 그대로, --color-* 는 화면 코드가 쓰는 의미 토큰(V2 변수로 다시 묶음).
+ * 컴포넌트에는 색 값(HEX)을 직접 쓰지 않는다. Tailwind 유틸리티로 연결하는 곳은 globals.css의 @theme다.
  */
 :root {
-  /* 색 */
-  --color-bg: #ffffff;
-  --color-surface: #f2f2f2;
-  --color-border: #d9d9d9;
-  --color-text: #1a1a1a;
-  --color-text-muted: #6b6b6b;
-  --color-primary: #2b2b2b;
-  --color-on-primary: #ffffff;
-  --color-accent: #3b5bdb;
-  --color-success: #2f9e44;
-  --color-warning: #e8590c;
-  --color-danger: #e03131;
-  --color-backdrop: #e9ecef;
+  /* V2 색 */
+  --yy-color-brand-primary: #4263eb;
+  --yy-color-brand-strong: #2944b6;
+  --yy-color-brand-soft: #eaf0ff;
+  --yy-color-text-primary: #1c2535;
+  --yy-color-text-secondary: #677389;
+  --yy-color-text-inverse: #ffffff;
+  --yy-color-accent-local: #ff9f72;
+  --yy-color-accent-soft: #fff0e7;
+  --yy-color-success: #16a58b;
+  --yy-color-success-soft: #e1f7f0;
+  --yy-color-background-base: #f7f9fd;
+  --yy-color-background-surface: #ffffff;
+  --yy-color-border-default: #e2e8f2;
+  --yy-color-neutral-100: #eff2f7;
+  --yy-color-neutral-300: #bbc3d0;
+  /* 변수 없는 V2 색에 이름을 붙인 것 */
+  --yy-color-danger: #d95665;
+  --yy-color-danger-soft: #fff0f1;
+
+  /* 의미 토큰(이름 유지 — 화면 코드가 그대로 동작) */
+  --color-bg: var(--yy-color-background-base);
+  --color-surface: var(--yy-color-background-surface);
+  --color-border: var(--yy-color-border-default);
+  --color-text: var(--yy-color-text-primary);
+  --color-text-muted: var(--yy-color-text-secondary);
+  --color-primary: var(--yy-color-brand-primary);
+  --color-on-primary: var(--yy-color-text-inverse);
+  --color-accent: var(--yy-color-brand-primary);
+  --color-success: var(--yy-color-success);
+  --color-warning: var(--yy-color-accent-local);
+  --color-danger: var(--yy-color-danger);
+  --color-backdrop: #e9edf5;
   --color-scrim: rgb(0 0 0 / 0.45);
 
   /* 반경 */
   --radius-sm: 8px;
-  --radius-md: 14px;
-  --radius-lg: 20px;
+  --radius-md: 12px;
+  --radius-lg: 16px;
+  --radius-xl: 20px;
+  --radius-pill: 999px;
   --radius-frame: 36px;
 
   /* 크기 */
-  --topbar-h: 68px;
-  --tabbar-h: 81px;
-  --btn-h: 50px;
+  --topbar-h: 56px;
+  --tabbar-h: 80px;
+  --btn-h: 56px;
   --field-h: 56px;
   --map-h: 255px;
   --gutter: 20px;
@@ -40,5 +62,5 @@
   --shadow-frame: 0 16px 48px rgb(0 0 0 / 0.16);
 
   /* 글꼴 */
-  --font-sans: 'Pretendard Variable', Pretendard, system-ui, sans-serif;
+  --font-sans: 'Noto Sans KR', system-ui, sans-serif;
 }
