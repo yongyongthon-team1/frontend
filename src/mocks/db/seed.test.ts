@@ -72,7 +72,7 @@ describe('createSeed', () => {
     const db = createSeed(today);
     const intros = db.tours.map((t) => t.introduction);
     expect(intros[0]).toBe(
-      '산업디자인 작업실과 수업 이야기, 학생들이 자주 가는 대학가 식당과 카페까지 함께 둘러봐요.',
+      '산업디자인 작업실과 수업 이야기\n학생들이 자주 가는 대학가 식당과 카페까지 함께 둘러봐요.',
     );
     expect(intros[5]).toBe('겨울방학 캠퍼스 생활과 동아리 이야기를 나눠요.');
     expect(new Set(intros).size).toBe(intros.length);

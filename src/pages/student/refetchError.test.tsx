@@ -24,19 +24,12 @@ const ROWS: Array<
     queryKey: () => QueryKey,
   ]
 > = [
-  [
-    '탐방 상세',
-    'START',
-    () => '/tours/1',
-    '이 탐방에서 만날 수 있는 것',
-    '/api/tours/:id',
-    () => qk.tour(1),
-  ],
+  ['탐방 상세', 'START', () => '/tours/1', '이런 경험을 해요', '/api/tours/:id', () => qk.tour(1)],
   [
     '탐방 신청서',
     'START',
     () => '/tours/1/apply',
-    '가이드에게 하고 싶은 이야기는?',
+    '탐방에서 하고 싶은 것',
     '/api/tours/:id',
     () => qk.tour(1),
   ],
@@ -44,7 +37,7 @@ const ROWS: Array<
     '신청 완료',
     'APPLIED',
     () => '/tours/1/apply/done',
-    '경희대학교 국제캠퍼스',
+    '승인 대기 중',
     '/api/tours/:id',
     () => qk.tour(1),
   ],

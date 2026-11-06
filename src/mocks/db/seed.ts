@@ -407,7 +407,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
       updatedAt: createdAt,
     });
   const demoIntro =
-    '산업디자인 작업실과 수업 이야기, 학생들이 자주 가는 대학가 식당과 카페까지 함께 둘러봐요.';
+    '산업디자인 작업실과 수업 이야기\n학생들이 자주 가는 대학가 식당과 카페까지 함께 둘러봐요.';
   const t1 = tour(
     guideKhu.id,
     2,

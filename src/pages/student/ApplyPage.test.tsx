@@ -5,43 +5,45 @@ import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
 
 describe('탐방 신청서 (hs-a04)', () => {
-  it('신청서 구성: 칩 · 탐방 카드 · 조건 확인 · 버튼', async () => {
+  it('신청서 구성: 제목 · 탐방 카드 · 입력 · 안내 · 버튼', async () => {
     await renderApp('/tours/1/apply', { as: 'student' });
-    expect(await screen.findByText('신청 전 정보 확인')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '탐방 신청서' })).toBeInTheDocument();
-    expect(screen.getByText(/· 가이드 재학 인증 완료$/)).toBeInTheDocument();
-    expect(screen.getByText('가이드에게 하고 싶은 이야기는?')).toBeInTheDocument();
-    expect(screen.getByLabelText('하고 싶은 것 입력')).toHaveValue('');
+    expect(await screen.findByText('탐방을 신청할까요?')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '탐방 신청서 · 하고 싶은 것' })).toBeInTheDocument();
+    expect(screen.getByText('가이드에게 전할 관심사를 적어 주세요.')).toBeInTheDocument();
+    expect(screen.getByText('신청할 탐방')).toBeInTheDocument();
+    expect(screen.getByText(/^경희대학교 국제캠퍼스 · \d\d\.\d\d \(.\)$/)).toBeInTheDocument();
+    expect(screen.getByLabelText('탐방에서 하고 싶은 것')).toHaveValue('');
     expect(
-      screen.getByPlaceholderText('실기 준비와 대학에서 배우는 수업이 궁금해요.'),
+      screen.getByPlaceholderText('예: 전공 수업을 듣고, 학생 식당도 가보고 싶어요.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('예: 전공 수업, 시설, 대학 생활')).toBeInTheDocument();
-    expect(screen.getByText('재학 인증 승인 ✓')).toBeInTheDocument();
-    expect(screen.getByText('보호자 동의 완료 ✓')).toBeInTheDocument();
-    expect(screen.getByRole('button', { name: '탐방 신청 완료하기' })).toBeEnabled();
+    expect(
+      screen.getByText('작성한 내용은 승인 후 AI 코스 초안의 추천 기준으로만 활용돼요.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '신청 완료하기' })).toBeEnabled();
+    expect(screen.queryByText(/신청 조건 확인/)).toBeNull();
   });
 
   it('신청서 5자 미만은 막는다', async () => {
     const { user, router } = await renderApp('/tours/1/apply', { as: 'student' });
-    await user.type(await screen.findByLabelText('하고 싶은 것 입력'), '밥');
-    await user.click(screen.getByRole('button', { name: '탐방 신청 완료하기' }));
+    await user.type(await screen.findByLabelText('탐방에서 하고 싶은 것'), '밥');
+    await user.click(screen.getByRole('button', { name: '신청 완료하기' }));
     expect(await screen.findByText('하고 싶은 것을 5자 이상 적어 주세요.')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/tours/1/apply');
   });
 
   it('공백만 있는 입력은 앞뒤를 잘라 검증한다', async () => {
     const { user } = await renderApp('/tours/1/apply', { as: 'student' });
-    await user.type(await screen.findByLabelText('하고 싶은 것 입력'), '   밥집   ');
-    await user.click(screen.getByRole('button', { name: '탐방 신청 완료하기' }));
+    await user.type(await screen.findByLabelText('탐방에서 하고 싶은 것'), '   밥집   ');
+    await user.click(screen.getByRole('button', { name: '신청 완료하기' }));
     expect(await screen.findByText('하고 싶은 것을 5자 이상 적어 주세요.')).toBeInTheDocument();
   });
 
   it('300자 초과는 막는다', async () => {
     const { user } = await renderApp('/tours/1/apply', { as: 'student' });
-    const box = await screen.findByLabelText('하고 싶은 것 입력');
+    const box = await screen.findByLabelText('탐방에서 하고 싶은 것');
     await user.click(box);
     await user.paste('가'.repeat(301));
-    await user.click(screen.getByRole('button', { name: '탐방 신청 완료하기' }));
+    await user.click(screen.getByRole('button', { name: '신청 완료하기' }));
     expect(await screen.findByText('300자 이내로 적어 주세요.')).toBeInTheDocument();
   });
 
@@ -55,8 +57,8 @@ describe('탐방 신청서 (hs-a04)', () => {
       }),
     );
     const { user, router } = await renderApp('/tours/1/apply', { as: 'student' });
-    await user.type(await screen.findByLabelText('하고 싶은 것 입력'), '  밥집이 궁금해요  ');
-    const submit = screen.getByRole('button', { name: '탐방 신청 완료하기' });
+    await user.type(await screen.findByLabelText('탐방에서 하고 싶은 것'), '  밥집이 궁금해요  ');
+    const submit = screen.getByRole('button', { name: '신청 완료하기' });
     await user.dblClick(submit);
     expect(await screen.findByText('신청이 접수됐어요!')).toBeInTheDocument();
     expect(bodies).toEqual([{ motivation: '밥집이 궁금해요' }]);
@@ -68,7 +70,7 @@ describe('탐방 신청서 (hs-a04)', () => {
 
   it('실패하면 토스트를 띄우고 탐방 정보를 다시 불러온다', async () => {
     const { user, router } = await renderApp('/tours/1/apply', { as: 'student' });
-    await screen.findByLabelText('하고 싶은 것 입력');
+    await screen.findByLabelText('탐방에서 하고 싶은 것');
     let tourGets = 0;
     server.use(
       http.post('/api/tours/:id/applications', () =>
@@ -79,8 +81,8 @@ describe('탐방 신청서 (hs-a04)', () => {
         return undefined; // 기본 핸들러로 넘긴다
       }),
     );
-    await user.type(screen.getByLabelText('하고 싶은 것 입력'), '밥집이 궁금해요');
-    await user.click(screen.getByRole('button', { name: '탐방 신청 완료하기' }));
+    await user.type(screen.getByLabelText('탐방에서 하고 싶은 것'), '밥집이 궁금해요');
+    await user.click(screen.getByRole('button', { name: '신청 완료하기' }));
     expect(await screen.findByText('정원이 마감됐어요.')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/tours/1/apply');
     await waitFor(() => expect(tourGets).toBe(1));
@@ -88,7 +90,7 @@ describe('탐방 신청서 (hs-a04)', () => {
 
   it('인증 전 학생: 버튼이 잠기고 사유 · 인증 링크가 보인다', async () => {
     await renderApp('/tours/1/apply', { as: 'newbie@demo.kr' });
-    expect(await screen.findByRole('button', { name: '탐방 신청 완료하기' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: '신청 완료하기' })).toBeDisabled();
     expect(
       screen.getByText('학생증 승인·보호자 동의 완료 후 신청할 수 있어요.'),
     ).toBeInTheDocument();
@@ -96,12 +98,11 @@ describe('탐방 신청서 (hs-a04)', () => {
       'href',
       '/verify',
     );
-    expect(screen.getByText('재학 인증 승인 ✗')).toBeInTheDocument();
   });
 
   it('마감 탐방: 신청서에서도 잠기고 다른 추천 보기', async () => {
     await renderApp('/tours/2/apply', { as: 'student' });
-    expect(await screen.findByRole('button', { name: '탐방 신청 완료하기' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: '신청 완료하기' })).toBeDisabled();
     expect(screen.getByText('남은 자리가 없어요.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '다른 추천 보기' })).toBeInTheDocument();
   });

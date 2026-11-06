@@ -4,16 +4,17 @@ import { toast } from 'sonner';
 import { useApplyToTour } from '@/features/applications/queries';
 import { useMe } from '@/features/auth/queries';
 import { recommendationsPath } from '@/features/tours/lastQuery';
-import { applyButtonState } from '@/features/tours/model';
+import { applyButtonState, campusLabel } from '@/features/tours/model';
 import { useTour } from '@/features/tours/queries';
 import { useDemoToolsOn } from '@/demo/demoStore';
 import { DEMO_MOTIVATION } from '@/shared/config/demoAccounts';
-import { formatMonthDay, formatTimeRange } from '@/shared/lib/date';
+import { formatDotDateWeekday } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
+import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { InfoCard } from '@/shared/ui/InfoCard';
 import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
 import { Textarea } from '@/shared/ui/Textarea';
@@ -28,7 +29,7 @@ function validate(motivation: string): string | undefined {
   return undefined;
 }
 
-/** 탐방 신청서(hs-a04). 신청이 막힌 상태면(정원 마감 · 인증 미완료 · 이미 신청) 버튼이 잠기고 사유가 보인다(hs-a06). */
+/** 탐방 신청서(hs-a04 · V2 H07). 신청이 막힌 상태면(정원 마감 · 인증 미완료 · 이미 신청) 버튼이 잠기고 사유가 보인다(hs-a06). */
 export function ApplyPage() {
   const tourId = Number(useParams().tourId);
   const navigate = useNavigate();
@@ -44,7 +45,7 @@ export function ApplyPage() {
   if (tour === undefined && tourQuery.isError) {
     return (
       <>
-        <TopBar title="탐방 신청서" back />
+        <TopBar title="탐방 신청서 · 하고 싶은 것" back />
         <Page>
           <ErrorState error={tourQuery.error} onRetry={() => void tourQuery.refetch()} />
         </Page>
@@ -54,7 +55,7 @@ export function ApplyPage() {
   if (tour === undefined || me.data === undefined) {
     return (
       <>
-        <TopBar title="탐방 신청서" back />
+        <TopBar title="탐방 신청서 · 하고 싶은 것" back />
         <Page>
           <Skeleton className="h-12" />
           <Skeleton className="mt-4 h-24" />
@@ -66,8 +67,6 @@ export function ApplyPage() {
 
   const state = applyButtonState(me.data, tour, recommendationsPath());
   const canApply = state.kind === 'APPLY';
-  const verified = me.data.verificationStatus === 'APPROVED';
-  const agreed = me.data.guardianStatus === 'AGREED';
 
   function onSubmit(e: FormEvent) {
     e.preventDefault();
@@ -84,23 +83,28 @@ export function ApplyPage() {
 
   return (
     <>
-      <TopBar title="탐방 신청서" back />
-      <Page>
-        <StatusChip>신청 전 정보 확인</StatusChip>
-        <form onSubmit={onSubmit} noValidate>
-          <div className="mt-4">
-            <InfoCard
-              title={tour.title}
-              description={`${formatMonthDay(tour.startsAt)} · ${formatTimeRange(tour.startsAt, tour.endsAt)}${tour.guideVerified ? ' · 가이드 재학 인증 완료' : ''}`}
-            />
+      <TopBar title="탐방 신청서 · 하고 싶은 것" back />
+      <Page className={BOTTOM_ACTION_PAGE}>
+        <PageHeading
+          as="h2"
+          title="탐방을 신청할까요?"
+          description="가이드에게 전할 관심사를 적어 주세요."
+        />
+        <form onSubmit={onSubmit} noValidate className="mt-5 flex flex-1 flex-col">
+          <div className="rounded-xl bg-surface p-4">
+            <StatusChip tone="info">신청할 탐방</StatusChip>
+            <p className="mt-2 text-[17px] leading-snug font-bold text-ink">{tour.title}</p>
+            <p className="mt-1 text-[13px] text-muted">
+              {campusLabel(tour.universityName, tour.campusName)} ·{' '}
+              {formatDotDateWeekday(tour.startsAt)}
+            </p>
           </div>
 
-          <h3 className="mt-6 text-lg font-bold text-ink">가이드에게 하고 싶은 이야기는?</h3>
-          <div className="mt-3">
+          <div className="mt-5">
             <Textarea
-              label="하고 싶은 것 입력"
-              placeholder="실기 준비와 대학에서 배우는 수업이 궁금해요."
-              hint="예: 전공 수업, 시설, 대학 생활"
+              showLabel
+              label="탐방에서 하고 싶은 것"
+              placeholder="예: 전공 수업을 듣고, 학생 식당도 가보고 싶어요."
               value={motivation}
               error={error}
               onChange={(e) => {
@@ -110,26 +114,20 @@ export function ApplyPage() {
             />
           </div>
 
-          <div className="mt-4">
-            <InfoCard title="신청 조건 확인" muted>
-              <p className="text-sm text-ink">재학 인증 승인 {verified ? '✓' : '✗'}</p>
-              <p className="mt-1 text-sm text-ink">보호자 동의 완료 {agreed ? '✓' : '✗'}</p>
-            </InfoCard>
-          </div>
+          <p className="mt-3 rounded-lg bg-brand-soft px-4 py-3 text-[13px] text-muted">
+            작성한 내용은 승인 후 AI 코스 초안의 추천 기준으로만 활용돼요.
+          </p>
 
-          <div className="mt-6">
+          <BottomAction>
             <Button
               type="submit"
               loading={apply.isPending}
               disabled={!canApply}
               hint={canApply ? undefined : { reason: state.reason, action: state.action }}
             >
-              탐방 신청 완료하기
+              신청 완료하기
             </Button>
-          </div>
-          <p className="mt-3 px-1 text-sm text-muted">
-            정원 마감 · 중복 신청 시 신청 버튼이 비활성화돼요.
-          </p>
+          </BottomAction>
         </form>
       </Page>
     </>

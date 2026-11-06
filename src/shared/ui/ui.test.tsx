@@ -978,4 +978,12 @@ describe('HeroCard · PageHeading', () => {
     render(<PageHeading title={'3개의 탐방을\n추천해요.'} />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveClass('whitespace-pre-line');
   });
+
+  it('PageHeading: as="h2"면 h2로 그린다(TopBar가 h1인 화면)', () => {
+    render(<PageHeading as="h2" title="탐방을 신청할까요?" />);
+    expect(
+      screen.getByRole('heading', { level: 2, name: '탐방을 신청할까요?' }),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+  });
 });

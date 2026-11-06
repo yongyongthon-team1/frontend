@@ -73,8 +73,8 @@ for (const { title, link, present } of VARIANTS) {
     await page.getByRole('button', { name: '나에게 맞는 탐방 추천받기' }).click();
     await expect(page.getByText('디자인 분야에 관심이 많군요!')).toBeVisible();
     await page.getByText('경희대학교 국제캠퍼스').first().click();
-    await page.getByRole('button', { name: '탐방 신청하기' }).click();
-    await page.getByRole('button', { name: '탐방 신청 완료하기' }).click();
+    await page.getByRole('button', { name: '이 탐방 신청하기' }).click();
+    await page.getByRole('button', { name: '신청 완료하기' }).click();
     await expect(page.getByText('신청이 접수됐어요!')).toBeVisible();
     await checkRoleBadge('고교생 화면');
 

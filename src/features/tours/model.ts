@@ -173,3 +173,15 @@ export function applyButtonState(
     action: { label: '탐방 신청하기', to: `/tours/${tour.id}/apply` },
   };
 }
+
+/**
+ * 탐방 소개를 V2 `이런 경험을 해요` 번호 목록의 항목으로 나눈다. 줄바꿈 · `·` · 마침표로 나누고 빈 조각은 버리며
+ * 최대 3개다. 한 덩어리뿐이면 그 한 개다.
+ */
+export function tourHighlights(introduction: string): string[] {
+  return introduction
+    .split(/[\n·.]/)
+    .map((part) => part.trim())
+    .filter((part) => part !== '')
+    .slice(0, 3);
+}

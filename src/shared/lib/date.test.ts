@@ -6,6 +6,7 @@ import {
   formatDuration,
   formatMonthDay,
   formatDotDate,
+  formatDotDateTimeRange,
   formatDotDateWeekday,
   formatShortDate,
   formatTime,
@@ -25,6 +26,12 @@ describe('date', () => {
   it('점 날짜 (V2 목록 행)', () => {
     expect(formatDotDate('2026-11-12T14:00:00+09:00')).toBe('11.12');
     expect(formatDotDateWeekday('2026-11-12T14:00:00+09:00')).toBe('11.12 (목)');
+  });
+  it('점 날짜 + 시간 범위 (V2 탐방 상세)', () => {
+    expect(formatDotDateTimeRange('2026-11-12T14:00:00+09:00', '2026-11-12T16:30:00+09:00')).toBe(
+      '11.12 (목) 14:00~16:30',
+    );
+    expect(formatDotDateTimeRange('2026-11-12T14:00:00+09:00', null)).toBe('11.12 (목) 14:00');
   });
   it('짧은 날짜', () => expect(formatShortDate('2026-11-15T14:00:00+09:00')).toBe('11/15(일)'));
   it('시각', () => expect(formatTime('2026-11-15T05:00:00Z')).toBe('14:00'));

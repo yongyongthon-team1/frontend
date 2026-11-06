@@ -62,6 +62,13 @@ export function formatDotDateWeekday(iso: string): string {
   return `${formatDotDate(iso)} (${seoulParts(iso).weekday})`;
 }
 
+/** `11.12 (목) 14:00~16:30` — V2 탐방 상세의 일정. 종료가 없으면 시작 시각만. */
+export function formatDotDateTimeRange(startIso: string, endIso: string | null): string {
+  const start = formatTime(startIso);
+  const time = endIso === null ? start : `${start}~${formatTime(endIso)}`;
+  return `${formatDotDateWeekday(startIso)} ${time}`;
+}
+
 export function formatTime(iso: string): string {
   const p = seoulParts(iso);
   return `${pad2(p.hour)}:${pad2(p.minute)}`;
