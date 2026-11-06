@@ -13,7 +13,10 @@ export interface StoreSheetProps {
   onOpenChange(open: boolean): void;
 }
 
-/** 코스 지점의 상점 시트(설계 5.6): 시간 · 추천 이유 · AI 리뷰 요약 · 별점 · 데이터 출처 · 제휴 혜택과 쿠폰. */
+/**
+ * 코스 지점의 상점 시트(설계 5.6 · V2): 흰 시트에 시간 · 업종 → AI 추천 이유(페일 블루) → ✦ AI 리뷰 요약 · 별점 → 데이터 출처
+ * → 제휴 혜택(페일 피치)과 쿠폰 보기.
+ */
 export function StoreSheet({ stop, coupon, onOpenChange }: StoreSheetProps) {
   return (
     <BottomSheet open={stop !== null} onOpenChange={onOpenChange} title={stop?.name ?? ''}>
@@ -26,38 +29,43 @@ function StoreDetail({ stop, coupon }: { stop: CourseStop; coupon: Coupon | null
   const { review, partnership } = stop;
   return (
     <div className="flex flex-col gap-4">
-      <p className="text-sm text-muted">{`${stop.visitTime} · ${stop.category}`}</p>
+      <p className="text-[13px] text-muted">{`${stop.visitTime} · ${stop.category}`}</p>
 
       {stop.recommendationReason ? (
-        <div className="rounded-md bg-surface p-4">
+        <div className="rounded-lg bg-brand-soft p-4">
           <AiBadge>추천 이유</AiBadge>
           <p className="mt-2 text-sm text-ink">{stop.recommendationReason}</p>
         </div>
       ) : null}
 
       {review && review.count > 0 ? (
-        <div>
+        <div className="rounded-lg bg-bg p-4">
           {review.summary ? (
             <>
-              <p className="text-sm font-bold text-ink">✦ AI 리뷰 요약</p>
+              <p className="text-sm font-bold text-brand">✦ AI 리뷰 요약</p>
               <p className="mt-1.5 text-sm text-ink">{review.summary}</p>
             </>
           ) : null}
-          <p className="mt-1.5 text-sm text-muted">
-            {review.average === null
-              ? `리뷰 ${review.count}개`
-              : `별점 ${review.average.toFixed(1)} · 리뷰 ${review.count}개`}
+          <p className="mt-1.5 flex items-center gap-1 text-[13px] text-muted">
+            <span aria-hidden className="text-warning">
+              ★
+            </span>
+            <span>
+              {review.average === null
+                ? `리뷰 ${review.count}개`
+                : `별점 ${review.average.toFixed(1)} · 리뷰 ${review.count}개`}
+            </span>
           </p>
         </div>
       ) : review ? (
-        <p className="text-sm text-muted">아직 리뷰가 없어요.</p>
+        <p className="text-[13px] text-muted">아직 리뷰가 없어요.</p>
       ) : null}
 
       {stop.dataSource ? <p className="text-xs text-muted">{stop.dataSource}</p> : null}
 
       {partnership ? (
-        <div className="flex flex-col gap-3 rounded-md border border-border p-4">
-          <p className="text-base font-bold text-ink">{`제휴 혜택 · ${partnership.discount}`}</p>
+        <div className="flex flex-col gap-3 rounded-lg bg-local-soft p-4">
+          <p className="text-[17px] font-bold text-ink">{`제휴 혜택 · ${partnership.discount}`}</p>
           {coupon ? (
             <Link to={`/coupons/${coupon.id}`} className={buttonClass('primary')}>
               쿠폰 보기

@@ -4,7 +4,7 @@ import { describe, expect, it } from 'vitest';
 import type { SeedCheckpoint } from '@/mocks/db/seed';
 import { getDb, mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
-import { formatTourDate } from '@/shared/lib/date';
+import { formatDotDateWeekday, formatMonthDay } from '@/shared/lib/date';
 import { findApplicationId, renderApp } from '@/test/renderApp';
 
 const STUDENT = 'student@demo.kr';
@@ -22,30 +22,71 @@ async function openCourseMap(
   return { ...result, id };
 }
 
-describe('탐방 코스 지도 (hs-s08)', () => {
-  it('확정 코스: 도식 지도 핀 3개와 지점 목록', async () => {
+describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
+  it('확정 코스: 단계 막대 · 시간표 3장, 지도는 닫혀 있다', async () => {
     const { router } = await renderApp('/my-tours', { as: 'student', checkpoint: 'CONFIRMED' });
     const id = findApplicationId(STUDENT, 1);
     await router.navigate(`/my-tours/${id}/course`);
-    expect(await screen.findByText('오늘의 탐방 코스')).toBeInTheDocument();
-    expect(await screen.findByText('학교에서 동네까지, 2시간 30분')).toBeInTheDocument();
-    const map = await screen.findByTestId('schematic-map');
-    expect(within(map).getAllByRole('button')).toHaveLength(3);
-    expect(within(map).getByRole('button', { name: '② 서천 밥상' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '코스 보기' })).toBeInTheDocument();
+    expect(await screen.findByText('함께 걸을 캠퍼스와 동네')).toBeInTheDocument();
+    expect(screen.getByText('우리의 2시간 30분 코스')).toBeInTheDocument();
+    expect(screen.getByText('3개 장소')).toBeInTheDocument();
+    expect(screen.getByText('학교에서 동네까지')).toBeInTheDocument();
+    expect(screen.getByText('도보로 이어지는 탐방')).toBeInTheDocument();
+    expect(screen.getByText('3개 장소 · 일정을 위아래로 스크롤해 확인하세요')).toBeInTheDocument();
 
-    const startsAt = getDb().tours.find((t) => t.id === 1)!.startsAt;
-    expect(screen.getByText(`${formatTourDate(startsAt)} · 경희대 국제캠퍼스`)).toBeInTheDocument();
-    expect(screen.getByText('① 예술·디자인대학 · 14:00')).toBeInTheDocument();
+    const tour = getDb().tours.find((t) => t.id === 1)!;
     expect(
-      screen.getByText('산업디자인학과 전공 공간에서 실제 수업 이야기를 들어요.'),
+      screen.getByText(`경희대 국제캠퍼스 산업디자인학과 탐방 · ${formatMonthDay(tour.startsAt)}`),
     ).toBeInTheDocument();
-    expect(screen.getByText('② 서천 밥상 · 15:10')).toBeInTheDocument();
-    expect(screen.getByText('③ 카페 모래시계 · 16:00')).toBeInTheDocument();
-    expect(screen.getAllByText('공공데이터 기반 추천 · 쿠폰 사용 가능')).toHaveLength(2);
-    expect(screen.getByRole('link', { name: '제휴 상점 쿠폰 확인' })).toHaveAttribute(
+
+    // 단계 막대: 번호 원 1~3 + 종류 라벨
+    const steps = screen.getByTestId('course-step-bar');
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(3);
+    expect(within(steps).getByText('캠퍼스')).toBeInTheDocument();
+    expect(within(steps).getByText('식사')).toBeInTheDocument();
+    expect(within(steps).getByText('카페')).toBeInTheDocument();
+
+    // 시간표 3장: 시간 알약 · 이름 · 머무는 분(2A-R6)
+    const timeline = screen.getByTestId('course-timeline');
+    expect(within(timeline).getAllByRole('button')).toHaveLength(3);
+    expect(within(timeline).getByText('14:00')).toBeInTheDocument();
+    expect(within(timeline).getByText('예술·디자인대학')).toBeInTheDocument();
+    expect(within(timeline).getByText(/· 70분$/)).toBeInTheDocument();
+    expect(within(timeline).getByText(/· 50분$/)).toBeInTheDocument();
+    expect(within(timeline).getByText(/· 30분$/)).toBeInTheDocument();
+    expect(
+      within(timeline).getByText('산업디자인학과 전공 공간에서 실제 수업 이야기를 들어요. · 70분'),
+    ).toBeInTheDocument();
+    expect(within(timeline).getAllByText('공공데이터 기반 추천 · 쿠폰 사용 가능')).toHaveLength(2);
+
+    // 지도는 닫혀 있다(카카오 SDK도 부르지 않는다)
+    expect(screen.getByRole('button', { name: '지도로 보기' })).toHaveAttribute(
+      'aria-expanded',
+      'false',
+    );
+    expect(screen.queryByTestId('schematic-map')).not.toBeInTheDocument();
+
+    expect(screen.getByRole('link', { name: '내 쿠폰 확인하기' })).toHaveAttribute(
       'href',
       `/my-tours/${id}/coupons`,
     );
+  });
+
+  it('지도로 보기를 펼치면 도식 지도 핀 3개(2A-R5), 접으면 사라진다', async () => {
+    const { user } = await openCourseMap('CONFIRMED');
+    const toggle = await screen.findByRole('button', { name: '지도로 보기' });
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    const map = await screen.findByTestId('schematic-map');
+    expect(within(map).getAllByRole('button')).toHaveLength(3);
+    // 지도 핀을 눌러도 같은 상점 시트가 열린다
+    await user.click(within(map).getByRole('button', { name: '② 서천 밥상' }));
+    expect(await screen.findByRole('dialog', { name: '서천 밥상' })).toBeInTheDocument();
+    await user.keyboard('{Escape}');
+    await user.click(toggle);
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(screen.queryByTestId('schematic-map')).not.toBeInTheDocument();
   });
 
   it('제휴 지점 카드는 한줄평(없으면 추천 이유)과 쿠폰 안내를 함께 보인다', async () => {
@@ -55,21 +96,21 @@ describe('탐방 코스 지도 (hs-s08)', () => {
           '양이 넉넉한 학생 단골 밥집';
       }),
     );
-    const meal = await screen.findByRole('button', { name: /② 서천 밥상 · 15:10/ });
-    expect(within(meal).getByText('양이 넉넉한 학생 단골 밥집')).toBeInTheDocument();
+    const meal = await screen.findByRole('button', { name: /서천 밥상/ });
+    expect(within(meal).getByText('양이 넉넉한 학생 단골 밥집 · 50분')).toBeInTheDocument();
     expect(within(meal).getByText('공공데이터 기반 추천 · 쿠폰 사용 가능')).toBeInTheDocument();
 
     const cafeReason = getDb().courseStops.find(
       (s) => s.tourId === 1 && s.stopOrder === 3,
     )!.recommendationReason!;
-    const cafe = screen.getByRole('button', { name: /③ 카페 모래시계 · 16:00/ });
-    expect(within(cafe).getByText(cafeReason)).toBeInTheDocument();
+    const cafe = screen.getByRole('button', { name: /카페 모래시계/ });
+    expect(within(cafe).getByText(`${cafeReason} · 30분`)).toBeInTheDocument();
     expect(within(cafe).getByText('공공데이터 기반 추천 · 쿠폰 사용 가능')).toBeInTheDocument();
   });
 
   it('지점을 누르면 AI 리뷰 요약 시트', async () => {
     const { user, id } = await openCourseMap('CONFIRMED');
-    await user.click(await screen.findByRole('button', { name: '② 서천 밥상' }));
+    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
     expect(await screen.findByText('✦ AI 리뷰 요약')).toBeInTheDocument();
     const sheet = screen.getByRole('dialog', { name: '서천 밥상' });
     expect(within(sheet).getByText('15:10 · 한식')).toBeInTheDocument();
@@ -96,7 +137,7 @@ describe('탐방 코스 지도 (hs-s08)', () => {
         db.reviews = db.reviews.filter((r) => r.storeId !== 2);
       }),
     );
-    await user.click(await screen.findByRole('button', { name: /③ 카페 모래시계 · 16:00/ }));
+    await user.click(await screen.findByRole('button', { name: /카페 모래시계/ }));
     const sheet = await screen.findByRole('dialog', { name: '카페 모래시계' });
     expect(within(sheet).getByText('아직 리뷰가 없어요.')).toBeInTheDocument();
     expect(within(sheet).queryByText('✦ AI 리뷰 요약')).not.toBeInTheDocument();
@@ -106,9 +147,27 @@ describe('탐방 코스 지도 (hs-s08)', () => {
 
   it('미확정이면 준비 중', async () => {
     await openCourseMap('APPROVED');
-    expect(await screen.findByText('가이드가 코스를 준비 중이에요')).toBeInTheDocument();
-    expect(screen.getByText('확정되면 지도와 쿠폰이 열려요.')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '코스 준비 중' })).toBeInTheDocument();
+    expect(screen.getByText('탐방 코스를 준비하고 있어요.')).toBeInTheDocument();
+    expect(screen.getByText('가이드가 신청자들의 관심사를 모으고 있어요.')).toBeInTheDocument();
+    expect(screen.getByText('코스 확정을 기다려요')).toBeInTheDocument();
+    expect(
+      screen.getByText('가이드가 최종 확정하면 지도와 장소별 설명이 열려요.'),
+    ).toBeInTheDocument();
+    expect(screen.getByText('참여 확정')).toBeInTheDocument();
+    const tour = getDb().tours.find((t) => t.id === 1)!;
+    expect(
+      screen.getByText(`경희대학교 국제캠퍼스 · ${formatDotDateWeekday(tour.startsAt)}`),
+    ).toBeInTheDocument();
+    const steps = screen.getByRole('list');
+    expect(within(steps).getAllByRole('listitem')).toHaveLength(3);
+    expect(
+      within(steps)
+        .getByText(/가이드가 코스 초안 검토 · 확정/)
+        .closest('li'),
+    ).toHaveAttribute('aria-current', 'step');
     expect(screen.queryByTestId('schematic-map')).not.toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '내 쿠폰 확인하기' })).not.toBeInTheDocument();
   });
 
   it('승인 대기 신청은 코스가 확정돼 있어도 코스를 부르지 않고 승인 안내를 보인다', async () => {
@@ -128,7 +187,8 @@ describe('탐방 코스 지도 (hs-s08)', () => {
     await router.navigate(`/my-tours/${id}/course`);
     expect(await screen.findByText('가이드 승인을 기다리고 있어요')).toBeInTheDocument();
     expect(screen.getByText('승인되면 지도와 쿠폰이 열려요.')).toBeInTheDocument();
-    expect(screen.queryByText('가이드가 코스를 준비 중이에요')).not.toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '코스 준비 중' })).toBeInTheDocument();
+    expect(screen.queryByText('코스 확정을 기다려요')).not.toBeInTheDocument();
     // 요청이 나갔다면 MSW에 닿을 만큼 다른 화면을 한 번 그린 뒤에 센다.
     await router.navigate(`/my-tours/${id}`);
     expect(
@@ -144,7 +204,7 @@ describe('탐방 코스 지도 (hs-s08)', () => {
       ),
     );
     await openCourseMap('CONFIRMED');
-    expect(await screen.findByText('가이드가 코스를 준비 중이에요')).toBeInTheDocument();
+    expect(await screen.findByText('코스 확정을 기다려요')).toBeInTheDocument();
   });
 
   it('그 밖의 코스 오류는 다시 시도할 수 있다', async () => {
@@ -157,9 +217,9 @@ describe('탐방 코스 지도 (hs-s08)', () => {
     );
     const { user } = await openCourseMap('CONFIRMED');
     expect(await screen.findByText('찾을 수 없어요.')).toBeInTheDocument();
-    expect(screen.queryByText('가이드가 코스를 준비 중이에요')).not.toBeInTheDocument();
+    expect(screen.queryByText('코스 확정을 기다려요')).not.toBeInTheDocument();
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
-    expect(await screen.findByText('학교에서 동네까지, 2시간 30분')).toBeInTheDocument();
+    expect(await screen.findByText('우리의 2시간 30분 코스')).toBeInTheDocument();
   });
 
   it('종료 시각이 없으면 소요 시간 없이 제목만', async () => {
@@ -168,7 +228,10 @@ describe('탐방 코스 지도 (hs-s08)', () => {
         db.tours.find((t) => t.id === 1)!.endsAt = null;
       }),
     );
-    expect(await screen.findByText('학교에서 동네까지')).toBeInTheDocument();
+    expect(await screen.findByText('우리의 탐방 코스')).toBeInTheDocument();
+    // 마지막 지점은 머무는 분을 생략한다(2A-R6)
+    expect(screen.queryByText(/· 30분$/)).not.toBeInTheDocument();
+    expect(screen.getByText(/· 70분$/)).toBeInTheDocument();
   });
 
   it('신청을 불러오지 못하면 오류와 다시 시도', async () => {

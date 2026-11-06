@@ -75,3 +75,24 @@ export function stopKindLabel(stop: Pick<CourseStop, 'type' | 'category'>): stri
 export function studentCourseLabel(status: CourseStatus | null): '코스 준비 중' | '코스 확정' {
   return status === 'CONFIRMED' ? '코스 확정' : '코스 준비 중';
 }
+
+const hhmmToMinutes = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
+
+/**
+ * 지점마다 머무는 분(2A-R6). 다음 지점 방문 시각까지이고, 마지막 지점은 탐방 종료 시각까지다. 종료 시각이 없거나
+ * 마지막 방문 시각보다 이르면(음수 · 0분) 그 지점은 `null`이다 — 화면은 `· N분`을 생략한다.
+ */
+export function stopDurations(
+  stops: Pick<CourseStop, 'visitTime'>[],
+  endsAt: string | null,
+): (number | null)[] {
+  return stops.map((stop, i) => {
+    const next = stops[i + 1]?.visitTime ?? (endsAt === null ? null : formatTime(endsAt));
+    if (next === null) return null;
+    const minutes = hhmmToMinutes(next) - hhmmToMinutes(stop.visitTime);
+    return minutes > 0 ? minutes : null;
+  });
+}

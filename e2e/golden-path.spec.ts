@@ -116,8 +116,8 @@ for (const { title, link, present } of VARIANTS) {
     await expect(page.getByRole('heading', { name: '내 탐방', exact: true })).toBeVisible();
     await checkRoleBadge('고교생 화면');
     await page.getByRole('link', { name: '코스 확인하기', exact: true }).click();
-    await expect(page.getByText('오늘의 탐방 코스')).toBeVisible();
-    await page.getByRole('link', { name: '제휴 상점 쿠폰 확인' }).click();
+    await expect(page.getByRole('heading', { name: '코스 보기' })).toBeVisible();
+    await page.getByRole('link', { name: '내 쿠폰 확인하기' }).click();
     await page.getByRole('link', { name: /할인/ }).first().click();
     const couponCode = page.getByTestId('coupon-code');
     await expect(couponCode).toHaveText(/^\d( \d){5}$/);
