@@ -818,6 +818,124 @@ describe('사장님 내 가게 (GET /owner/store)', () => {
   });
 });
 
+describe('가입 · 프로필 (POST /auth/signup · PUT /me/student-profile · PUT /me/guide-profile)', () => {
+  const signupBody = {
+    email: 'Fresh@Demo.kr',
+    password: 'demo1234',
+    name: '한새봄',
+    role: 'HIGH_SCHOOL',
+  };
+
+  it('가입은 로그인 없이 201과 토큰 + Me를 주고, 그 토큰으로 /me를 읽는다', async () => {
+    const res = await rawFetch('/auth/signup', { method: 'POST', body: signupBody });
+    expect(res.status).toBe(201);
+    const { token, me } = (await res.json()) as LoginResponse;
+    expect(token).toEqual(expect.any(String));
+    expect(me).toMatchObject({
+      email: 'fresh@demo.kr',
+      name: '한새봄',
+      role: 'HIGH_SCHOOL',
+      verificationStatus: 'NONE',
+      guardianStatus: 'NONE',
+      studentProfile: { highSchoolName: null, grade: null, interestedMajor: null },
+      guideProfile: null,
+    });
+
+    configureHttp({ getToken: () => token });
+    expect(await request<Me>('/me')).toEqual(me);
+  });
+
+  it('가입한 계정으로 같은 자격으로 다시 로그인할 수 있다', async () => {
+    await rawFetch('/auth/signup', { method: 'POST', body: signupBody });
+    const { me } = await request<LoginResponse>('/auth/login', {
+      method: 'POST',
+      body: { email: 'fresh@demo.kr', password: 'demo1234' },
+    });
+    expect(me.name).toBe('한새봄');
+  });
+
+  it('칸 오류는 400 VALIDATION과 fieldErrors, 중복 이메일은 409 EMAIL_DUPLICATE의 fieldErrors.email', async () => {
+    await expect(
+      request('/auth/signup', {
+        method: 'POST',
+        body: { ...signupBody, password: '123' },
+        auth: false,
+      }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { password: expect.any(String) },
+    });
+    await expect(
+      request('/auth/signup', {
+        method: 'POST',
+        body: { ...signupBody, email: 'STUDENT@demo.kr' },
+        auth: false,
+      }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'EMAIL_DUPLICATE',
+      fieldErrors: { email: expect.any(String) },
+    });
+    // 실패한 가입은 아무것도 남기지 않는다.
+    expect(getDb().users.filter((u) => u.email === 'fresh@demo.kr')).toHaveLength(0);
+  });
+
+  it('고교생 프로필 저장은 새 Me를 주고 이름도 바뀐다, 고교생이 아니면 403, 로그인 전이면 401', async () => {
+    await login('student@demo.kr');
+    const me = await request<Me>('/me/student-profile', {
+      method: 'PUT',
+      body: { name: '김민지2', highSchoolName: '수원고', grade: 3, interestedMajor: null },
+    });
+    expect(me).toMatchObject({
+      name: '김민지2',
+      studentProfile: { highSchoolName: '수원고', grade: 3, interestedMajor: null },
+    });
+    expect(await request<Me>('/me')).toEqual(me);
+    await expect(
+      request('/me/student-profile', {
+        method: 'PUT',
+        body: { name: '김민지', highSchoolName: null, grade: 5, interestedMajor: null },
+      }),
+    ).rejects.toMatchObject({ status: 400, fieldErrors: { grade: expect.any(String) } });
+
+    await login('guide@demo.kr');
+    await expect(request('/me/student-profile', { method: 'PUT', body: me })).rejects.toMatchObject(
+      { status: 403, code: 'FORBIDDEN' },
+    );
+    configureHttp({ getToken: () => null });
+    await expect(request('/me/student-profile', { method: 'PUT', body: {} })).rejects.toMatchObject(
+      {
+        status: 401,
+      },
+    );
+  });
+
+  it('가이드 프로필 저장은 새 Me를 주고 학교는 그대로, 가이드가 아니면 403', async () => {
+    const before = (await login('guide@demo.kr')).me.guideProfile!;
+    const me = await request<Me>('/me/guide-profile', {
+      method: 'PUT',
+      body: { major: '컴퓨터공학과', introduction: '' },
+    });
+    expect(me.guideProfile).toEqual({
+      universityId: before.universityId,
+      major: '컴퓨터공학과',
+      introduction: null,
+    });
+    await expect(
+      request('/me/guide-profile', {
+        method: 'PUT',
+        body: { major: '가'.repeat(31), introduction: null },
+      }),
+    ).rejects.toMatchObject({ status: 400, fieldErrors: { major: expect.any(String) } });
+
+    await login('student@demo.kr');
+    await expect(
+      request('/me/guide-profile', { method: 'PUT', body: { major: 'x', introduction: null } }),
+    ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+  });
+});
+
 describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
   it('fieldError: 400 VALIDATION에 코드 표 문구와 fieldErrors 본문', async () => {
     server.use(

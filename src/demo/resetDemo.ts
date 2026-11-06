@@ -24,6 +24,7 @@ export async function resetDemoData(
   });
   useSession.getState().setToken(null);
   useDemoStore.getState().setActiveDemoEmail(null);
+  useDemoStore.getState().setActiveDemoToken(null);
   useDemoStore.getState().setLastCoupon(null);
   deps.queryClient.clear();
 }

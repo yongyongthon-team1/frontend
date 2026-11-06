@@ -1,6 +1,9 @@
-import { act, screen, waitFor, within } from '@testing-library/react';
+import { QueryClientProvider } from '@tanstack/react-query';
+import { act, renderHook, screen, waitFor, within } from '@testing-library/react';
+import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { refetchMe, useLogin, useSignup } from '@/features/auth/queries';
 import { useSession } from '@/features/auth/session';
 import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
@@ -10,7 +13,7 @@ import { DEMO_EMAILS, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { findApplicationId, renderApp } from '@/test/renderApp';
 import { useBootStatus } from './bootStatus';
 import { useDemoStore } from './demoStore';
-import { connectDemoSession } from './quickLogin';
+import { connectDemoSession, quickLogin } from './quickLogin';
 
 const STUDENT = DEMO_EMAILS.student;
 const ROLE_BUTTONS = ['고교생', '가이드', '사장님', '운영자'];
@@ -26,6 +29,7 @@ beforeEach(() => {
     lastCoupon: null,
     resetKey: null,
     activeDemoEmail: null,
+    activeDemoToken: null,
   });
   useBootStatus.setState({ apiMode: 'mock', mockWorkerFailed: false });
 });
@@ -413,6 +417,7 @@ describe('시연 계정 자동 재로그인', () => {
     const token = useSession.getState().token;
     expect(getDb().sessions.some((s) => s.token === token)).toBe(true);
     expect(useDemoStore.getState().activeDemoEmail).toBe(STUDENT);
+    expect(useDemoStore.getState().activeDemoToken).toBe(token); // 복구가 받은 토큰을 시연 토큰으로 기록한다
     expect(router.state.location.pathname).toBe('/my-tours');
 
     dropServerSessions();
@@ -440,5 +445,79 @@ describe('시연 계정 자동 재로그인', () => {
     await user.click(await screen.findByRole('button', { name: '로그아웃' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(useDemoStore.getState().activeDemoEmail).toBeNull();
+  });
+
+  describe('시연 밖에서 토큰이 바뀌면 시연 계정 기록을 비운다 (가입 · 수동 로그인)', () => {
+    const noNavigate = { navigate: () => {} };
+
+    /** 빠른 로그인으로 시연 계정에 들어간 상태. */
+    async function enterAsDemoAccount(beforeLogin?: () => void) {
+      const app = await renderApp('/login');
+      beforeLogin?.();
+      await quickLogin({ email: STUDENT }, { queryClient: app.queryClient, ...noNavigate });
+      const wrapper = ({ children }: { children: ReactNode }) => (
+        <QueryClientProvider client={app.queryClient}>{children}</QueryClientProvider>
+      );
+      return { ...app, wrapper };
+    }
+
+    it('빠른 로그인은 새 토큰을 시연 토큰으로 기록하고, 구독이 기록을 지우지 않는다', async () => {
+      const emails: Array<string | null> = [];
+      let stop = () => {};
+      // 다른 시연 계정에서 전환하는 중이었다 — 전환 도중 기록이 비는 순간이 없어야 한다.
+      await enterAsDemoAccount(() => {
+        useDemoStore.setState({ activeDemoEmail: DEMO_EMAILS.guide, activeDemoToken: 'old-token' });
+        stop = useDemoStore.subscribe((s) => emails.push(s.activeDemoEmail));
+      });
+      stop();
+      expect(useDemoStore.getState().activeDemoToken).toBe(useSession.getState().token);
+      expect(useDemoStore.getState().activeDemoEmail).toBe(STUDENT);
+      expect(emails).not.toContain(null);
+    });
+
+    it('시연 계정으로 들어간 뒤 가입하면 시연 계정 기록이 비워지고, 401에서 시연 계정으로 되돌려 로그인하지 않는다', async () => {
+      const { queryClient, wrapper } = await enterAsDemoAccount();
+      const { result } = renderHook(() => useSignup(), { wrapper });
+      await act(() =>
+        result.current.mutateAsync({
+          email: 'fresh@demo.kr',
+          password: 'demo1234',
+          name: '한새봄',
+          role: 'HIGH_SCHOOL',
+        }),
+      );
+      expect(useDemoStore.getState()).toMatchObject({
+        activeDemoEmail: null,
+        activeDemoToken: null,
+      });
+      expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: 'fresh@demo.kr' });
+
+      // 가입한 사람의 세션이 끊겨도 시연 계정(student@demo.kr)으로 몰래 다시 로그인하지 않는다.
+      const logins = countLogins();
+      mutate((db) => {
+        db.sessions = [];
+      });
+      await act(() => refetchMe(queryClient).catch(() => undefined)); // 401
+      await waitFor(() => expect(useSession.getState().token).toBeNull());
+      expect(logins.count).toBe(0);
+    });
+
+    it('수동 로그인으로 다른 계정이 되어도 시연 계정 기록을 비운다', async () => {
+      const { wrapper } = await enterAsDemoAccount();
+      const { result } = renderHook(() => useLogin(), { wrapper });
+      await act(() => result.current.mutateAsync({ email: 'guide@demo.kr', password: 'demo1234' }));
+      expect(useDemoStore.getState()).toMatchObject({
+        activeDemoEmail: null,
+        activeDemoToken: null,
+      });
+    });
+
+    it('옛 저장본(activeDemoToken 없음)은 부팅 때 시연 계정 기록이 지워진다 — 패널의 강조만 사라지고 다음 전환 때 다시 기록된다', async () => {
+      disconnect();
+      await renderApp('/me', { as: 'student' });
+      useDemoStore.setState({ activeDemoEmail: STUDENT, activeDemoToken: null });
+      disconnect = connectDemoSession(); // 부팅
+      expect(useDemoStore.getState().activeDemoEmail).toBeNull();
+    });
   });
 });

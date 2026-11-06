@@ -35,7 +35,12 @@ const CONTRACT = [
 ];
 
 /** 계약 3-2절(P1 엔드포인트, 동결 대상 아님) 중 목업이 있는 것(쿼리 문자열은 뺀 경로). 2B의 각 API 태스크가 자기 행을 더한다. */
-const P1_CONTRACT: string[] = ['GET /api/owner/store'];
+const P1_CONTRACT: string[] = [
+  'GET /api/owner/store',
+  'POST /api/auth/signup',
+  'PUT /api/me/student-profile',
+  'PUT /api/me/guide-profile',
+];
 
 const label = (h: { info: { method: unknown; path: unknown } }) =>
   `${String(h.info.method)} ${String(h.info.path)}`;

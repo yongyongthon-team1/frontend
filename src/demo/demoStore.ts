@@ -34,6 +34,12 @@ interface DemoState {
   resetKey: string | null;
   /** 빠른 로그인한 시연 계정. 세션이 끊기면(401) 이 계정으로 한 번 다시 로그인한다. */
   activeDemoEmail: string | null;
+  /**
+   * 빠른 로그인(또는 복구)이 세션에 넣은 토큰. 세션 토큰이 이 값과 다르면 가입 · 수동 로그인 등 시연 밖에서 바뀐 것이라
+   * `activeDemoEmail`을 비운다(`connectDemoSession`). 이 값이 없는 옛 `ytt.demo` 저장본은 부팅 때 `activeDemoEmail`이
+   * 지워진다 — 패널의 현재 계정 강조만 사라지고 다음 전환 때 다시 기록되므로 받아들인다.
+   */
+  activeDemoToken: string | null;
   setEnabled(enabled: boolean): void;
   setApiModeOverride(mode: ApiMode | null): void;
   setPresentMode(presentMode: boolean): void;
@@ -42,6 +48,7 @@ interface DemoState {
   setLastCoupon(coupon: LastCoupon | null): void;
   setResetKey(resetKey: string | null): void;
   setActiveDemoEmail(email: string | null): void;
+  setActiveDemoToken(token: string | null): void;
 }
 
 export const useDemoStore = create<DemoState>()(
@@ -55,6 +62,7 @@ export const useDemoStore = create<DemoState>()(
       lastCoupon: null,
       resetKey: null,
       activeDemoEmail: null,
+      activeDemoToken: null,
       setEnabled: (enabled) => set({ enabled }),
       setApiModeOverride: (apiModeOverride) => set({ apiModeOverride }),
       setPresentMode: (presentMode) => set({ presentMode }),
@@ -63,6 +71,7 @@ export const useDemoStore = create<DemoState>()(
       setLastCoupon: (lastCoupon) => set({ lastCoupon }),
       setResetKey: (resetKey) => set({ resetKey }),
       setActiveDemoEmail: (activeDemoEmail) => set({ activeDemoEmail }),
+      setActiveDemoToken: (activeDemoToken) => set({ activeDemoToken }),
     }),
     { name: DEMO_STORE_KEY },
   ),

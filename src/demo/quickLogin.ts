@@ -51,6 +51,8 @@ export async function quickLogin(
   const email = typeof target === 'string' ? DEMO_EMAILS[target] : target.email;
   const { token, me } = await login({ email, password: demoPassword() });
   deps.queryClient.clear();
+  // 시연 토큰을 먼저 기록한다 — 토큰이 바뀔 때 도는 구독(`connectDemoSession`)이 시연 밖의 변경으로 오해하지 않게.
+  useDemoStore.getState().setActiveDemoToken(token);
   useSession.getState().setToken(token);
   deps.queryClient.setQueryData(qk.me, me);
   useDemoStore.getState().setActiveDemoEmail(email);
@@ -80,7 +82,10 @@ function recoverDemoSession(): Promise<boolean> | null {
   const failedToken = useSession.getState().token;
   return login({ email, password: demoPassword() }).then(
     ({ token }) => {
-      if (useSession.getState().token === failedToken) useSession.getState().setToken(token);
+      if (useSession.getState().token === failedToken) {
+        useDemoStore.getState().setActiveDemoToken(token); // setToken 앞 — 구독이 기록을 지우지 않게
+        useSession.getState().setToken(token);
+      }
       return true;
     },
     () => false,
@@ -88,14 +93,17 @@ function recoverDemoSession(): Promise<boolean> | null {
 }
 
 /**
- * 시연 계층을 세션에 연결한다(`main.tsx`가 한 번 부른다): 401 자동 재로그인을 등록하고, 세션 토큰이 비면(로그아웃 ·
- * 초기화 · 복구 실패) 빠른 로그인 기록(`activeDemoEmail`)도 비운다. features가 demo를 import하지 않게 하는 연결점이다
+ * 시연 계층을 세션에 연결한다(`main.tsx`가 한 번 부른다): 401 자동 재로그인을 등록하고, 세션 토큰이 비거나(로그아웃 ·
+ * 초기화 · 복구 실패) 시연이 넣은 토큰(`activeDemoToken`)과 달라지면(가입 · 수동 로그인) 빠른 로그인 기록
+ * (`activeDemoEmail` · `activeDemoToken`)도 비운다. 옛 저장본은 `activeDemoToken`이 없어 부팅 때 기록이 지워진다(받아들임). features가 demo를 import하지 않게 하는 연결점이다
  * (판정 29). 해제 함수를 돌려준다(테스트).
  */
 export function connectDemoSession(): () => void {
   const forgetDemoAccount = (token: string | null) => {
-    if (token === null && useDemoStore.getState().activeDemoEmail !== null) {
-      useDemoStore.getState().setActiveDemoEmail(null);
+    const demo = useDemoStore.getState();
+    if (demo.activeDemoEmail !== null && (token === null || token !== demo.activeDemoToken)) {
+      demo.setActiveDemoEmail(null);
+      demo.setActiveDemoToken(null);
     }
   };
   forgetDemoAccount(useSession.getState().token);

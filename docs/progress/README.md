@@ -89,9 +89,9 @@
 | auth | `POST /api/auth/login` | hs-s01 로그인 | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `POST /api/auth/logout` | hs-a03 · guide-s01 · `/owner/me` (로그아웃) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `GET /api/me` | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 | ⬜ | ✅ | ⬜ | ⬜ |
-| auth | #1 `POST /api/auth/signup` | hs-a01 회원가입 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
-| auth | #2 `PUT /api/me/student-profile` | hs-a03 내 정보 수정 `/me/edit` (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
-| auth | #3 `PUT /api/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
+| auth | #1 `POST /api/auth/signup` | hs-a01 회원가입 (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | #2 `PUT /api/me/student-profile` | hs-a03 내 정보 수정 `/me/edit` (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | #3 `PUT /api/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/universities` | hs-s03, guide-s02 | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/universities/:id/insight` | hs-s04, guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `POST /api/recommendations` | hs-s03, hs-s04, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |

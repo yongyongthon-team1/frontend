@@ -9,7 +9,12 @@ import { resetDemoData } from './resetDemo';
 
 beforeEach(() => {
   // setup.ts는 목업 DB와 localStorage만 비운다 — zustand의 메모리 상태는 직접 되돌린다.
-  useDemoStore.setState({ resetKey: null, lastCoupon: null, activeDemoEmail: null });
+  useDemoStore.setState({
+    resetKey: null,
+    lastCoupon: null,
+    activeDemoEmail: null,
+    activeDemoToken: null,
+  });
   useSession.setState({ token: null });
   configureHttp({
     baseUrl: '/api',
@@ -62,6 +67,7 @@ describe('시연 데이터 초기화 요청 (결정 0007)', () => {
     useSession.setState({ token: 'live-token' });
     useDemoStore.setState({
       activeDemoEmail: 'student@demo.kr',
+      activeDemoToken: 'live-token',
       lastCoupon: { code: '123456', storeId: 1 },
     });
     const client = queryClient();
@@ -69,7 +75,11 @@ describe('시연 데이터 초기화 요청 (결정 0007)', () => {
 
     await resetDemoData({}, { queryClient: client });
     expect(useSession.getState().token).toBeNull();
-    expect(useDemoStore.getState()).toMatchObject({ activeDemoEmail: null, lastCoupon: null });
+    expect(useDemoStore.getState()).toMatchObject({
+      activeDemoEmail: null,
+      activeDemoToken: null,
+      lastCoupon: null,
+    });
     expect(client.getQueryCache().getAll()).toHaveLength(0);
   });
 

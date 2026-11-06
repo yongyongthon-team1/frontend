@@ -23,6 +23,7 @@ beforeEach(() => {
     lastCoupon: null,
     resetKey: null,
     activeDemoEmail: null,
+    activeDemoToken: null,
   });
   useSession.setState({ token: null });
 });
@@ -147,6 +148,7 @@ describe('첫 렌더 전 실행(초기화 · 빠른 로그인)', () => {
     expect(landing).toBe('/');
     expect(useSession.getState().token).not.toBeNull();
     expect(useDemoStore.getState().activeDemoEmail).toBe('student@demo.kr');
+    expect(useDemoStore.getState().activeDemoToken).toBe(useSession.getState().token);
     expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: 'student@demo.kr' });
     expect(getDb().coupons.length).toBeGreaterThan(0);
   });

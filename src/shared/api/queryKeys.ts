@@ -8,6 +8,8 @@ export const qk = {
   universities: ['universities'] as const,
   insight: (universityId: number) => ['insight', universityId] as const,
   recommendations: (q: RecommendationQuery) => ['recommendations', q] as const,
+  /** 탐방 목록 · 상세 전부의 접두사(무효화용). */
+  allTours: ['tours'] as const,
   tours: (filter: { status?: TourStatus; universityId?: number }) =>
     ['tours', 'list', filter] as const,
   tour: (id: number) => ['tours', 'detail', id] as const,
@@ -20,7 +22,11 @@ export const qk = {
   course: (tourId: number) => ['course', tourId] as const,
   guideTours: ['guideTours'] as const,
   applicants: (tourId: number) => ['applicants', tourId] as const,
+  /** 가이드의 신청자 보드 전부의 접두사(무효화용). */
+  allApplicants: ['applicants'] as const,
   guideCourse: (tourId: number) => ['guideCourse', tourId] as const,
+  /** 가이드의 코스 전부의 접두사(무효화용). */
+  allGuideCourses: ['guideCourse'] as const,
   /** 뮤테이션 키: AI 코스 초안 생성. 화면이 다시 마운트돼도 진행 중인 생성을 알아본다. */
   courseDraft: (tourId: number) => ['courseDraft', tourId] as const,
   couponLookup: (code: string) => ['couponLookup', code] as const,
