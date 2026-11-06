@@ -3,10 +3,10 @@ import type { Locator, Page } from '@playwright/test';
 import { EXAMPLE_QUERIES } from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
 import { expect, test } from './fixtures';
 
-// 무대 노트북 화면 점검(Review Focus 3 · 판정 28 · 30). 골든 패스 핵심 정보 — 관심 키워드 · 첫 추천 이유, 코스 초안
-// 지점, 쿠폰 코드 — 가 스크롤 없이 보여야 한다. 뷰포트는 브라우저 UI를 뺀 실제 페이지 영역이다. 폰 프레임 높이가
-// min(844px, 뷰포트 높이 − 32px)이라 TopBar(68px)와 하단 탭(81px) 사이 본문은 439 · 419 · 409px뿐이다(설계 5.7의
-// 무대 400px 예산). 실패하면 단언을 느슨하게 하지 말고 화면 배치를 고친다.
+// 무대 노트북 화면 점검(Review Focus 3 · 판정 28 · 30). 골든 패스 핵심 정보 — 관심 키워드 · 첫 추천 이유, 코스 완성
+// 지점, 쿠폰 코드 — 가 스크롤 없이, 다른 요소에 덮이지 않고 보여야 한다. 뷰포트는 브라우저 UI를 뺀 실제 페이지
+// 영역이다. 폰 프레임 높이가 min(844px, 뷰포트 높이 − 32px)이라 TopBar(68px)와 하단 탭(81px) 사이 본문은
+// 439 · 419 · 409px뿐이다(설계 5.7의 무대 400px 예산). 실패하면 단언을 느슨하게 하지 말고 화면 배치를 고친다.
 const STAGE_VIEWPORTS = [
   { width: 1366, height: 620, deviceScaleFactor: 1 },
   { width: 1280, height: 600, deviceScaleFactor: 1 },
@@ -19,9 +19,15 @@ async function boxOf(locator: Locator) {
   return box;
 }
 
+/** 덮임 검사의 표본 점: 요소 상자의 가로 25 · 50 · 75%, 세로 15 · 50 · 85%(판정 R4). */
+const COVER_SAMPLES_X = [0.25, 0.5, 0.75];
+const COVER_SAMPLES_Y = [0.15, 0.5, 0.85];
+
 /**
  * 핵심 요소가 스크롤 없이 다 보이는지: 화면 영역(main)이 맨 위에 있고, 요소마다 뷰포트 안(ratio 1)이면서 하단 탭
- * 위에서 끝난다. IntersectionObserver(`toBeInViewport`)는 다른 요소가 덮는 것을 보지 않아서 탭 위치는 따로 잰다.
+ * 위에서 끝나며, 다른 요소에 덮이지 않는다. IntersectionObserver(`toBeInViewport`)는 다른 요소가 덮는 것을 보지
+ * 않아서 탭 위치는 따로 재고, 덮임은 요소 상자의 3×3 점마다 그 점의 맨 위 요소(`elementFromPoint`)가 대상 안에
+ * 있는지로 본다 — 하단에 붙은 버튼 같은 것이 핵심 정보를 가리면 실패한다(판정 R4).
  */
 async function expectVisibleWithoutScroll(page: Page, targets: Locator[]) {
   // 글꼴이 다 와야 줄바꿈 · 높이가 무대와 같다.
@@ -34,6 +40,29 @@ async function expectVisibleWithoutScroll(page: Page, targets: Locator[]) {
     await expect(target).toBeInViewport({ ratio: 1 });
     const box = await boxOf(target);
     expect(box.y + box.height, `${target}의 하단이 하단 탭 위`).toBeLessThanOrEqual(tabBarTop);
+    const samples = await target.evaluate(
+      (el, { xs, ys }) => {
+        const rect = el.getBoundingClientRect();
+        return ys.flatMap((fy) =>
+          xs.map((fx) => {
+            const x = rect.x + rect.width * fx;
+            const y = rect.y + rect.height * fy;
+            const top = el.ownerDocument.elementFromPoint(x, y);
+            return {
+              point: `(${fx * 100}%, ${fy * 100}%) = (${Math.round(x)}, ${Math.round(y)})`,
+              covered: !el.contains(top),
+              top: top === null ? 'null' : top.outerHTML.slice(0, 120),
+            };
+          }),
+        );
+      },
+      { xs: COVER_SAMPLES_X, ys: COVER_SAMPLES_Y },
+    );
+    for (const { point, covered, top } of samples) {
+      expect(covered, `${target}의 ${point} 점이 다른 요소에 덮이지 않는다(맨 위: ${top})`).toBe(
+        false,
+      );
+    }
   }
 }
 
@@ -62,19 +91,19 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
       await screenshot(page, 1);
     });
 
-    test('② 코스 초안: 지점 카드 3개', async ({ page }) => {
+    test('② 코스 완성: 지점 카드 3개', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&checkpoint=APPROVED&as=guide');
       // 가이드 첫 화면 /guide(G01) → 맨 아래 `내가 개설한 탐방`(G06) → `신청자 관리하기`(G02) → 코스 만들기.
       await page.getByRole('link', { name: '내가 개설한 탐방' }).click();
       await page.getByRole('link', { name: '신청자 관리하기' }).first().click();
       await page.getByRole('button', { name: '승인 완료 후 코스 만들기' }).click();
-      await expect(page.getByRole('heading', { name: '2시간 30분 추천 코스' })).toBeVisible();
+      // AI 로딩 화면 뒤 코스 완성(G03)으로 바뀐다 — 생성 직후 첫 화면이 무대 장면이다.
+      await expect(page.getByRole('heading', { name: '코스를 완성해 볼까요?' })).toBeVisible();
 
-      // 지점 카드는 제목(heading)이 있는 목록 항목이다(관심사 칩은 제목이 없다).
       const stops = page
         .getByRole('main')
-        .getByRole('listitem')
-        .filter({ has: page.getByRole('heading') });
+        .getByRole('list', { name: '코스 지점' })
+        .getByRole('listitem');
       await expect(stops).toHaveCount(3);
       await expectVisibleWithoutScroll(page, await stops.all());
       await screenshot(page, 2);
@@ -92,14 +121,6 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
       if (!(await code.isVisible())) await firstCoupon.click();
       await expect(code).toHaveText(/^\d{3} \d{3}$/);
       await expectVisibleWithoutScroll(page, [code]);
-      // 하단에 붙은 버튼 같은 다른 요소가 코드를 덮지 않는다(가운데 점의 맨 위 요소가 코드).
-      const covered = await code.evaluate((el) => {
-        const r = el.getBoundingClientRect();
-        return !el.contains(
-          el.ownerDocument.elementFromPoint(r.x + r.width / 2, r.y + r.height / 2),
-        );
-      });
-      expect(covered, '쿠폰 코드가 다른 요소에 덮이지 않는다').toBe(false);
       await screenshot(page, 3);
     });
   });

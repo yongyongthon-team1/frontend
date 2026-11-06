@@ -1,6 +1,6 @@
-import type { RouteObject } from 'react-router';
+import { Navigate, type RouteObject } from 'react-router';
 import { ApplicantsPage } from '@/pages/guide/ApplicantsPage';
-import { CourseConfirmedPage } from '@/pages/guide/CourseConfirmedPage';
+import { CourseConfirmPage } from '@/pages/guide/CourseConfirmPage';
 import { CourseDraftPage } from '@/pages/guide/CourseDraftPage';
 import { CourseEditPage } from '@/pages/guide/CourseEditPage';
 import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
@@ -173,11 +173,12 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/tours/:tourId/course/confirm',
-                    element: <PlaceholderPage title="코스 확정 전 점검" wireframe="g08" />, // Task 10
+                    element: <CourseConfirmPage />, // G08 확정 전 점검 · 완료
                   },
                   {
+                    // 1단계 확정 결과 주소 — 완료 상태는 이제 확정 점검 주소에 있다(판정 2A-R10).
                     path: '/guide/tours/:tourId/course/confirmed',
-                    element: <CourseConfirmedPage />,
+                    element: <Navigate to="../confirm" relative="path" replace />,
                   },
                   {
                     path: '/guide/tours/:tourId/complete',

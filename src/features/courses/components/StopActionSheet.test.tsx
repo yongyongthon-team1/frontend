@@ -1,0 +1,87 @@
+import { render, screen, within } from '@testing-library/react';
+import { userEvent } from '@testing-library/user-event';
+import { describe, expect, it, vi } from 'vitest';
+import type { CourseStop } from '@/features/courses/model';
+import { StopActionSheet, type StopActionSheetProps } from './StopActionSheet';
+
+const STOP: CourseStop = {
+  id: 7,
+  order: 2,
+  visitTime: '15:10',
+  type: 'STORE',
+  name: '서천 밥상',
+  category: '한식',
+  lat: 0,
+  lng: 0,
+  description: null,
+  recommendationReason: '신청자 2명이 궁금해했어요.',
+  storeId: 1,
+  partnership: { discount: '10% 할인' },
+  review: null,
+  dataSource: null,
+};
+
+function renderSheet(props: Partial<StopActionSheetProps> = {}) {
+  const calls: string[] = [];
+  const handlers = {
+    onMoveUp: vi.fn(() => calls.push('up')),
+    onMoveDown: vi.fn(() => calls.push('down')),
+    onEditNote: vi.fn(() => calls.push('note')),
+    onRemove: vi.fn(() => calls.push('remove')),
+    onClose: vi.fn(() => calls.push('close')),
+  };
+  render(
+    <StopActionSheet
+      stop={STOP}
+      isFirst={false}
+      isLast={false}
+      busy={false}
+      {...handlers}
+      {...props}
+    />,
+  );
+  return { calls, handlers, user: userEvent.setup() };
+}
+
+const ACTIONS = ['위로 이동', '아래로 이동', '한줄평', '빼기'];
+
+describe('StopActionSheet (G03 ≡ 시트)', () => {
+  it('제목은 지점 이름, 버튼은 위로 이동 · 아래로 이동 · 한줄평 · 빼기', () => {
+    renderSheet();
+    const sheet = screen.getByRole('dialog', { name: '서천 밥상' });
+    for (const name of ACTIONS) {
+      expect(within(sheet).getByRole('button', { name })).toBeEnabled();
+    }
+  });
+
+  it('첫 지점은 위로 이동, 마지막 지점은 아래로 이동을 누를 수 없다', () => {
+    renderSheet({ isFirst: true, isLast: true });
+    expect(screen.getByRole('button', { name: '위로 이동' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '아래로 이동' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '한줄평' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '빼기' })).toBeEnabled();
+  });
+
+  it('처리 중이면 모두 비활성', () => {
+    renderSheet({ busy: true });
+    for (const name of ACTIONS) {
+      expect(screen.getByRole('button', { name })).toBeDisabled();
+    }
+  });
+
+  it.each([
+    ['위로 이동', 'up'],
+    ['아래로 이동', 'down'],
+    ['한줄평', 'note'],
+    ['빼기', 'remove'],
+  ])('%s를 누르면 시트를 먼저 닫고 그 동작을 시작한다', async (name, call) => {
+    const { calls, user } = renderSheet();
+    await user.click(screen.getByRole('button', { name }));
+    expect(calls).toEqual(['close', call]);
+  });
+
+  it('지점이 없으면 닫혀 있다', () => {
+    renderSheet({ stop: null });
+    expect(screen.queryByRole('dialog')).toBeNull();
+  });
+});

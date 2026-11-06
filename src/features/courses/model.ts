@@ -63,12 +63,22 @@ export function slotTimes(startsAt: string, count: number): string[] {
 const MEAL_CATEGORIES = new Set(['한식', '분식', '중식', '일식', '양식', '식당']);
 
 /**
- * 코스 확정 화면 경로 줄(`캠퍼스 → 식사 → 카페`)의 지점 분류. 캠퍼스 지점은 `캠퍼스`, 식사 업종은 `식사`이고,
+ * 지점 분류(H04 단계 막대 라벨 · G03 · G08 요약 줄). 캠퍼스 지점은 `캠퍼스`, 식사 업종은 `식사`이고,
  * 그 밖(`카페` 포함)은 업종 그대로다 — `보드게임카페`는 카페가 아니다.
  */
 export function stopKindLabel(stop: Pick<CourseStop, 'type' | 'category'>): string {
   if (stop.type === 'CAMPUS') return '캠퍼스';
   return MEAL_CATEGORIES.has(stop.category) ? '식사' : stop.category;
+}
+
+/** 코스를 이루는 지점 분류(`stopKindLabel`)를 처음 나온 순서대로 한 번씩 — 코스 완성(G03) · 확정 점검(G08)의 요약 줄. */
+export function courseKinds(stops: Pick<CourseStop, 'type' | 'category'>[]): string[] {
+  return [...new Set(stops.map(stopKindLabel))];
+}
+
+/** 제휴 지점 수. `partnership`은 서버가 탐방 날짜에 유효한 제휴로 채운다(쿠폰 발급과 같은 기준). */
+export function partnerStopCount(stops: Pick<CourseStop, 'partnership'>[]): number {
+  return stops.filter((stop) => stop.partnership !== null).length;
 }
 
 /** 학생에게 보이는 코스 상태. 코스가 없거나 초안이면 아직 준비 중이다. */

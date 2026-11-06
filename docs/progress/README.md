@@ -46,13 +46,13 @@
 | `H11` | 신청 취소 확인 (V2, 확인 창 대체) | `/my-tours/:applicationId/cancel` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-a06` | 탐방 추천·신청 예외 상태 · V2(H13 추천 0건 · 탐방 상세의 마감 · 중복 신청 카드) | `/recommendations` · `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `G01` | 가이드 홈 (V2, 신청자 없음 G11 포함) | `/guide` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| — | 코스 편집 탭 (다가오는 탐방의 코스로 이동) | `/guide/course` | P0 | 🟨 | ⬜ | ⬜ | ⬜ | ⬜ |
+| — | 코스 편집 탭 (다가오는 탐방의 코스로 이동) | `/guide/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s01` | 가이드 프로필 | `/guide/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s02` | 탐방 개설 | `/guide/tours/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s03` | 신청자 관리 · V2(G02 신청자 승인) | `/guide/tours/:tourId/applicants` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `guide-s04` | AI 추천 코스 생성 | `/guide/tours/:tourId/course/draft` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
-| `guide-s05` | 코스 편집 · 상점 교체 | `/guide/tours/:tourId/course/edit` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
-| `guide-s06` | 코스 확정 · 쿠폰 발급 | `/guide/tours/:tourId/course/confirmed` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| `guide-s04` | AI 추천 코스 생성 · V2(생성 중 로딩 뒤 G03 코스 완성 `edit`로 replace) | `/guide/tours/:tourId/course/draft` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `guide-s05` | 코스 편집 · 상점 교체 · V2(G03 코스 완성: AI 초안 + 편집 한 화면, 카드 `≡` → 지점 시트) | `/guide/tours/:tourId/course/edit` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `guide-s06` | 코스 확정 · 쿠폰 발급 · V2(G08 확정 전 점검 → 같은 화면의 완료 상태, 옛 `/confirmed`는 이리로) | `/guide/tours/:tourId/course/confirm` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s07` | 탐방 종료 · 완료 | `/guide/tours/:tourId/complete` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-a01` | 대학생 재학 인증 | `/guide/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-a02` | 내가 개설한 탐방 · V2(G06, `?tab=past`) | `/guide/tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -77,7 +77,7 @@
 - `hs-s08`은 목업 · 도식 지도로 확인했다. 카카오맵(실제 지도)은 JavaScript 키(팀 요청 16)가 오면 고정 도메인에서 확인한다.
 - `hs-s08` 상점 시트의 `최근 리뷰`(펼치기, 설계 5.6 · R-02)는 계약에만 먼저 넣었다(`CourseStop.review.recent` 최신순 최대 3개, 판정 34). 프론트 타입 · 목업 · 화면은 MVP 2단계에서 만든다.
 - `owner-a03`은 쿠폰 오류 3종(이미 사용 · 만료/다른 가게 · 없는 코드)과 "아직 사용할 수 없는 쿠폰"까지다. 리포트 빈 상태는 `owner-s04`(P2)와 함께 만든다.
-- `guide-s05`는 순서 · 한줄평 · 삭제까지다. 지점 추가 · 상점 교체는 2단계(`guide-a03`)에서 만든다.
+- `guide-s05`는 순서 · 한줄평 · 삭제까지다(V2 G03의 지점 시트). 지점 추가 · 상점 교체는 2단계(`guide-a03`)에서 만든다.
 
 ## API 연동
 

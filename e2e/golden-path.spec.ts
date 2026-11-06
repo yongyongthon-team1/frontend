@@ -88,18 +88,23 @@ for (const { title, link, present } of VARIANTS) {
     const applicant = page.locator('article', { hasText: '김민지' });
     await applicant.getByRole('button', { name: '승인하기', exact: true }).click();
     await expect(applicant).toContainText('승인됨');
-    // 승인 뒤 코스가 아직 없으니 이 버튼이 곧바로 초안 생성(`?generate=1`)으로 이어진다.
+    // 승인 뒤 코스가 아직 없으니 이 버튼이 곧바로 초안 생성(`?generate=1`)으로 이어지고, AI 로딩 뒤 코스 완성(G03)이 된다.
     await page.getByRole('button', { name: '승인 완료 후 코스 만들기' }).click();
-    await expect(page.getByText('2시간 30분 추천 코스')).toBeVisible();
-    await page.getByRole('button', { name: '코스 수정하기' }).click();
-    const moveDown = page.getByRole('button', { name: /아래로 이동/ }).nth(1);
-    const movedStop =
-      (await moveDown.getAttribute('aria-label'))?.replace(/ 아래로 이동$/, '') ?? '';
+    await expect(page.getByRole('heading', { name: '코스를 완성해 볼까요?' })).toBeVisible();
+    // 둘째 지점의 `≡`(`{이름} 편집`) → 지점 시트의 `아래로 이동` → 그 지점이 셋째가 된다.
+    const stops = page.getByRole('list', { name: '코스 지점' });
+    const secondEdit = stops.getByRole('button', { name: / 편집$/ }).nth(1);
+    const movedStop = (await secondEdit.getAttribute('aria-label'))?.replace(/ 편집$/, '') ?? '';
     expect(movedStop).not.toBe('');
-    await moveDown.click();
-    await expect(page.getByRole('article').nth(2).getByRole('heading')).toContainText(movedStop);
-    await page.getByRole('button', { name: '최종 코스 확정' }).click();
-    await page.getByRole('button', { name: '확정하기' }).click();
+    await secondEdit.click();
+    await page
+      .getByRole('dialog', { name: movedStop })
+      .getByRole('button', { name: '아래로 이동' })
+      .click();
+    await expect(stops.getByRole('listitem').nth(2)).toContainText(movedStop);
+    // 확정 전 점검(G08) → 코스 확정하기 → 같은 화면의 완료 상태
+    await page.getByRole('button', { name: '이 코스로 확정하기' }).click();
+    await page.getByRole('button', { name: '코스 확정하기' }).click();
     await expect(page.getByText(/쿠폰 [1-9]\d*장 발급/)).toBeVisible();
     await checkRoleBadge('가이드 화면');
 

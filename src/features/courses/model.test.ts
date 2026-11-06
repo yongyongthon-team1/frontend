@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { slotTimes, stopDurations, stopKindLabel, studentCourseLabel } from './model';
+import {
+  courseKinds,
+  partnerStopCount,
+  slotTimes,
+  stopDurations,
+  stopKindLabel,
+  studentCourseLabel,
+} from './model';
 
 describe('slotTimes', () => {
   it('슬롯 시간은 와이어프레임과 같다', () =>
@@ -58,4 +65,31 @@ describe('stopDurations (2A-R6)', () => {
     ]));
 
   it('지점이 없으면 빈 목록', () => expect(stopDurations([], null)).toEqual([]));
+});
+
+describe('courseKinds (G03 히어로 · G08 요약)', () => {
+  it('지점 분류를 처음 나온 순서대로 한 번씩', () =>
+    expect(
+      courseKinds([
+        { type: 'CAMPUS', category: '캠퍼스' },
+        { type: 'STORE', category: '한식' },
+        { type: 'STORE', category: '카페' },
+        { type: 'STORE', category: '분식' },
+      ]),
+    ).toEqual(['캠퍼스', '식사', '카페']));
+
+  it('지점이 없으면 빈 목록', () => expect(courseKinds([])).toEqual([]));
+});
+
+describe('partnerStopCount', () => {
+  it('제휴(partnership)가 있는 지점 수', () =>
+    expect(
+      partnerStopCount([
+        { partnership: null },
+        { partnership: { discount: '10% 할인' } },
+        { partnership: { discount: '음료 1잔' } },
+      ]),
+    ).toBe(2));
+
+  it('없으면 0', () => expect(partnerStopCount([{ partnership: null }])).toBe(0));
 });

@@ -1,6 +1,7 @@
 import { configure, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
+import { mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
@@ -11,96 +12,143 @@ afterEach(() => {
   configure({ reactStrictMode: false });
 });
 
-/** 편집 화면 항목 제목들(`≡ ① 이름 · 14:00`). */
-const itemTitles = () =>
-  within(screen.getByRole('list', { name: '코스 지점' }))
-    .getAllByRole('heading')
-    .map((heading) => heading.textContent);
+const G03_TITLE = '코스를 완성해 볼까요?';
+const G08_TITLE = '코스를 확정할까요?';
 
-/** 편집 화면에서 이름으로 찾은 항목 카드. */
-const itemCard = (name: string) =>
-  screen.getByRole('heading', { name: new RegExp(name) }).closest('article')!;
+const stopList = () => screen.getByRole('list', { name: '코스 지점' });
 
-/** 승인자가 있는 탐방 1에서 AI 초안을 만들고 편집 화면으로 간다. */
-async function openEditor() {
+/** G03 지점 카드를 위에서부터 `{시간} {이름}`으로(시간 알약 · 이름 제목). */
+const stopRows = () =>
+  within(stopList())
+    .getAllByRole('listitem')
+    .map((li) => {
+      const time = within(li).getByText(/^\d{2}:\d{2}$/).textContent;
+      return `${time} ${within(li).getByRole('heading').textContent}`;
+    });
+
+/** 이름으로 찾은 G03 지점 카드. */
+const stopCard = (name: string) => within(stopList()).getByRole('heading', { name }).closest('li')!;
+
+/** 승인자가 있는 탐방 1에서 AI 초안을 만들어 G03(코스 완성)을 연다. */
+async function openCourse() {
   const result = await renderApp('/guide/tours/1/course/draft?generate=1', {
     as: 'guide',
     checkpoint: 'APPROVED',
   });
-  await result.user.click(await screen.findByRole('button', { name: '코스 수정하기' }));
-  await screen.findByRole('list', { name: '코스 지점' });
+  await screen.findByRole('heading', { name: G03_TITLE });
   return result;
 }
 
-describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () => {
-  it('승인 완료 후 코스 만들기 → 초안(제휴 포함) → 순서 변경 → 확정 → 쿠폰 발급', async () => {
-    const { user } = await renderApp('/guide/tours/1/applicants', {
+/** 지점 카드의 `≡`(`{이름} 편집`)로 지점 시트를 연다. */
+async function openStopSheet(user: Awaited<ReturnType<typeof openCourse>>['user'], name: string) {
+  await user.click(screen.getByRole('button', { name: `${name} 편집` }));
+  return screen.findByRole('dialog', { name });
+}
+
+describe('코스 완성 G03 (guide-s04 · s05)', () => {
+  it('승인 완료 후 코스 만들기 → AI 로딩 → G03 → 둘째 지점 아래로 → 확정 점검 → 확정 → 쿠폰 발급', async () => {
+    const { user, router } = await renderApp('/guide/tours/1/applicants', {
       as: 'guide',
       checkpoint: 'APPROVED',
     });
     await user.click(await screen.findByRole('button', { name: '승인 완료 후 코스 만들기' }));
-    expect(await screen.findByText('2시간 30분 추천 코스')).toBeInTheDocument();
-    expect(screen.getAllByText('제휴').length).toBeGreaterThan(0);
-    expect(screen.queryByText('지역 데이터 점수 · 제휴 여부 · 리뷰 요약')).toBeNull(); // 옛 기준 문구 금지
-    await user.click(screen.getByRole('button', { name: '코스 수정하기' }));
-    const third = (await screen.findAllByRole('button', { name: /아래로 이동/ }))[1]; // ② → ③
-    await user.click(third);
-    // 순서 변경 요청이 끝나야 확정 버튼이 풀린다(진행 중에는 편집 · 확정 버튼을 모두 잠근다).
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '최종 코스 확정' })).toBeEnabled(),
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/edit');
+    expect(screen.getByText("승인된 학생의 '하고 싶은 것'만 반영했어요.")).toBeInTheDocument();
+    // 페일 블루 카드: AI 추천 코스 · 소요 · 지점 분류
+    expect(screen.getByRole('group', { name: 'AI 결과' })).toHaveTextContent('AI 추천 코스');
+    expect(screen.getByText('2시간 30분')).toBeInTheDocument();
+    expect(screen.getByText('캠퍼스·식사·카페')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '일정 · 3개 장소' })).toBeInTheDocument();
+    expect(screen.getByText('코스에 제휴 가게 1곳 이상 포함해 주세요.')).toBeInTheDocument();
+    // 지점 카드: 이유(한줄평이 없으면 AI 추천 이유) · 머무는 분(다음 지점까지, 마지막은 탐방 종료까지)
+    expect(within(stopCard('예술·디자인대학')).getByText(/전공 공간에서/)).toBeInTheDocument();
+    expect(within(stopCard('예술·디자인대학')).getByText('· 70분')).toBeInTheDocument();
+    expect(within(stopCard('서천 밥상')).getByText('· 50분')).toBeInTheDocument();
+    expect(within(stopCard('카페 모래시계')).getByText('· 30분')).toBeInTheDocument();
+
+    const second = within(stopList()).getAllByRole('button', { name: / 편집$/ })[1]!;
+    const moved = second.getAttribute('aria-label')!.replace(/ 편집$/, '');
+    await user.click(second);
+    await user.click(
+      within(await screen.findByRole('dialog', { name: moved })).getByRole('button', {
+        name: '아래로 이동',
+      }),
     );
-    await user.click(screen.getByRole('button', { name: '최종 코스 확정' }));
-    await user.click(await screen.findByRole('button', { name: '확정하기' }));
-    expect(await screen.findByText('코스를 확정했어요!')).toBeInTheDocument();
+    await waitFor(() => expect(stopRows()[2]).toBe(`16:00 ${moved}`));
+
+    // 순서 변경 요청이 끝나야 확정 버튼이 풀린다(진행 중에는 편집 · 확정 버튼을 모두 잠근다).
+    const toConfirm = screen.getByRole('button', { name: '이 코스로 확정하기' });
+    await waitFor(() => expect(toConfirm).toBeEnabled());
+    await user.click(toConfirm);
+    expect(await screen.findByRole('heading', { name: G08_TITLE })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/confirm');
+    await user.click(screen.getByRole('button', { name: '코스 확정하기' }));
+    expect(await screen.findByRole('heading', { name: '코스를 확정했어요' })).toBeInTheDocument();
     expect(screen.getByText(/쿠폰 [1-9]\d*장 발급/)).toBeInTheDocument();
   });
 
-  it('순서를 바꿔도 시간은 14:00/15:10/16:00', async () => {
-    const { user } = await openEditor();
-    expect(itemTitles()).toEqual([
-      '≡ ① 예술·디자인대학 · 14:00',
-      '≡ ② 서천 밥상 · 15:10',
-      '≡ ③ 카페 모래시계 · 16:00',
-    ]);
-    await user.click(screen.getByRole('button', { name: '서천 밥상 아래로 이동' }));
+  it('순서를 바꿔도 시간은 14:00/15:10/16:00 — 시트는 동작을 시작하면 닫히고, 첫 지점은 위로 · 마지막 지점은 아래로를 못 누른다', async () => {
+    const { user } = await openCourse();
+    expect(stopRows()).toEqual(['14:00 예술·디자인대학', '15:10 서천 밥상', '16:00 카페 모래시계']);
+
+    const sheet = await openStopSheet(user, '서천 밥상');
+    await user.click(within(sheet).getByRole('button', { name: '아래로 이동' }));
+    expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() =>
-      expect(itemTitles()).toEqual([
-        '≡ ① 예술·디자인대학 · 14:00',
-        '≡ ② 카페 모래시계 · 15:10',
-        '≡ ③ 서천 밥상 · 16:00',
+      expect(stopRows()).toEqual([
+        '14:00 예술·디자인대학',
+        '15:10 카페 모래시계',
+        '16:00 서천 밥상',
       ]),
     );
-    // 맨 위 항목의 위로 · 맨 아래 항목의 아래로는 누를 수 없다
-    expect(screen.getByRole('button', { name: '예술·디자인대학 위로 이동' })).toBeDisabled();
-    expect(screen.getByRole('button', { name: '서천 밥상 아래로 이동' })).toBeDisabled();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '예술·디자인대학 편집' })).toBeEnabled(),
+    );
+
+    const first = await openStopSheet(user, '예술·디자인대학');
+    expect(within(first).getByRole('button', { name: '위로 이동' })).toBeDisabled();
+    expect(within(first).getByRole('button', { name: '아래로 이동' })).toBeEnabled();
+    await user.click(within(first).getByRole('button', { name: '닫기' }));
+    await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+
+    const last = await openStopSheet(user, '서천 밥상');
+    expect(within(last).getByRole('button', { name: '위로 이동' })).toBeEnabled();
+    expect(within(last).getByRole('button', { name: '아래로 이동' })).toBeDisabled();
   });
 
-  it('편집 요청이 진행 중이면 편집 · 확정 버튼을 모두 잠근다', async () => {
-    const { user } = await openEditor();
+  it('편집 요청이 진행 중이면 지점 편집 · 다시 만들기 · 확정 버튼을 모두 잠근다', async () => {
+    const { user } = await openCourse();
     // 응답이 늦어야 요청이 진행 중인 화면을 볼 수 있다(지연이 0이면 클릭이 끝나기 전에 응답이 온다).
     setMockLatency({ base: 150, ai: 0 });
-    await user.click(screen.getByRole('button', { name: '서천 밥상 아래로 이동' }));
-    const list = screen.getByRole('list', { name: '코스 지점' });
-    for (const button of within(list).getAllByRole('button')) expect(button).toBeDisabled();
-    expect(screen.getByRole('button', { name: '최종 코스 확정' })).toBeDisabled();
+    const sheet = await openStopSheet(user, '서천 밥상');
+    await user.click(within(sheet).getByRole('button', { name: '아래로 이동' }));
+    for (const button of within(stopList()).getAllByRole('button')) expect(button).toBeDisabled();
+    expect(screen.getByRole('button', { name: '다시 만들기' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '이 코스로 확정하기' })).toBeDisabled();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: '최종 코스 확정' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: '이 코스로 확정하기' })).toBeEnabled(),
     );
+    for (const button of within(stopList()).getAllByRole('button')) expect(button).toBeEnabled();
   });
 
-  it('인사이트 카드의 예시 표시', async () => {
-    await renderApp('/guide/tours/1/course/draft?generate=1', {
-      as: 'guide',
-      checkpoint: 'APPROVED',
-    });
+  it('지점 목록 아래에 추천 상점 기준과 인사이트 카드(예시 표시)가 남는다', async () => {
+    await openCourse();
     expect(await screen.findByText('방학 상권 인사이트')).toBeInTheDocument();
     expect(screen.getByText('예시')).toBeInTheDocument();
     expect(screen.getByText(/^출처 · /)).toBeInTheDocument();
-    // AI 결과에는 ✦ 배지가 붙는다: 위쪽 칩 1개 + 지점 3곳
-    expect(screen.getAllByRole('group', { name: 'AI 결과' })).toHaveLength(4);
+    expect(screen.getByText('추천 상점 기준')).toBeInTheDocument();
+    // 지점 목록 → 확정 버튼 → 기준 · 인사이트 순서(카드는 무대에서 접힘 아래)
+    const list = stopList();
+    const insight = screen.getByText('방학 상권 인사이트');
+    const cta = screen.getByRole('button', { name: '이 코스로 확정하기' });
+    expect(list.compareDocumentPosition(cta) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(cta.compareDocumentPosition(insight) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // 옛 와이어프레임 기준 문구는 쓰지 않는다
+    expect(screen.queryByText('지역 데이터 점수 · 제휴 여부 · 리뷰 요약')).toBeNull();
   });
 
-  it('StrictMode로 다시 마운트돼도 초안 생성 요청은 한 번이고, 성공하면 주소에서 ?generate=1을 지운다', async () => {
+  it('StrictMode로 다시 마운트돼도 초안 생성 요청은 한 번이고, 성공하면 편집 주소로 replace', async () => {
     configure({ reactStrictMode: true });
     let drafts = 0;
     server.events.on('request:start', ({ request }) => {
@@ -112,19 +160,24 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     });
     // ?generate=1 없이 들어오면 만들지 않고 빈 상태를 보여 준다(코스 없음이 캐시에 남는다)
     expect(await screen.findByText('아직 코스 초안이 없어요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: 'AI 코스 만들기' })).toHaveAttribute(
+      'href',
+      '/guide/tours/1/course/draft?generate=1',
+    );
     expect(drafts).toBe(0);
 
     // 캐시에 "코스 없음"이 있는 채로 다시 마운트 — StrictMode가 마운트 effect를 두 번 돌린다
     await router.navigate('/guide/tours/1/applicants');
     await user.click(await screen.findByRole('button', { name: '승인 완료 후 코스 만들기' }));
-    expect(await screen.findByText('2시간 30분 추천 코스')).toBeInTheDocument();
-    await waitFor(() => expect(router.state.location.search).toBe(''));
-    expect(router.state.location.pathname).toBe('/guide/tours/1/course/draft');
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/edit');
+    expect(router.state.location.search).toBe('');
+    expect(router.state.historyAction).toBe('REPLACE');
     expect(drafts).toBe(1);
   });
 
   it('초안 생성 요청이 진행 중일 때 화면을 떠났다 돌아와도 요청은 한 번', async () => {
-    // AI 응답이 늦어야 요청이 진행 중인 채로 초안 화면을 다시 마운트할 수 있다.
+    // AI 응답이 늦어야 요청이 진행 중인 채로 생성 화면을 다시 마운트할 수 있다.
     setMockLatency({ base: 0, ai: 400 });
     let drafts = 0;
     server.events.on('request:start', ({ request }) => {
@@ -137,11 +190,12 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     await user.click(await screen.findByRole('button', { name: '승인 완료 후 코스 만들기' }));
     await waitFor(() => expect(drafts).toBe(1));
 
-    // 생성 중에 신청자 관리로 갔다가 다시 코스 만들기 — 새로 마운트된 초안 화면은 진행 중인 생성을 기다린다
+    // 생성 중에 신청자 관리로 갔다가 다시 코스 만들기 — 새로 마운트된 생성 화면은 진행 중인 생성을 기다린다
     await router.navigate('/guide/tours/1/applicants');
     await user.click(await screen.findByRole('button', { name: '승인 완료 후 코스 만들기' }));
     expect(await screen.findByText('신청자 관심사를 모으고 있어요')).toBeInTheDocument();
-    expect(await screen.findByText('2시간 30분 추천 코스')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/edit');
     expect(drafts).toBe(1);
   });
 
@@ -161,37 +215,65 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
       '문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
     );
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
-    expect(await screen.findByText('2시간 30분 추천 코스')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
   });
 
-  it('한줄평을 저장하면 항목에 보이고, 비워서 저장하면 추천 이유로 돌아간다', async () => {
-    const { user } = await openEditor();
-    await user.click(screen.getByRole('button', { name: '서천 밥상 한줄평' }));
-    let sheet = await screen.findByRole('dialog');
+  it('다시 만들기는 확인 창을 거쳐 초안을 새로 만들고 G03에 머문다', async () => {
+    let drafts = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST' && request.url.endsWith('/course/draft')) drafts++;
+    });
+    const { user, router } = await openCourse();
+    await user.click(screen.getByRole('button', { name: '다시 만들기' }));
+    const dialog = await screen.findByRole('alertdialog');
+    expect(within(dialog).getByText('초안을 다시 만들까요?')).toBeInTheDocument();
+    expect(
+      within(dialog).getByText('지금 초안과 편집 내용이 새 초안으로 바뀌어요.'),
+    ).toBeInTheDocument();
+    await user.click(within(dialog).getByRole('button', { name: '다시 만들기' }));
+    await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
+    expect(drafts).toBe(2);
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/edit');
+    expect(stopRows()).toHaveLength(3);
+  });
+
+  it('한줄평을 저장하면 카드에 보이고, 비워서 저장하면 추천 이유로 돌아간다', async () => {
+    const { user } = await openCourse();
+    await user.click(
+      within(await openStopSheet(user, '서천 밥상')).getByRole('button', { name: '한줄평' }),
+    );
+    let sheet = await screen.findByRole('dialog', { name: '서천 밥상 한줄평' });
     const field = within(sheet).getByRole('textbox', { name: '한줄평' });
     expect(field).toHaveValue('');
     await user.type(field, '양이 많아 든든해요');
     await user.click(within(sheet).getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(within(itemCard('서천 밥상')).getByText('양이 많아 든든해요')).toBeInTheDocument();
+    expect(within(stopCard('서천 밥상')).getByText('양이 많아 든든해요')).toBeInTheDocument();
 
     // 다시 열면 지금 한줄평이 채워져 있다
-    await user.click(screen.getByRole('button', { name: '서천 밥상 한줄평' }));
-    sheet = await screen.findByRole('dialog');
+    await user.click(
+      within(await openStopSheet(user, '서천 밥상')).getByRole('button', { name: '한줄평' }),
+    );
+    sheet = await screen.findByRole('dialog', { name: '서천 밥상 한줄평' });
     expect(within(sheet).getByRole('textbox', { name: '한줄평' })).toHaveValue(
       '양이 많아 든든해요',
     );
     await user.clear(within(sheet).getByRole('textbox', { name: '한줄평' }));
     await user.click(within(sheet).getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(within(itemCard('서천 밥상')).getByText(/^신청자 2명이/)).toBeInTheDocument();
+    expect(within(stopCard('서천 밥상')).getByText(/^신청자 2명이/)).toBeInTheDocument();
   });
 
-  it('지점을 모두 빼면 최종 코스 확정은 비활성 + 사유', async () => {
-    const { user } = await openEditor();
+  it('지점을 모두 빼면 이 코스로 확정하기는 비활성 + 사유, 제휴 안내는 경고 칩', async () => {
+    const { user } = await openCourse();
     for (let left = 3; left > 0; left--) {
-      const list = screen.getByRole('list', { name: '코스 지점' });
-      await user.click(within(list).getAllByRole('button', { name: / 삭제$/ })[0]);
+      const name = within(stopList()).getAllByRole('heading')[0]!.textContent!;
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: `${name} 편집` })).toBeEnabled(),
+      );
+      await user.click(
+        within(await openStopSheet(user, name)).getByRole('button', { name: '빼기' }),
+      );
       const dialog = await screen.findByRole('alertdialog');
       expect(within(dialog).getByText('이 지점을 뺄까요?')).toBeInTheDocument();
       expect(
@@ -199,48 +281,19 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
       ).toBeInTheDocument();
       await user.click(within(dialog).getByRole('button', { name: '빼기' }));
       await waitFor(() => expect(screen.queryByRole('alertdialog')).toBeNull());
-      await waitFor(() => expect(within(list).queryAllByRole('listitem')).toHaveLength(left - 1));
+      await waitFor(() =>
+        expect(within(stopList()).queryAllByRole('listitem')).toHaveLength(left - 1),
+      );
     }
-    expect(screen.getByRole('button', { name: '최종 코스 확정' })).toBeDisabled();
-    expect(screen.getByText('지점이 하나 이상 있어야 확정할 수 있어요.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '초안 다시 만들기' })).toHaveAttribute(
-      'href',
-      '/guide/tours/1/course/draft',
+    const toConfirm = screen.getByRole('button', { name: '이 코스로 확정하기' });
+    expect(toConfirm).toBeDisabled();
+    expect(toConfirm).toHaveAccessibleDescription('지점이 하나 이상 있어야 확정할 수 있어요.');
+    expect(screen.getByRole('heading', { name: '일정 · 0개 장소' })).toBeInTheDocument();
+    // 제휴 지점이 0이면 캡션이 경고 칩이 된다(같은 문구). 다시 만들기는 같은 화면에서 누를 수 있다.
+    expect(screen.getByText('코스에 제휴 가게 1곳 이상 포함해 주세요.').closest('div')).toHaveClass(
+      'bg-local-soft',
     );
-  });
-
-  it('코스가 없으면 확정 화면 주소는 신청자 관리로 보낸다', async () => {
-    const { router } = await renderApp('/guide/tours/1/course/confirmed', {
-      as: 'guide',
-      checkpoint: 'APPROVED',
-    });
-    expect(
-      await screen.findByRole('button', { name: '승인 완료 후 코스 만들기' }),
-    ).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/guide/tours/1/applicants');
-  });
-
-  it('초안이면 확정 화면 주소는 편집 화면으로 보낸다', async () => {
-    const { router } = await renderApp('/guide/tours/1/course/draft?generate=1', {
-      as: 'guide',
-      checkpoint: 'APPROVED',
-    });
-    await screen.findByText('2시간 30분 추천 코스');
-    await router.navigate('/guide/tours/1/course/confirmed');
-    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours/1/course/edit'));
-    expect(await screen.findByRole('list', { name: '코스 지점' })).toBeInTheDocument();
-  });
-
-  it('확정된 코스는 편집 주소로 와도 확정 화면 — 탐방 정보 카드', async () => {
-    const { router } = await renderApp('/guide/tours/1/course/edit', {
-      as: 'guide',
-      checkpoint: 'CONFIRMED',
-    });
-    expect(await screen.findByText('캠퍼스 → 식사 → 카페 / 총 3개 장소')).toBeInTheDocument();
-    expect(router.state.location.pathname).toBe('/guide/tours/1/course/confirmed');
-    expect(screen.getByText('참가 승인 3명 · 쿠폰 6장 발급')).toBeInTheDocument();
-    expect(screen.getByText('승인된 신청자에게 제휴 상점 쿠폰이 발급돼요.')).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '뒤로 가기' })).toBeNull();
+    expect(screen.getByRole('button', { name: '다시 만들기' })).toBeEnabled();
   });
 
   it('초안을 만든 뒤 신청자 관리로 돌아가면 코스 버튼은 코스 이어서 편집, 탐방 목록도 다시 불러온다', async () => {
@@ -256,10 +309,11 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     });
     await user.click((await screen.findAllByRole('link', { name: '신청자 관리하기' }))[0]!);
     await user.click(await screen.findByRole('button', { name: '승인 완료 후 코스 만들기' }));
-    expect(await screen.findByText('2시간 30분 추천 코스')).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
 
     await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
     expect(await screen.findByRole('button', { name: '코스 이어서 편집' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/applicants');
     expect(
       screen.queryByRole('button', { name: '승인 완료 후 코스 만들기' }),
     ).not.toBeInTheDocument();
@@ -268,25 +322,146 @@ describe('AI 코스 초안 · 편집 · 확정 (guide-s04 · s05 · s06)', () =>
     await router.navigate('/guide/tours');
     await waitFor(() => expect(guideTourGets).toBe(2));
   });
+});
 
-  it('코스 확정 뒤에 승인하면 확정 화면의 승인 수 · 쿠폰 발급 수가 늘어난다', async () => {
-    const app = await renderApp('/guide/tours/1/course/confirmed', {
+describe('코스 주소 가드 (막다른 곳 없음)', () => {
+  it('코스가 없으면 편집 · 확정 점검 · 옛 확정 주소는 신청자 관리로 보낸다', async () => {
+    const { router } = await renderApp('/guide/tours/1/course/edit', {
+      as: 'guide',
+      checkpoint: 'APPROVED',
+    });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours/1/applicants'));
+    for (const path of ['/guide/tours/1/course/confirm', '/guide/tours/1/course/confirmed']) {
+      await router.navigate(path);
+      await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours/1/applicants'));
+    }
+    expect(
+      await screen.findByRole('button', { name: '승인 완료 후 코스 만들기' }),
+    ).toBeInTheDocument();
+  });
+
+  it('초안이 있으면 /course/draft는 편집 화면으로 replace하고 다시 만들지 않는다', async () => {
+    let drafts = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST' && request.url.endsWith('/course/draft')) drafts++;
+    });
+    const { router } = await openCourse();
+    for (const path of ['/guide/tours/1/course/draft', '/guide/tours/1/course/draft?generate=1']) {
+      await router.navigate(path);
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe('/guide/tours/1/course/edit'),
+      );
+      expect(router.state.historyAction).toBe('REPLACE');
+    }
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+    expect(drafts).toBe(1);
+  });
+
+  it('확정된 코스는 편집 · 생성 · 옛 확정 주소로 와도 확정 점검 주소의 완료 상태', async () => {
+    const { router } = await renderApp('/guide/tours/1/course/edit', {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });
-    const { user } = app;
+    expect(await screen.findByRole('heading', { name: '코스를 확정했어요' })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/confirm');
     expect(await screen.findByText('참가 승인 3명 · 쿠폰 6장 발급')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '신청자 관리로 이동' }));
+    for (const path of ['/guide/tours/1/course/draft', '/guide/tours/1/course/confirmed']) {
+      await router.navigate(path);
+      await waitFor(() =>
+        expect(router.state.location.pathname).toBe('/guide/tours/1/course/confirm'),
+      );
+      expect(router.state.historyAction).toBe('REPLACE');
+    }
+  });
+});
+
+describe('확정 전 점검 G08 (guide-s06)', () => {
+  it('초안 코스로 오면 점검 화면: 소요 · 지점 분류 요약과 점검 두 줄, 뒤로는 G03', async () => {
+    const { user, router } = await openCourse();
+    await router.navigate('/guide/tours/1/course/confirm');
+    expect(await screen.findByRole('heading', { name: G08_TITLE })).toBeInTheDocument();
+    expect(screen.getByText('확정 후 참가자에게 최종 일정이 공개돼요.')).toBeInTheDocument();
+    expect(screen.getByText('2시간 30분 코스 초안 완성')).toBeInTheDocument();
+    expect(screen.getByText('캠퍼스 · 식사 · 카페 등 3개 장소로 구성했어요.')).toBeInTheDocument();
+    expect(screen.getByText('승인된 고교생 요청 반영')).toBeInTheDocument();
+    expect(screen.getByText('확인 완료')).toBeInTheDocument();
+    expect(screen.getByText('제휴 상점 1곳 이상')).toBeInTheDocument();
+    expect(screen.getByText('충족')).toBeInTheDocument();
+    expect(
+      screen.getByText('확정하면 참가자에게 코스가 공개되고 쿠폰이 자동 발급돼요.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '코스 확정하기' })).toBeEnabled();
+    await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+  });
+
+  it('제휴 지점이 0이면 미충족 · 확정 비활성 + 사유 · 코스 편집으로', async () => {
+    const { user, router } = await renderApp('/guide/me', { as: 'guide', checkpoint: 'APPROVED' });
+    // 탐방 날짜에 유효한 제휴가 하나도 없으면 AI 초안에 제휴 지점이 없다.
+    mutate((db) => {
+      db.partnerships.length = 0;
+    });
+    await router.navigate('/guide/tours/1/course/draft?generate=1');
+    await screen.findByRole('heading', { name: G03_TITLE });
+    await user.click(screen.getByRole('button', { name: '이 코스로 확정하기' }));
+    expect(await screen.findByRole('heading', { name: G08_TITLE })).toBeInTheDocument();
+    expect(screen.getByText('미충족')).toBeInTheDocument();
+    const confirm = screen.getByRole('button', { name: '코스 확정하기' });
+    expect(confirm).toBeDisabled();
+    expect(confirm).toHaveAccessibleDescription('제휴 상점을 1곳 이상 넣어 주세요.');
+    const toEdit = screen.getByRole('link', { name: '코스 편집으로' });
+    expect(toEdit).toHaveAttribute('href', '/guide/tours/1/course/edit');
+    await user.click(toEdit);
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+  });
+
+  it('코스 확정하기를 연타해도 확정 요청은 한 번이고, 같은 화면이 완료 상태로 바뀐다', async () => {
+    const { user, router } = await openCourse();
+    await router.navigate('/guide/tours/1/course/confirm');
+    await screen.findByRole('heading', { name: G08_TITLE });
+    // 응답이 늦어야 첫 클릭의 요청이 진행 중인 채로 두 번째 클릭이 들어온다.
+    setMockLatency({ base: 150, ai: 0 });
+    let confirms = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST' && request.url.endsWith('/course/confirm')) confirms++;
+    });
+    await user.dblClick(screen.getByRole('button', { name: '코스 확정하기' }));
+    expect(await screen.findByRole('heading', { name: '코스를 확정했어요' })).toBeInTheDocument();
+    expect(screen.getByText('참가 승인 3명 · 쿠폰 6장 발급')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/confirm');
+    expect(screen.queryByRole('heading', { name: G08_TITLE })).toBeNull();
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방으로' })).toHaveAttribute(
+      'href',
+      '/guide/tours',
+    );
+    expect(confirms).toBe(1);
+  });
+
+  it('쿠폰이 0장이면 완료 카드에 1단계 안내 문구', async () => {
+    const { router } = await renderApp('/guide/me', { as: 'guide', checkpoint: 'CONFIRMED' });
+    mutate((db) => {
+      db.coupons.length = 0;
+    });
+    await router.navigate('/guide/tours/1/course/confirm');
+    expect(await screen.findByText('참가 승인 3명 · 쿠폰 0장 발급')).toBeInTheDocument();
+    expect(screen.getByText('코스에 제휴 상점이 없어 발급된 쿠폰이 없어요.')).toBeInTheDocument();
+  });
+
+  it('코스 확정 뒤에 승인하면 완료 상태의 승인 수 · 쿠폰 발급 수가 늘어난다', async () => {
+    const { user, router } = await renderApp('/guide/tours/1/course/confirm', {
+      as: 'guide',
+      checkpoint: 'CONFIRMED',
+    });
+    expect(await screen.findByText('참가 승인 3명 · 쿠폰 6장 발급')).toBeInTheDocument();
+    // 완료 상태의 뒤로는 신청자 관리다(편집 주소는 확정 코스를 다시 이 화면으로 보낸다).
+    await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
 
     // 최유진(승인 대기)을 승인하면 코스 안 제휴 상점 2곳의 쿠폰이 더 발급된다.
     const yujin = (await screen.findByRole('heading', { name: /최유진/ })).closest('article')!;
     await user.click(within(yujin).getByRole('button', { name: '승인하기' }));
     expect(await screen.findByText('최유진 님을 승인했어요.')).toBeInTheDocument();
-    // 확정 코스 보기는 확정 점검 주소(`confirm`, Task 10이 채운다)로 간다. 숫자는 지금의 확정 화면(`confirmed`)에서 본다.
-    const { router } = app;
     await user.click(screen.getByRole('button', { name: '확정 코스 보기' }));
     expect(router.state.location.pathname).toBe('/guide/tours/1/course/confirm');
-    await router.navigate('/guide/tours/1/course/confirmed');
     expect(await screen.findByText('참가 승인 4명 · 쿠폰 8장 발급')).toBeInTheDocument();
   });
 });

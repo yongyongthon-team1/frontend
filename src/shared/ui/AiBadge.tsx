@@ -1,12 +1,16 @@
 import type { ReactNode } from 'react';
+import { cn } from '@/shared/lib/cn';
 
-// AI가 만든 결과에는 항상 ✦ 배지를 붙인다.
-export function AiBadge({ children }: { children?: ReactNode }) {
+// AI가 만든 결과에는 항상 ✦ 배지를 붙인다. 페일 블루 카드 위에서는 `className`으로 흰 바탕(`bg-surface`)을 준다.
+export function AiBadge({ children, className }: { children?: ReactNode; className?: string }) {
   return (
     <span
       role="group"
       aria-label="AI 결과"
-      className="inline-flex items-center gap-1 min-h-[27px] rounded-pill bg-brand-soft px-3 py-1 text-xs font-bold text-brand"
+      className={cn(
+        'inline-flex items-center gap-1 min-h-[27px] rounded-pill bg-brand-soft px-3 py-1 text-xs font-bold text-brand',
+        className,
+      )}
     >
       <span aria-hidden className="text-brand">
         ✦

@@ -1,33 +1,54 @@
+import { Menu } from 'lucide-react';
 import { useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
-import type { CourseStop } from '@/features/courses/model';
+import { InsightCard } from '@/features/campuses/components/InsightCard';
+import { StopActionSheet } from '@/features/courses/components/StopActionSheet';
 import {
-  useConfirmCourse,
+  courseKinds,
+  partnerStopCount,
+  stopDurations,
+  type CourseStop,
+} from '@/features/courses/model';
+import {
+  useCreateDraft,
   useDeleteStop,
   useGuideCourse,
   useIsCreatingDraft,
   useReorderStops,
   useUpdateStop,
 } from '@/features/courses/queries';
-import { circled } from '@/shared/lib/date';
+import { cn } from '@/shared/lib/cn';
+import { formatDuration } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import { AiBadge } from '@/shared/ui/AiBadge';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { Illustration } from '@/shared/ui/Illustration';
+import { InfoCard } from '@/shared/ui/InfoCard';
 import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
+import { StatusChip } from '@/shared/ui/StatusChip';
 import { Textarea } from '@/shared/ui/Textarea';
 import { TopBar } from '@/shared/ui/TopBar';
 
 const showError = (error: { code: string }) => toast.error(errorMessage(error.code));
 
+const PARTNER_CAPTION = '코스에 제휴 가게 1곳 이상 포함해 주세요.';
+
 /**
- * 코스 편집(guide-s05): 순서(위로 · 아래로) · 한줄평 · 지점 빼기와 최종 확정. 지점 추가 · 상점 교체는 2단계다.
- * 코스를 바꾸는 요청이 하나라도 진행 중이면(초안 화면이 보낸 AI 초안 생성 포함) 편집 · 확정 버튼을 모두 잠가
- * 요청이 겹치지 않게 한다. 방문 시간은 서버가 위치 슬롯으로 다시 매긴 값을 그대로 그린다.
+ * 코스 완성(V2 G03 · guide-s04 · s05 · 판정 2A-R10): AI 초안과 편집이 한 화면이다. 지점 카드의 `≡`가 지점 시트(위로 ·
+ * 아래로 이동 · 한줄평 · 빼기)를 열고, `이 코스로 확정하기`는 확정 전 점검(G08)으로 간다. 1단계 `다시 만들기`는 소제목
+ * 오른쪽 작은 버튼이다. 코스를 바꾸는 요청이 하나라도 진행 중이면(AI 초안 생성 · 다시 만들기 포함) 편집 · 확정 버튼을
+ * 모두 잠가 요청이 겹치지 않게 한다. 방문 시간은 서버가 위치 슬롯으로 다시 매긴 값을 그대로 그린다.
+ *
+ * 무대 예산(2A-R4 · R10): 생성 직후 지점 카드 3장이 판정 뷰포트(본문 약 420px)에서 하단 탭 위에 다 보여야 해서
+ * ① 히어로는 일러스트를 작게, 배지와 소요를 한 줄로(높이 110 미만) ② 소제목 · 간격을 줄이고 ③ 카드 설명은 한 줄
+ * 말줄임 ④ 확정 버튼은 하단에 고정하지 않고 목록 바로 뒤에 둔다(고정 버튼이 셋째 카드를 덮는다, H05 판정 R5와 같음).
+ * 추천 상점 기준 · 캠퍼스 인사이트(1단계 기능, 판정 R9)는 그 아래 접힘 밖에 남는다.
  */
 export function CourseEditPage() {
   const tourId = Number(useParams().tourId);
@@ -36,15 +57,16 @@ export function CourseEditPage() {
   const reorder = useReorderStops(tourId);
   const updateStop = useUpdateStop(tourId);
   const deleteStop = useDeleteStop(tourId);
-  const confirm = useConfirmCourse(tourId);
+  const createDraft = useCreateDraft(tourId);
   const drafting = useIsCreatingDraft(tourId);
+  const [sheetStopId, setSheetStopId] = useState<number | null>(null);
   const [noteStopId, setNoteStopId] = useState<number | null>(null);
   const [note, setNote] = useState('');
   const [deleteStopId, setDeleteStopId] = useState<number | null>(null);
-  const [confirmOpen, setConfirmOpen] = useState(false);
+  const [regenerateOpen, setRegenerateOpen] = useState(false);
   const course = courseQuery.data;
   const base = `/guide/tours/${tourId}`;
-  const topBar = <TopBar title="탐방 코스 편집" back={`${base}/course/draft`} />;
+  const topBar = <TopBar title="탐방 코스 편집" back={`${base}/applicants`} />;
 
   if (course === undefined) {
     return (
@@ -55,27 +77,29 @@ export function CourseEditPage() {
             <ErrorState error={courseQuery.error} onRetry={() => void courseQuery.refetch()} />
           ) : (
             <>
-              <Skeleton className="h-5 w-3/4" />
-              <Skeleton className="mt-4 h-36 rounded-lg" />
-              <Skeleton className="mt-3 h-36 rounded-lg" />
-              <Skeleton className="mt-3 h-36 rounded-lg" />
+              <Skeleton className="h-14 w-3/4" />
+              <Skeleton className="mt-3 h-[72px] rounded-xl" />
+              <Skeleton className="mt-3 h-6 w-40" />
+              <Skeleton className="mt-3 h-[60px] rounded-lg" />
+              <Skeleton className="mt-2 h-[60px] rounded-lg" />
+              <Skeleton className="mt-2 h-[60px] rounded-lg" />
             </>
           )}
         </Page>
       </>
     );
   }
-  // 코스가 없으면 초안 화면이 "아직 초안이 없어요"와 AI 코스 만들기를 보여 준다.
-  if (course === null) return <Navigate to={`${base}/course/draft`} replace />;
-  if (course.status === 'CONFIRMED') return <Navigate to={`${base}/course/confirmed`} replace />;
+  // 코스가 없으면 신청자 관리(승인자가 있으면 그곳의 `승인 완료 후 코스 만들기`가 초안을 만든다).
+  if (course === null) return <Navigate to={`${base}/applicants`} replace />;
+  if (course.status === 'CONFIRMED') return <Navigate to={`${base}/course/confirm`} replace />;
 
-  const { stops } = course;
-  const busy =
-    reorder.isPending ||
-    updateStop.isPending ||
-    deleteStop.isPending ||
-    confirm.isPending ||
-    drafting;
+  const { tour, stops } = course;
+  const busy = reorder.isPending || updateStop.isPending || deleteStop.isPending || drafting;
+  const durations = stopDurations(stops, tour.endsAt);
+  const kinds = courseKinds(stops).join('·');
+  const hasPartner = partnerStopCount(stops) > 0;
+  const sheetIndex = stops.findIndex((s) => s.id === sheetStopId);
+  const sheetStop = stops[sheetIndex] ?? null;
   const noteStop = stops.find((s) => s.id === noteStopId) ?? null;
 
   function move(index: number, offset: -1 | 1) {
@@ -108,14 +132,12 @@ export function CourseEditPage() {
     });
   }
 
-  function onConfirmCourse() {
-    confirm.mutate(undefined, {
-      onSuccess: () => {
-        setConfirmOpen(false);
-        void navigate(`${base}/course/confirmed`, { replace: true });
-      },
+  // 다시 만들기가 실패하면 지금 초안을 그대로 두고 알린다(규칙에 걸리면 서버 코스도 그대로다).
+  function onRegenerate() {
+    createDraft.mutate(undefined, {
+      onSuccess: () => setRegenerateOpen(false),
       onError: (error) => {
-        setConfirmOpen(false);
+        setRegenerateOpen(false);
         showError(error);
       },
     });
@@ -125,43 +147,92 @@ export function CourseEditPage() {
     <>
       {topBar}
       <Page>
-        <p className="text-sm text-muted">순서를 바꾸고 장소를 교체할 수 있어요.</p>
+        <PageHeading
+          as="h2"
+          title="코스를 완성해 볼까요?"
+          description="승인된 학생의 '하고 싶은 것'만 반영했어요."
+        />
 
-        <ol aria-label="코스 지점" className="mt-4 flex flex-col gap-3">
+        <div className="mt-3 flex items-center gap-3 rounded-xl bg-brand-soft py-3 pr-3 pl-4">
+          <div className="min-w-0 flex-1">
+            <div className="flex flex-wrap items-center gap-x-2">
+              <AiBadge className="bg-surface">AI 추천 코스</AiBadge>
+              {tour.endsAt === null ? null : (
+                <p className="text-xl leading-[1.4] font-bold text-ink">
+                  {formatDuration(tour.startsAt, tour.endsAt)}
+                </p>
+              )}
+            </div>
+            {kinds ? <p className="mt-0.5 truncate text-[13px] text-muted">{kinds}</p> : null}
+          </div>
+          <Illustration kind="dining" className="h-[52px] w-auto shrink-0 object-contain" />
+        </div>
+
+        <div className="mt-4 flex items-center justify-between gap-3">
+          <h3 className="text-lg leading-[1.4] font-bold text-ink">{`일정 · ${stops.length}개 장소`}</h3>
+          <Button
+            variant="ghost"
+            size="sm"
+            disabled={busy}
+            onClick={() => setRegenerateOpen(true)}
+            className="-my-3 -mr-3 shrink-0 px-3 text-[13px] text-brand"
+          >
+            다시 만들기
+          </Button>
+        </div>
+        {hasPartner ? (
+          <p className="text-xs text-muted">{PARTNER_CAPTION}</p>
+        ) : (
+          <StatusChip tone="warning" icon="!" className="mt-1">
+            {PARTNER_CAPTION}
+          </StatusChip>
+        )}
+
+        <ol aria-label="코스 지점" className="mt-2 flex flex-col gap-2">
           {stops.map((stop, index) => (
-            <li key={stop.id}>
-              <EditStopItem
-                stop={stop}
-                busy={busy}
-                first={index === 0}
-                last={index === stops.length - 1}
-                onUp={() => move(index, -1)}
-                onDown={() => move(index, 1)}
-                onNote={() => openNote(stop)}
-                onDelete={() => setDeleteStopId(stop.id)}
-              />
-            </li>
+            <StopCard
+              key={stop.id}
+              stop={stop}
+              minutes={durations[index] ?? null}
+              busy={busy}
+              onEdit={() => setSheetStopId(stop.id)}
+            />
           ))}
         </ol>
 
-        <div className="mt-6">
+        <div className="mt-4">
           <Button
             disabled={busy || stops.length === 0}
             hint={
               stops.length === 0
-                ? {
-                    reason: '지점이 하나 이상 있어야 확정할 수 있어요.',
-                    action: { label: '초안 다시 만들기', to: `${base}/course/draft` },
-                  }
+                ? { reason: '지점이 하나 이상 있어야 확정할 수 있어요.' }
                 : undefined
             }
-            onClick={() => setConfirmOpen(true)}
+            onClick={() => navigate(`${base}/course/confirm`)}
           >
-            최종 코스 확정
+            이 코스로 확정하기
           </Button>
         </div>
-        <p className="mt-3 text-sm text-muted">확정 후에는 참가자에게 지도와 쿠폰이 공개돼요.</p>
+
+        <InfoCard className="mt-6" muted title="추천 상점 기준" description={course.criteria} />
+        <div className="mt-3">
+          <InsightCard universityId={tour.universityId} />
+        </div>
       </Page>
+
+      <StopActionSheet
+        stop={sheetStop}
+        isFirst={sheetIndex === 0}
+        isLast={sheetIndex === stops.length - 1}
+        busy={busy}
+        onMoveUp={() => move(sheetIndex, -1)}
+        onMoveDown={() => move(sheetIndex, 1)}
+        onEditNote={() => {
+          if (sheetStop) openNote(sheetStop);
+        }}
+        onRemove={() => setDeleteStopId(sheetStopId)}
+        onClose={() => setSheetStopId(null)}
+      />
 
       <BottomSheet
         open={noteStop !== null}
@@ -189,90 +260,71 @@ export function CourseEditPage() {
       />
 
       <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title="코스를 확정할까요?"
-        description="확정하면 더 이상 수정할 수 없고, 승인된 신청자에게 지도와 쿠폰이 공개돼요."
-        confirmLabel="확정하기"
-        onConfirm={onConfirmCourse}
-        pending={confirm.isPending}
+        open={regenerateOpen}
+        onOpenChange={setRegenerateOpen}
+        title="초안을 다시 만들까요?"
+        description="지금 초안과 편집 내용이 새 초안으로 바뀌어요."
+        confirmLabel="다시 만들기"
+        onConfirm={onRegenerate}
+        pending={createDraft.isPending}
       />
     </>
   );
 }
 
-function EditStopItem({
+/**
+ * G03 지점 카드: 시간 알약 · 이름 · `{한줄평 또는 AI 추천 이유} · {N분}`(한 줄, 이유만 말줄임) · 오른쪽 `≡`(지점 시트).
+ * 한줄평이 없어 AI 추천 이유를 보일 때만 앞에 ✦를 붙인다(1단계 규칙: AI 결과에는 ✦).
+ */
+function StopCard({
   stop,
+  minutes,
   busy,
-  first,
-  last,
-  onUp,
-  onDown,
-  onNote,
-  onDelete,
+  onEdit,
 }: {
   stop: CourseStop;
+  minutes: number | null;
   busy: boolean;
-  first: boolean;
-  last: boolean;
-  onUp(): void;
-  onDown(): void;
-  onNote(): void;
-  onDelete(): void;
+  onEdit(): void;
 }) {
-  // 가이드 한줄평이 없으면 AI 추천 이유를 보여 주고, 그때만 AI 배지를 붙인다.
-  const aiReason = stop.description === null ? stop.recommendationReason : null;
   const detail = stop.description ?? stop.recommendationReason;
+  const fromAi = stop.description === null && stop.recommendationReason !== null;
   return (
-    <article className="rounded-lg border border-border bg-bg p-5">
-      <h2 className="text-base font-bold text-ink">
-        <span aria-hidden="true">≡ </span>
-        {`${circled(stop.order)} ${stop.name} · ${stop.visitTime}`}
-      </h2>
-      {detail ? (
-        <div className="mt-1.5 flex items-start gap-1.5">
-          {aiReason ? <AiBadge /> : null}
-          <p className="min-w-0 text-sm text-muted">{detail}</p>
-        </div>
-      ) : null}
-      <div className="mt-3 flex flex-wrap gap-2">
-        <Button
-          size="sm"
-          variant="secondary"
-          aria-label={`${stop.name} 위로 이동`}
-          disabled={busy || first}
-          onClick={onUp}
-        >
-          위로
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          aria-label={`${stop.name} 아래로 이동`}
-          disabled={busy || last}
-          onClick={onDown}
-        >
-          아래로
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          aria-label={`${stop.name} 한줄평`}
-          disabled={busy}
-          onClick={onNote}
-        >
-          한줄평
-        </Button>
-        <Button
-          size="sm"
-          variant="secondary"
-          aria-label={`${stop.name} 삭제`}
-          disabled={busy}
-          onClick={onDelete}
-        >
-          삭제
-        </Button>
+    <li className="flex items-center gap-3 rounded-lg border border-border bg-surface py-2.5 pr-1 pl-3">
+      <span className="shrink-0 rounded-pill bg-brand-soft px-3 py-1.5 text-[13px] font-bold text-brand tabular-nums">
+        {stop.visitTime}
+      </span>
+      <div className="min-w-0 flex-1">
+        <h4 className="truncate text-[17px] leading-[1.4] font-bold text-ink">{stop.name}</h4>
+        {detail !== null || minutes !== null ? (
+          <p className="flex min-w-0 text-xs text-muted">
+            {detail === null ? null : (
+              <span className="min-w-0 truncate">
+                {fromAi ? (
+                  <span aria-hidden className="mr-0.5 text-brand">
+                    ✦
+                  </span>
+                ) : null}
+                {detail}
+              </span>
+            )}
+            {minutes === null ? null : (
+              <span className={cn('shrink-0', detail !== null && 'pl-1')}>
+                {detail === null ? `${minutes}분` : `· ${minutes}분`}
+              </span>
+            )}
+          </p>
+        ) : null}
       </div>
-    </article>
+      <button
+        type="button"
+        aria-label={`${stop.name} 편집`}
+        disabled={busy}
+        onClick={onEdit}
+        className="-my-2 flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-neutral-100 disabled:cursor-not-allowed disabled:text-neutral-300 disabled:hover:bg-transparent"
+      >
+        <Menu aria-hidden className="size-5" />
+      </button>
+    </li>
   );
 }
