@@ -1,4 +1,5 @@
 import { formatTime, seoulDateKey } from '@/shared/lib/date';
+import type { Tone } from '@/shared/lib/types';
 
 export type CouponStatus = 'ISSUED' | 'USED' | 'EXPIRED';
 /** 서버가 계산해서 준다. */
@@ -51,6 +52,11 @@ export function computeCouponState(
   if (c.status === 'EXPIRED' || now.getTime() > Date.parse(c.expiresAt)) return 'EXPIRED';
   if (seoulDateKey(now) < seoulDateKey(c.tourStartsAt)) return 'BEFORE_DAY';
   return 'USABLE';
+}
+
+/** 쿠폰 상태 칩 색: 쓸 수 있는 것만 success, 나머지(당일 전 · 만료 · 사용 완료)는 조용한 neutral. 목록과 상세가 같이 쓴다. */
+export function couponStateTone(state: CouponState): Tone {
+  return state === 'USABLE' ? 'success' : 'neutral';
 }
 
 export function couponStateLabel(state: CouponState, usedAt: string | null): string {

@@ -22,6 +22,7 @@ import { cn } from '@/shared/lib/cn';
 import { formatDuration } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import { AiBadge } from '@/shared/ui/AiBadge';
+import { AiReasonPrefix } from '@/shared/ui/AiReasonPrefix';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { Button } from '@/shared/ui/Button';
 import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
@@ -333,14 +334,7 @@ function StopCard({
           <p className="flex min-w-0 text-xs text-muted">
             {detail === null ? null : (
               <span className="min-w-0 truncate">
-                {fromAi ? (
-                  <>
-                    <span aria-hidden className="mr-0.5 text-brand">
-                      ✦
-                    </span>
-                    <span className="sr-only">AI 추천 이유: </span>
-                  </>
-                ) : null}
+                {fromAi ? <AiReasonPrefix /> : null}
                 {detail}
               </span>
             )}

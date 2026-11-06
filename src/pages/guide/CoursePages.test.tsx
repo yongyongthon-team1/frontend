@@ -1,9 +1,10 @@
 import { configure, screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
-import { mutate } from '@/mocks/db/store';
+import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
+import { formatMonthDay, formatTimeRange } from '@/shared/lib/date';
 import { renderApp } from '@/test/renderApp';
 
 afterEach(() => {
@@ -498,6 +499,57 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
     await router.navigate('/guide/tours/1/course/confirm');
     expect(await screen.findByText('참가 승인 3명 · 쿠폰 0장 발급')).toBeInTheDocument();
     expect(screen.getByText('코스에 제휴 상점이 없어 발급된 쿠폰이 없어요.')).toBeInTheDocument();
+  });
+
+  it('완료 카드는 날짜 · 시간, 지점 분류와 총 지점 수, 이후 승인 안내를 보인다(1단계 정보)', async () => {
+    await renderApp('/guide/tours/1/course/confirm', { as: 'guide', checkpoint: 'CONFIRMED' });
+    expect(await screen.findByRole('heading', { name: '코스를 확정했어요' })).toBeInTheDocument();
+    const card = screen.getByRole('heading', { name: '코스를 확정했어요' }).closest('section')!;
+    const tour = getDb().tours.find((t) => t.id === 1)!;
+    expect(
+      within(card).getByText(
+        `${formatMonthDay(tour.startsAt)} ${formatTimeRange(tour.startsAt, tour.endsAt)}`,
+      ),
+    ).toBeInTheDocument();
+    expect(within(card).getByText('캠퍼스 · 식사 · 카페 / 총 3개 장소')).toBeInTheDocument();
+    expect(
+      within(card).getByText('코스 확정 후에 신청을 승인하면 새 승인자에게도 쿠폰을 발급해요.'),
+    ).toBeInTheDocument();
+  });
+
+  it('신청자 보드를 못 불러와도 완료 카드는 그대로, 승인 수 줄만 짧은 오류와 다시 시도', async () => {
+    server.use(
+      http.get('/api/guide/tours/:id/applicants', () =>
+        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
+      ),
+    );
+    const { user } = await renderApp('/guide/tours/1/course/confirm', {
+      as: 'guide',
+      checkpoint: 'CONFIRMED',
+    });
+    expect(await screen.findByRole('heading', { name: '코스를 확정했어요' })).toBeInTheDocument();
+    const retry = await screen.findByRole('button', { name: '다시 시도' });
+    expect(screen.getByText('캠퍼스 · 식사 · 카페 / 총 3개 장소')).toBeInTheDocument();
+    expect(screen.queryByText(/참가 승인/)).not.toBeInTheDocument();
+    expect(screen.queryByRole('alert')).not.toBeInTheDocument(); // 카드를 ErrorState로 바꾸지 않는다
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방으로' })).toBeInTheDocument();
+
+    server.resetHandlers();
+    await user.click(retry);
+    expect(await screen.findByText('참가 승인 3명 · 쿠폰 6장 발급')).toBeInTheDocument();
+  });
+
+  it('신청자 보드를 불러오는 동안에도 완료 카드 제목은 보인다', async () => {
+    server.use(
+      http.get('/api/guide/tours/:id/applicants', async () => {
+        await new Promise((resolve) => setTimeout(resolve, 150));
+        return undefined;
+      }),
+    );
+    await renderApp('/guide/tours/1/course/confirm', { as: 'guide', checkpoint: 'CONFIRMED' });
+    expect(await screen.findByRole('heading', { name: '코스를 확정했어요' })).toBeInTheDocument();
+    expect(screen.queryByText(/참가 승인/)).not.toBeInTheDocument();
+    expect(await screen.findByText('참가 승인 3명 · 쿠폰 6장 발급')).toBeInTheDocument();
   });
 
   it('코스 확정 뒤에 승인하면 완료 상태의 승인 수 · 쿠폰 발급 수가 늘어난다', async () => {

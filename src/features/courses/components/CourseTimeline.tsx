@@ -1,4 +1,5 @@
 import type { CourseStop } from '@/features/courses/model';
+import { AiReasonPrefix } from '@/shared/ui/AiReasonPrefix';
 
 export interface CourseTimelineProps {
   stops: CourseStop[];
@@ -16,6 +17,8 @@ export function CourseTimeline({ stops, durations, onSelect }: CourseTimelinePro
     <ul data-testid="course-timeline" className="flex flex-col gap-3">
       {stops.map((stop, index) => {
         const detail = stop.description ?? stop.recommendationReason;
+        // 가이드 한줄평이 아니라 AI 추천 이유를 보일 때만 AI 표시를 붙인다(G03 지점 카드와 같은 규칙).
+        const fromAi = stop.description === null && stop.recommendationReason !== null;
         const minutes = durations[index] ?? null;
         const meta = [detail, minutes === null ? null : `${minutes}분`]
           .filter((part): part is string => Boolean(part))
@@ -35,7 +38,10 @@ export function CourseTimeline({ stops, durations, onSelect }: CourseTimelinePro
                   {stop.name}
                 </span>
                 {meta ? (
-                  <span className="mt-0.5 line-clamp-2 text-xs text-muted">{meta}</span>
+                  <span className="mt-0.5 line-clamp-2 text-xs text-muted">
+                    {fromAi ? <AiReasonPrefix /> : null}
+                    {meta}
+                  </span>
                 ) : null}
                 {stop.partnership ? (
                   <span className="mt-1 block text-xs font-bold text-brand">

@@ -1,6 +1,8 @@
 import { screen, within } from '@testing-library/react';
+import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { mutate } from '@/mocks/db/store';
+import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
 
 /** `renderApp`은 목업 DB를 새로 만들므로, DB를 고친 뒤에 목적지로 이동해 그 값으로 그린다. */
@@ -100,17 +102,47 @@ describe('가이드 홈 (G01 · G11)', () => {
     expect(screen.queryByText('모집 중')).not.toBeInTheDocument();
   });
 
-  it('진행 예정 탐방이 없으면 빈 상태 + 새 탐방 개설하기', async () => {
+  it('지난 탐방만 있으면 `진행 예정인 탐방이 없어요.` 빈 상태 + 새 탐방 개설하기', async () => {
     await renderPatched('/guide', { as: 'guide' }, (db) => {
       for (const t of db.tours) {
         if (t.status === 'RECRUITING' || t.status === 'CLOSED') t.status = 'COMPLETED';
       }
     });
-    const empty = (await screen.findByText('아직 개설한 탐방이 없어요.')).parentElement!;
+    const empty = (await screen.findByText('진행 예정인 탐방이 없어요.')).parentElement!;
     expect(within(empty).getByRole('link', { name: '새 탐방 개설하기' })).toHaveAttribute(
       'href',
       '/guide/tours/new',
     );
+    expect(screen.queryByText('아직 개설한 탐방이 없어요.')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toBeInTheDocument();
+  });
+
+  it('개설한 탐방이 하나도 없으면 `아직 개설한 탐방이 없어요.`', async () => {
+    await renderPatched('/guide', { as: 'guide' }, (db) => {
+      db.tours.length = 0;
+    });
+    const empty = (await screen.findByText('아직 개설한 탐방이 없어요.')).parentElement!;
+    expect(within(empty).getByRole('link', { name: '새 탐방 개설하기' })).toBeInTheDocument();
+    expect(screen.queryByText('진행 예정인 탐방이 없어요.')).not.toBeInTheDocument();
+  });
+
+  it('불러오는 동안에도 h1이 있다(화면 낭독기용)', async () => {
+    server.use(http.get('/api/guide/tours', () => new Promise<never>(() => {})));
+    await renderApp('/guide', { as: 'guide' });
+    expect(await screen.findByRole('heading', { level: 1, name: '내 탐방' })).toHaveClass(
+      'sr-only',
+    );
+    expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
+  });
+
+  it('오류일 때도 h1이 있다', async () => {
+    server.use(
+      http.get('/api/guide/tours', () =>
+        HttpResponse.json({ code: 'UNKNOWN', message: 'x' }, { status: 400 }),
+      ),
+    );
+    await renderApp('/guide', { as: 'guide' });
+    expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '내 탐방' })).toBeInTheDocument();
   });
 });

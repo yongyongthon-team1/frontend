@@ -3,9 +3,14 @@ import { useRef } from 'react';
 import { Link, Navigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { useApplicantsBoard } from '@/features/applications/queries';
-import { courseKinds, partnerStopCount, type Course } from '@/features/courses/model';
+import {
+  courseKinds,
+  partnerStopCount,
+  stopKindLabel,
+  type Course,
+} from '@/features/courses/model';
 import { useConfirmCourse, useGuideCourse, useIsCreatingDraft } from '@/features/courses/queries';
-import { formatDuration } from '@/shared/lib/date';
+import { formatDuration, formatMonthDay, formatTimeRange } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import type { Tone } from '@/shared/lib/types';
 import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
@@ -171,7 +176,7 @@ function ConfirmedCourse({
   course: Course;
   boardQuery: ReturnType<typeof useApplicantsBoard>;
 }) {
-  const { tour, issuedCouponCount } = course;
+  const { tour, stops, issuedCouponCount } = course;
   const base = `/guide/tours/${tour.id}`;
   const board = boardQuery.data;
 
@@ -179,31 +184,46 @@ function ConfirmedCourse({
     <>
       <TopBar title={TITLE} back={`${base}/applicants`} />
       <Page className={BOTTOM_ACTION_PAGE}>
-        {board === undefined ? (
-          boardQuery.isError ? (
-            <ErrorState error={boardQuery.error} onRetry={() => void boardQuery.refetch()} />
-          ) : (
-            <Skeleton className="mt-3 h-[150px] rounded-xl" />
-          )
-        ) : (
-          <section className="mt-3 rounded-xl bg-brand-soft p-5">
-            <span
-              aria-hidden
-              className="flex size-11 items-center justify-center rounded-full bg-surface text-success"
-            >
-              <Check className="size-6" />
-            </span>
-            <h2 className="mt-4 text-xl leading-snug font-bold text-ink">코스를 확정했어요</h2>
-            <p className="mt-1.5 text-[15px] font-bold text-ink">
+        {/* 완료 카드는 신청자 보드와 상관없이 늘 그린다 — 보드는 승인 수 줄에만 쓴다(데이터 우선 렌더링). */}
+        <section className="mt-3 rounded-xl bg-brand-soft p-5">
+          <span
+            aria-hidden
+            className="flex size-11 items-center justify-center rounded-full bg-surface text-success"
+          >
+            <Check className="size-6" />
+          </span>
+          <h2 className="mt-4 text-xl leading-snug font-bold text-ink">코스를 확정했어요</h2>
+          <p className="mt-1.5 text-[13px] text-muted">
+            {`${formatMonthDay(tour.startsAt)} ${formatTimeRange(tour.startsAt, tour.endsAt)}`}
+          </p>
+          <p className="mt-1 text-[13px] text-muted">
+            {`${stops.map(stopKindLabel).join(' · ')} / 총 ${stops.length}개 장소`}
+          </p>
+          {board !== undefined ? (
+            <p className="mt-3 text-[15px] font-bold text-ink">
               {`참가 승인 ${board.counts.approved}명 · 쿠폰 ${issuedCouponCount}장 발급`}
             </p>
-            {issuedCouponCount === 0 ? (
-              <p className="mt-1 text-[13px] text-muted">
-                코스에 제휴 상점이 없어 발급된 쿠폰이 없어요.
+          ) : boardQuery.isError ? (
+            <div className="mt-3 flex items-center justify-between gap-3">
+              <p className="min-w-0 text-[13px] text-muted">
+                {errorMessage(boardQuery.error.code)}
               </p>
-            ) : null}
-          </section>
-        )}
+              <Button variant="secondary" size="sm" onClick={() => void boardQuery.refetch()}>
+                다시 시도
+              </Button>
+            </div>
+          ) : (
+            <Skeleton className="mt-3 h-6 w-2/3" />
+          )}
+          {issuedCouponCount === 0 ? (
+            <p className="mt-1 text-[13px] text-muted">
+              코스에 제휴 상점이 없어 발급된 쿠폰이 없어요.
+            </p>
+          ) : null}
+          <p className="mt-3 text-[13px] text-muted">
+            코스 확정 후에 신청을 승인하면 새 승인자에게도 쿠폰을 발급해요.
+          </p>
+        </section>
 
         <BottomAction>
           <Link to="/guide/tours" className={buttonClass('primary')}>

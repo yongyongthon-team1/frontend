@@ -109,17 +109,26 @@ describe('내가 개설한 탐방 (G06 · guide-a02)', () => {
     ]);
   });
 
-  it('진행 예정 탐방이 없으면 빈 상태', async () => {
+  it('진행 예정 탐방이 없고 지난 탐방만 있으면 `진행 예정인 탐방이 없어요.`', async () => {
     await renderPatched('/guide/tours', { as: 'guide' }, (db) => {
       for (const t of db.tours) {
         if (t.status === 'RECRUITING' || t.status === 'CLOSED') t.status = 'COMPLETED';
       }
     });
-    expect(await screen.findByText('아직 개설한 탐방이 없어요.')).toBeInTheDocument();
+    expect(await screen.findByText('진행 예정인 탐방이 없어요.')).toBeInTheDocument();
+    expect(screen.queryByText('아직 개설한 탐방이 없어요.')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '새 탐방 개설하기' })).toHaveAttribute(
       'href',
       '/guide/tours/new',
     );
+  });
+
+  it('개설한 탐방이 하나도 없으면 `아직 개설한 탐방이 없어요.`', async () => {
+    await renderPatched('/guide/tours', { as: 'guide' }, (db) => {
+      db.tours.length = 0;
+    });
+    expect(await screen.findByText('아직 개설한 탐방이 없어요.')).toBeInTheDocument();
+    expect(screen.queryByText('진행 예정인 탐방이 없어요.')).not.toBeInTheDocument();
   });
 
   describe('지난 탐방 탭', () => {

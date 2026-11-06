@@ -9,6 +9,7 @@ import { fromSearch, toSearch } from '@/features/tours/recommendationParams';
 import { formatDotDate } from '@/shared/lib/date';
 import { AiBadge } from '@/shared/ui/AiBadge';
 import { AiLoading } from '@/shared/ui/AiLoading';
+import { AiReasonPrefix } from '@/shared/ui/AiReasonPrefix';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { FilterChips } from '@/shared/ui/FilterChips';
 import { Illustration } from '@/shared/ui/Illustration';
@@ -134,7 +135,7 @@ export function RecommendationsPage() {
                       metaTone="brand"
                       meta={
                         <span data-testid="recommendation-reason-line" className="block truncate">
-                          <span aria-hidden>✦ </span>
+                          <AiReasonPrefix />
                           {formatDotDate(tour.startsAt)} · {reason}
                         </span>
                       }

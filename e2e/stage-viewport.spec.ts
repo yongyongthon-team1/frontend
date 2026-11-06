@@ -39,7 +39,8 @@ async function expectVisibleWithoutScroll(page: Page, targets: Locator[], name: 
   const tabBar = page.getByRole('navigation', { name: '주요 메뉴' });
   await expect(tabBar).toBeVisible();
   const tabBarTop = (await boxOf(tabBar)).y;
-  // 기준점은 상단 바 하단(main 상단 + 56) — 세 무대 화면 모두 TopBar가 있다. 가용 높이가 머리 주석의 452 · 432 · 422다.
+  // 기준점은 main 상단 + 56. 코스 · 쿠폰 화면은 TopBar(56)가 있고, 무대 ①(H02)은 TopBar 없이 자기 뒤로 가기 줄
+  // (`pt-2` + `h-12` = 56)이 같은 기준선을 만든다. 가용 높이가 머리 주석의 452 · 432 · 422다.
   const bodyTop = (await boxOf(page.getByRole('main'))).y + TOPBAR_HEIGHT;
   let lowest = 0;
   for (const target of targets) {

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { computeCouponState, couponNotice, couponStateLabel, formatCouponCode } from './model';
+import {
+  computeCouponState,
+  couponNotice,
+  couponStateLabel,
+  couponStateTone,
+  formatCouponCode,
+} from './model';
 
 const issued = {
   status: 'ISSUED' as const,
@@ -26,6 +32,15 @@ describe('computeCouponState', () => {
     expect(
       computeCouponState({ ...issued, status: 'EXPIRED' }, new Date('2026-11-14T12:00:00+09:00')),
     ).toBe('EXPIRED'));
+});
+
+describe('couponStateTone', () => {
+  it.each([
+    ['USABLE', 'success'],
+    ['BEFORE_DAY', 'neutral'],
+    ['EXPIRED', 'neutral'],
+    ['USED', 'neutral'], // 사용 완료는 목록과 상세 모두 "다 쓴" neutral
+  ] as const)('%s → %s', (state, tone) => expect(couponStateTone(state)).toBe(tone));
 });
 
 describe('couponStateLabel', () => {

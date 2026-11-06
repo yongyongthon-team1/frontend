@@ -1,5 +1,5 @@
 import { Navigate, useParams } from 'react-router';
-import { couponStateLabel } from '@/features/coupons/model';
+import { couponStateLabel, couponStateTone } from '@/features/coupons/model';
 import { useMyCoupons } from '@/features/coupons/queries';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
@@ -47,7 +47,7 @@ export function CouponListPage() {
                   title={coupon.storeName}
                   meta={coupon.discount}
                   right={
-                    <StatusChip tone={coupon.state === 'USABLE' ? 'success' : 'neutral'}>
+                    <StatusChip tone={couponStateTone(coupon.state)}>
                       {couponStateLabel(coupon.state, coupon.usedAt)}
                     </StatusChip>
                   }

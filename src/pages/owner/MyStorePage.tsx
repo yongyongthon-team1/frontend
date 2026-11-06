@@ -1,3 +1,4 @@
+import { useState } from 'react';
 import { Link } from 'react-router';
 import { useLogout } from '@/features/auth/queries';
 import {
@@ -42,13 +43,20 @@ function illustrationFor(category: string): IllustrationKind {
  */
 function Header() {
   const logout = useLogout();
+  // 연타해도 로그아웃은 한 번: 진행 중에는 버튼을 잠근다(`PlaceholderPage`의 로그아웃 버튼과 같은 방식).
+  const [pending, setPending] = useState(false);
   return (
     <div className="flex items-center justify-between">
       <BrandMark variant="wordmark" />
       <button
         type="button"
-        onClick={() => void logout()}
-        className="relative right-[var(--header-action-clear,0px)] -mr-3 inline-flex min-h-11 items-center px-3 text-sm font-bold text-muted hover:text-ink"
+        disabled={pending}
+        aria-busy={pending}
+        onClick={() => {
+          setPending(true);
+          void logout().finally(() => setPending(false));
+        }}
+        className="relative right-[var(--header-action-clear,0px)] -mr-3 inline-flex min-h-11 items-center px-3 text-sm font-bold text-muted hover:text-ink disabled:opacity-50"
       >
         로그아웃
       </button>
@@ -64,6 +72,7 @@ export function MyStorePage() {
   if (store === undefined) {
     return (
       <Page className="pt-6">
+        <h1 className="sr-only">내 가게</h1>
         <Header />
         {query.isError ? (
           <div className="mt-6">

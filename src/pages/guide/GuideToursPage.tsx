@@ -125,7 +125,7 @@ export function GuideToursPage() {
             </>
           )
         ) : tab === 'upcoming' ? (
-          <UpcomingList tours={orderUpcoming(tours)} />
+          <UpcomingList tours={orderUpcoming(tours)} hasPast={tours.length > 0} />
         ) : (
           <PastList tours={orderPast(tours)} />
         )}
@@ -134,11 +134,12 @@ export function GuideToursPage() {
   );
 }
 
-function UpcomingList({ tours }: { tours: GuideTourSummary[] }) {
+/** `hasPast`: 진행 예정은 없지만 개설한 탐방 자체는 있다(지난 탐방) — "개설한 탐방이 없다"고 말하지 않는다. */
+function UpcomingList({ tours, hasPast }: { tours: GuideTourSummary[]; hasPast: boolean }) {
   if (tours.length === 0) {
     return (
       <EmptyState
-        title="아직 개설한 탐방이 없어요."
+        title={hasPast ? '진행 예정인 탐방이 없어요.' : '아직 개설한 탐방이 없어요.'}
         action={{ label: '새 탐방 개설하기', to: '/guide/tours/new' }}
       />
     );

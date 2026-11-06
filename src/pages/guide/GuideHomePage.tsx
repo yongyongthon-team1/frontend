@@ -51,6 +51,7 @@ export function GuideHomePage() {
   if (tours === undefined) {
     return (
       <Page className="pt-6">
+        <h1 className="sr-only">내 탐방</h1>
         <div>
           <BrandMark variant="wordmark" />
         </div>
@@ -83,7 +84,7 @@ export function GuideHomePage() {
         />
         <div className="mt-6">
           <EmptyState
-            title="아직 개설한 탐방이 없어요."
+            title={tours.length > 0 ? '진행 예정인 탐방이 없어요.' : '아직 개설한 탐방이 없어요.'}
             action={{ label: '새 탐방 개설하기', to: '/guide/tours/new' }}
           />
         </div>

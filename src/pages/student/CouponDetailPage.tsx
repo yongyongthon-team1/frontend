@@ -1,7 +1,12 @@
 import { Check } from 'lucide-react';
 import { useEffect } from 'react';
 import { Link, useParams } from 'react-router';
-import { couponStateLabel, formatCouponCode, type Coupon } from '@/features/coupons/model';
+import {
+  couponStateLabel,
+  couponStateTone,
+  formatCouponCode,
+  type Coupon,
+} from '@/features/coupons/model';
 import { useMyCoupon } from '@/features/coupons/queries';
 import { useDemoStore } from '@/demo/demoStore';
 import { cn } from '@/shared/lib/cn';
@@ -20,11 +25,7 @@ import { TopBar } from '@/shared/ui/TopBar';
 function StoreBlock({ coupon, chip }: { coupon: Coupon; chip: string }) {
   return (
     <>
-      <StatusChip
-        tone={coupon.state === 'USED' || coupon.state === 'USABLE' ? 'success' : 'neutral'}
-      >
-        {chip}
-      </StatusChip>
+      <StatusChip tone={couponStateTone(coupon.state)}>{chip}</StatusChip>
       <h3 className="mt-3 text-[19px] leading-[1.4] font-bold text-ink">{coupon.storeName}</h3>
       <p className="text-[15px] text-muted">{coupon.discount}</p>
     </>

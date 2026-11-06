@@ -102,7 +102,9 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     await renderStore();
     expect(await screen.findByRole('button', { name: '로그아웃' })).toBeInTheDocument();
     expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
-    expect(screen.queryByRole('heading', { level: 1 })).not.toBeInTheDocument();
+    // 화면 낭독기용 h1만 있고(눈에 보이는 제목은 데이터가 온 뒤에), 가게 제목은 아직 없다.
+    expect(screen.getByRole('heading', { level: 1, name: '내 가게' })).toHaveClass('sr-only');
+    expect(screen.queryByRole('heading', { name: /학생들이 가게를/ })).not.toBeInTheDocument();
     expect(screen.queryByText('아직 연결된 가게가 없어요.')).not.toBeInTheDocument();
   });
 
@@ -114,6 +116,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     );
     const { user } = await renderStore();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '내 가게' })).toBeInTheDocument();
     expect(screen.queryByText('아직 연결된 가게가 없어요.')).not.toBeInTheDocument();
     server.resetHandlers();
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
@@ -144,6 +147,24 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(useSession.getState().token).toBeNull();
     expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument();
+  });
+
+  it('로그아웃을 연타해도 로그아웃 요청은 한 번이고, 진행 중에는 버튼이 잠긴다', async () => {
+    let logouts = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST' && request.url.endsWith('/auth/logout')) logouts++;
+    });
+    try {
+      const { user, router } = await renderStore();
+      await screen.findByText('서천 밥상');
+      const button = screen.getByRole('button', { name: '로그아웃' });
+      await user.dblClick(button);
+      expect(button).toBeDisabled();
+      await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+      expect(logouts).toBe(1);
+    } finally {
+      server.events.removeAllListeners('request:start');
+    }
   });
 
   it('하단 탭: 내 가게가 현재 탭', async () => {

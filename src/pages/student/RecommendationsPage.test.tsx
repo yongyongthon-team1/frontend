@@ -77,7 +77,10 @@ describe('AI 추천 목록 (hs-s04 · H02 · hs-a06 · H13)', () => {
     expect(first).toHaveTextContent(/\d\d\.\d\d · /);
     // 첫 행의 메타에 첫 추천 이유가 들어간다.
     const line = within(first).getByTestId('recommendation-reason-line');
-    expect(line.textContent).toMatch(/^✦ \d\d\.\d\d · .*관심이 있다고 해서/);
+    // ✦는 장식(숨김), 화면 낭독기에는 `AI 추천 이유:`가 읽힌다.
+    expect(line.textContent).toMatch(/^✦AI 추천 이유: \d\d\.\d\d · .*관심이 있다고 해서/);
+    expect(within(line).getByText('✦')).toHaveAttribute('aria-hidden', 'true');
+    expect(within(line).getByText('AI 추천 이유:')).toHaveClass('sr-only');
     // 아래 상자에도 같은 이유(전문)가 있다.
     const box = screen.getByText('왜 추천했나요?').closest('section')!;
     expect(box.textContent).toContain(line.textContent!.replace(/^.*? · /, ''));
