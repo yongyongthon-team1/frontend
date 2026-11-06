@@ -1,146 +1,154 @@
-import { useState } from 'react';
-import { Link, useParams } from 'react-router';
-import { toast } from 'sonner';
-import { studentCourseLabel } from '@/features/courses/model';
+import { ChevronRight } from 'lucide-react';
+import type { ReactNode } from 'react';
+import { Link, useNavigate, useParams } from 'react-router';
 import type { ApplicationStatus } from '@/features/applications/model';
-import { useCancelMyApplication, useMyApplication } from '@/features/applications/queries';
-import { formatMonthDay, formatShortDate, formatTimeRange } from '@/shared/lib/date';
-import { errorMessage } from '@/shared/lib/errors';
+import { useMyApplication } from '@/features/applications/queries';
+import { campusLabel } from '@/features/tours/model';
+import { formatDotDateWeekday, formatTimeRange } from '@/shared/lib/date';
 import type { Tone } from '@/shared/lib/types';
+import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
-import { buttonClass } from '@/shared/ui/buttonStyles';
-import { ConfirmDialog } from '@/shared/ui/ConfirmDialog';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { InfoCard } from '@/shared/ui/InfoCard';
 import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
+import { toneTextClass } from '@/shared/ui/tone';
 import { TopBar } from '@/shared/ui/TopBar';
 
-const STATUS_CHIP: Record<ApplicationStatus, { label: string; tone: Tone }> = {
-  APPROVED: { label: '✓ 신청 승인 완료', tone: 'success' },
-  PENDING: { label: '⌛ 가이드 승인 대기 중', tone: 'warning' },
-  REJECTED: { label: '신청 거절', tone: 'danger' },
-  CANCELED: { label: '취소됨', tone: 'neutral' },
+// 가이드 승인 상태 한 단어. 칩과 상태 행이 같은 문구 · 색을 쓴다.
+const STATUS: Record<ApplicationStatus, { label: string; chipTone: Tone; textTone: Tone }> = {
+  APPROVED: { label: '참여 확정', chipTone: 'success', textTone: 'success' },
+  PENDING: { label: '승인 대기', chipTone: 'neutral', textTone: 'info' },
+  REJECTED: { label: '신청 거절', chipTone: 'danger', textTone: 'danger' },
+  CANCELED: { label: '취소됨', chipTone: 'neutral', textTone: 'neutral' },
 };
 
-/** 내 탐방 상세(hs-s07). 오픈채팅은 서버가 승인된 신청에만 준다. 취소 가능 여부도 서버 값(`cancellable`)을 그린다. */
+function LinkRow({ title, description }: { title: string; description: string }) {
+  return (
+    <>
+      <div className="min-w-0 flex-1">
+        <p className="flex items-center gap-1 text-[17px] font-bold text-ink">
+          {title}
+          <ChevronRight aria-hidden className="size-4 shrink-0 text-muted" />
+        </p>
+        <p className="mt-1 text-xs text-muted">{description}</p>
+      </div>
+    </>
+  );
+}
+
+const rowClass = 'flex items-center gap-3 rounded-lg bg-surface px-5 py-4';
+
+function Header({ children }: { children?: ReactNode }) {
+  return (
+    <>
+      <TopBar title="신청 내역 상세" back="/my-tours" />
+      <Page>{children}</Page>
+    </>
+  );
+}
+
+/** 신청 내역 상세(hs-s07 · V2 H10). 오픈채팅은 서버가 승인된 신청에만 준다. 취소 가능 여부도 서버 값(`cancellable`)을 그린다. */
 export function MyTourDetailPage() {
   const applicationId = Number(useParams().applicationId);
+  const navigate = useNavigate();
   const query = useMyApplication(applicationId);
-  const cancel = useCancelMyApplication(applicationId);
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const { data: app } = query;
 
   // 다시 불러오다 실패해도 이미 받은 신청은 그대로 보인다(판정 24) — 오류 화면은 받은 데이터가 없을 때만.
   if (app === undefined && query.isError) {
     return (
-      <>
-        <TopBar title="내 탐방" back="/my-tours" />
-        <Page>
-          <ErrorState error={query.error} onRetry={() => void query.refetch()} />
-        </Page>
-      </>
+      <Header>
+        <ErrorState error={query.error} onRetry={() => void query.refetch()} />
+      </Header>
     );
   }
   if (app === undefined) {
     return (
-      <>
-        <TopBar title="내 탐방" back="/my-tours" />
-        <Page>
-          <Skeleton className="h-12" />
-          <Skeleton className="mt-4 h-8 w-3/4" />
-          <Skeleton className="mt-4 h-28" />
-          <Skeleton className="mt-3 h-24" />
-        </Page>
-      </>
+      <Header>
+        <Skeleton className="h-12" />
+        <Skeleton className="mt-5 h-[140px] rounded-xl" />
+        <Skeleton className="mt-3 h-[70px]" />
+        <Skeleton className="mt-3 h-[70px]" />
+      </Header>
     );
   }
 
   const { tour } = app;
-  const chip = STATUS_CHIP[app.status];
+  const status = STATUS[app.status];
   const active = app.status === 'PENDING' || app.status === 'APPROVED';
-  // 지도 · 쿠폰은 승인된 신청자에게만 열린다(서버도 승인 대기 신청에는 코스를 주지 않는다 · 쿠폰은 승인자에게만 발급).
+  // 코스는 승인된 신청자에게만 열린다(서버도 승인 대기 신청에는 코스를 주지 않는다).
   const courseOpen = app.status === 'APPROVED' && app.courseStatus === 'CONFIRMED';
-
-  function onConfirmCancel() {
-    cancel.mutate(undefined, {
-      onSuccess: () => {
-        setConfirmOpen(false);
-        toast('신청을 취소했어요.');
-      },
-      onError: (error) => {
-        setConfirmOpen(false);
-        toast.error(errorMessage(error.code));
-      },
-    });
-  }
 
   return (
     <>
-      <TopBar title="내 탐방" back="/my-tours" />
-      <Page>
-        <StatusChip tone={chip.tone}>{chip.label}</StatusChip>
-        <h2 className="mt-4 text-2xl leading-snug font-bold text-ink">
-          {app.status === 'APPROVED' ? `${formatMonthDay(tour.startsAt)}에 만나요!` : tour.title}
-        </h2>
+      <TopBar title="신청 내역 상세" back="/my-tours" />
+      <Page className={active ? BOTTOM_ACTION_PAGE : undefined}>
+        <PageHeading as="h2" title="신청 내역" description="참여 일정을 확인하고 준비해 주세요." />
 
-        <div className="mt-4 flex flex-col gap-3">
-          <InfoCard
-            title={`${tour.universityName} ${tour.campusName}`}
-            description={`${formatShortDate(tour.startsAt)} ${formatTimeRange(tour.startsAt, tour.endsAt)} · ${tour.guideName} 가이드`}
-          >
-            {active ? (
-              <p className="text-sm font-semibold text-ink">
-                진행 상태 · {studentCourseLabel(app.courseStatus)}
-              </p>
-            ) : null}
-          </InfoCard>
+        <section className="mt-5 rounded-xl bg-surface p-5">
+          <StatusChip tone={status.chipTone}>{status.label}</StatusChip>
+          <h3 className="mt-3 text-xl leading-snug font-bold text-ink">{tour.title}</h3>
+          <p className="mt-2 text-[13px] text-muted">
+            {formatDotDateWeekday(tour.startsAt)} · {formatTimeRange(tour.startsAt, tour.endsAt)}
+          </p>
+          <p className="mt-1 text-[13px] text-muted">
+            {campusLabel(tour.universityName, tour.campusName)}
+          </p>
+        </section>
+
+        <div className="mt-3 flex flex-col gap-3">
+          <div className="rounded-lg bg-surface px-5 py-4">
+            <p className="text-[13px] text-muted">가이드 승인 상태</p>
+            <p className={`mt-1 text-[17px] font-bold ${toneTextClass[status.textTone]}`}>
+              {status.label}
+            </p>
+          </div>
 
           {app.openChatUrl ? (
-            <InfoCard
-              title="가이드와 오픈채팅 참여하기"
-              description="승인된 신청자에게만 링크가 열려요."
-              muted
+            <a
+              href={app.openChatUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className={rowClass}
             >
-              <a
-                href={app.openChatUrl}
-                target="_blank"
-                rel="noopener noreferrer"
-                className={buttonClass('secondary')}
-              >
-                오픈채팅 바로가기 ↗
-              </a>
-            </InfoCard>
+              <LinkRow title="가이드 오픈채팅" description="승인된 참가자만 입장할 수 있어요." />
+            </a>
           ) : null}
 
           {active ? (
-            <InfoCard title="캠퍼스 & 상권 코스">
-              {courseOpen ? (
-                <div className="flex flex-col gap-2">
-                  <Link to={`/my-tours/${app.id}/course`} className={buttonClass('primary')}>
-                    코스 지도 보기
-                  </Link>
-                  <Link to={`/my-tours/${app.id}/coupons`} className={buttonClass('secondary')}>
-                    쿠폰 보기
-                  </Link>
-                </div>
-              ) : (
-                <p className="text-sm text-muted">
+            courseOpen ? (
+              <Link to={`/my-tours/${app.id}/course`} className={rowClass}>
+                <LinkRow title="코스 보기" description="캠퍼스 · 전공 Q&A · 로컬 상점" />
+              </Link>
+            ) : (
+              <div className="rounded-lg bg-surface px-5 py-4">
+                <p className="text-[17px] font-bold text-ink">코스 보기</p>
+                <p className="mt-1 text-xs text-muted">
                   {app.status === 'PENDING'
                     ? '가이드가 신청을 승인하면 지도와 쿠폰이 공개돼요.'
                     : '가이드가 코스를 확정하면 지도와 쿠폰이 공개돼요.'}
                 </p>
-              )}
-            </InfoCard>
+              </div>
+            )
+          ) : null}
+
+          {active ? (
+            <p className="rounded-lg bg-brand-soft px-4 py-3 text-[13px] text-muted">
+              신청을 취소하면 참여 권한과 발급 쿠폰이 무효화돼요.
+            </p>
           ) : null}
         </div>
 
         {active ? (
-          <div className="mt-6">
+          <BottomAction>
             {app.cancellable ? (
-              <Button variant="secondary" onClick={() => setConfirmOpen(true)}>
-                탐방 신청 취소
+              <Button
+                variant="secondary"
+                onClick={() => void navigate(`/my-tours/${app.id}/cancel`)}
+              >
+                신청 취소하기
               </Button>
             ) : (
               <Button
@@ -148,22 +156,12 @@ export function MyTourDetailPage() {
                 disabled
                 hint={{ reason: '탐방 날짜가 되어 취소할 수 없어요.' }}
               >
-                탐방 신청 취소
+                신청 취소하기
               </Button>
             )}
-          </div>
+          </BottomAction>
         ) : null}
       </Page>
-
-      <ConfirmDialog
-        open={confirmOpen}
-        onOpenChange={setConfirmOpen}
-        title="신청을 취소할까요?"
-        description="승인된 신청을 취소하면 자리가 다른 학생에게 돌아가고, 발급된 쿠폰은 만료돼요."
-        confirmLabel="신청 취소"
-        onConfirm={onConfirmCancel}
-        pending={cancel.isPending}
-      />
     </>
   );
 }

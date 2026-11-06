@@ -61,14 +61,14 @@ describe('시연 패널', () => {
       checkpoint: 'APPLIED',
     });
     act(() => useDemoStore.setState({ enabled: true }));
-    await screen.findByText('신청 · 가이드 승인 대기');
+    await screen.findByText('신청 접수 완료 · 가이드 승인 대기 중');
     const keysBefore = queryClient.getQueryCache().getAll().length;
     expect(keysBefore).toBeGreaterThan(0);
     const clear = vi.spyOn(queryClient, 'clear');
     await user.click(screen.getByRole('button', { name: '가이드' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/guide'));
     expect(clear).toHaveBeenCalled();
-    expect(screen.queryByText('신청 · 가이드 승인 대기')).toBeNull();
+    expect(screen.queryByText('신청 접수 완료 · 가이드 승인 대기 중')).toBeNull();
     // 판정 G2: 이전 역할의 데이터가 캐시에 남지 않는다.
     expect(queryClient.getQueryData(qk.myApplications)).toBeUndefined();
     expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: DEMO_EMAILS.guide });
@@ -88,7 +88,7 @@ describe('시연 패널', () => {
         checkpoint: 'APPLIED',
       });
       act(() => useDemoStore.setState({ enabled: true, activeDemoEmail: STUDENT }));
-      await screen.findByText('신청 · 가이드 승인 대기');
+      await screen.findByText('신청 접수 완료 · 가이드 승인 대기 중');
       const studentToken = useSession.getState().token;
       const clear = vi.spyOn(queryClient, 'clear');
 
@@ -124,7 +124,7 @@ describe('시연 패널', () => {
         checkpoint: 'APPLIED',
       });
       act(() => useDemoStore.setState({ enabled: true, activeDemoEmail: STUDENT }));
-      await screen.findByText('신청 · 가이드 승인 대기');
+      await screen.findByText('신청 접수 완료 · 가이드 승인 대기 중');
       const token = useSession.getState().token;
       const clear = vi.spyOn(queryClient, 'clear');
       // 로그인 실패 401은 세션 만료가 아니다 — 지금 세션의 복구 · 로그아웃을 부르면 안 된다.
@@ -140,14 +140,14 @@ describe('시연 패널', () => {
       expect(useSession.getState().token).toBe(token);
       expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: STUDENT });
       expect(useDemoStore.getState().activeDemoEmail).toBe(STUDENT);
-      expect(screen.getByText('신청 · 가이드 승인 대기')).toBeInTheDocument();
+      expect(screen.getByText('신청 접수 완료 · 가이드 승인 대기 중')).toBeInTheDocument();
       expect(clear).not.toHaveBeenCalled();
     });
 
     it('전환 중에 다른 역할을 눌러도 무시한다(로그인 요청 1번)', async () => {
       const { user, router } = await renderApp('/my-tours', { as: 'student' });
       act(() => useDemoStore.setState({ enabled: true }));
-      await screen.findByRole('heading', { name: '내 탐방 · 신청 상태' });
+      await screen.findByRole('heading', { name: '내 탐방' });
       setMockLatency({ base: 150, ai: 0 }); // 첫 전환의 로그인이 진행 중일 때 두 번째 클릭이 들어오게
       const logins = countLogins();
 
@@ -352,7 +352,7 @@ describe('시연 계정 자동 재로그인', () => {
   it('시연 계정의 요청이 401이면 한 번 다시 로그인하고, 같은 페이지 세션의 두 번째 401은 로그아웃', async () => {
     const { router, queryClient } = await renderApp('/my-tours', { as: 'student' });
     act(() => useDemoStore.setState({ activeDemoEmail: STUDENT }));
-    await screen.findByRole('heading', { name: '내 탐방 · 신청 상태' });
+    await screen.findByRole('heading', { name: '내 탐방' });
     const logins = countLogins();
 
     dropServerSessions();
@@ -376,7 +376,7 @@ describe('시연 계정 자동 재로그인', () => {
 
   it('시연 계정이 아니면 다시 로그인하지 않고 바로 로그아웃', async () => {
     const { router, queryClient } = await renderApp('/my-tours', { as: 'student' });
-    await screen.findByRole('heading', { name: '내 탐방 · 신청 상태' });
+    await screen.findByRole('heading', { name: '내 탐방' });
     const logins = countLogins();
     dropServerSessions();
     await act(() => queryClient.invalidateQueries({ queryKey: qk.me }));

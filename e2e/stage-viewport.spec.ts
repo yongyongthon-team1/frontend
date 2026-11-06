@@ -83,7 +83,7 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
     test('③ 쿠폰 상세: 6자리 코드', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&checkpoint=CONFIRMED&as=student');
       await page.getByRole('link', { name: '내 탐방', exact: true }).click();
-      await page.getByRole('link', { name: /코스 지도 보기/ }).click();
+      await page.getByRole('link', { name: '코스 확인하기', exact: true }).click();
       await page.getByRole('link', { name: '제휴 상점 쿠폰 확인' }).click();
       await expect(page.getByRole('heading', { name: '내 쿠폰' })).toBeVisible();
       await page.getByRole('main').getByRole('listitem').getByRole('link').first().click();

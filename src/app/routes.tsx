@@ -8,6 +8,7 @@ import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
+import { CancelApplicationPage } from '@/pages/student/CancelApplicationPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
 import { ApplyPage } from '@/pages/student/ApplyPage';
 import { CouponDetailPage } from '@/pages/student/CouponDetailPage';
@@ -107,7 +108,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/my-tours/:applicationId/cancel',
-                    element: <PlaceholderPage title="신청 취소" wireframe="h11" />, // Task 6
+                    element: <CancelApplicationPage />,
                   },
                   {
                     path: '/coupons/:couponId',

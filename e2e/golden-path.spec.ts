@@ -104,7 +104,7 @@ for (const { title, link, present } of VARIANTS) {
     await expect(page.getByText(/쿠폰 [1-9]\d*장 발급/)).toBeVisible();
     await checkRoleBadge('가이드 화면');
 
-    // 고교생: 내 탐방 → 코스 지도 → 제휴 상점 쿠폰 → 6자리 코드(순서를 바꿨으므로 첫 쿠폰은 상점 1이 아니다)
+    // 고교생: 내 탐방 → 코스 확인하기(코스 화면) → 제휴 상점 쿠폰 → 6자리 코드(순서를 바꿨으므로 첫 쿠폰은 상점 1이 아니다)
     await switchRole('고교생');
     // 가이드 탭에도 `내 탐방`이 있으므로, 역할 전환이 끝나(고교생 홈) 그 탭이 사라진 뒤에 누른다.
     // (고교생 홈의 제목은 바뀔 수 있으니, 역할이 바뀌어도 변하지 않는 신호 — 고교생 탭 `탐색`이 켜진 것 — 를 기다린다.)
@@ -113,9 +113,9 @@ for (const { title, link, present } of VARIANTS) {
       'page',
     );
     await page.getByRole('link', { name: '내 탐방', exact: true }).click();
-    await expect(page.getByRole('heading', { name: '내 탐방 · 신청 상태' })).toBeVisible();
+    await expect(page.getByRole('heading', { name: '내 탐방', exact: true })).toBeVisible();
     await checkRoleBadge('고교생 화면');
-    await page.getByRole('link', { name: /코스 지도 보기/ }).click();
+    await page.getByRole('link', { name: '코스 확인하기', exact: true }).click();
     await expect(page.getByText('오늘의 탐방 코스')).toBeVisible();
     await page.getByRole('link', { name: '제휴 상점 쿠폰 확인' }).click();
     await page.getByRole('link', { name: /할인/ }).first().click();

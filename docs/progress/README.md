@@ -33,7 +33,7 @@
 | `hs-s04` | AI 추천 탐방 목록 · V2(H02) | `/recommendations` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s05` | 탐방 상세 · 신청 · V2(H03) | `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s06` | 신청 완료 · 승인 대기 · V2(H08) | `/tours/:tourId/apply/done` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `hs-s07` | 내 탐방 · 승인 완료 | `/my-tours/:applicationId` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| `hs-s07` | 내 탐방 · 승인 완료 · V2(H10 신청 내역 상세) | `/my-tours/:applicationId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s08` | 탐방 코스 지도 | `/my-tours/:applicationId/course` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `hs-s09` | 상점 쿠폰 · 사용 | `/my-tours/:applicationId/coupons` · `/coupons/:couponId` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `hs-s10` | 방문 리뷰 작성 | `/reviews/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -41,7 +41,9 @@
 | `hs-a02` | 보호자 동의 페이지 | `/consent/:token` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a03` | 내 정보 · 인증 상태 | `/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a04` | 탐방 신청서 · V2(H07) | `/tours/:tourId/apply` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `hs-a05` | 내 탐방 상태별 목록 | `/my-tours` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| `hs-a05` | 내 탐방 상태별 목록 · V2(H06 예정된 탐방) | `/my-tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `H09` | 지난 탐방 (V2) | `/my-tours?tab=past` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `H11` | 신청 취소 확인 (V2, 확인 창 대체) | `/my-tours/:applicationId/cancel` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-a06` | 탐방 추천·신청 예외 상태 · V2(H13 추천 0건 · 탐방 상세의 마감 · 중복 신청 카드) | `/recommendations` · `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `G01` | 가이드 홈 (V2) | `/guide` | P0 | 🟨 | ⬜ | ⬜ | ⬜ | ⬜ |
 | — | 코스 편집 탭 (다가오는 탐방의 코스로 이동) | `/guide/course` | P0 | 🟨 | ⬜ | ⬜ | ⬜ | ⬜ |

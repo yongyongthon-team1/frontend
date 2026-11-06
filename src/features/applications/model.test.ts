@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TourSummary } from '@/features/tours/model';
 import {
   guideCoursePath,
-  myTourDisplay,
+  groupMyApplications,
   pickFocusTour,
   type GuideTourSummary,
   type MyApplication,
@@ -38,83 +38,52 @@ const app: MyApplication = {
   cancellable: true,
 };
 
-const rec = '/recommendations?q=a';
+const mk = (
+  id: number,
+  status: MyApplication['status'],
+  tourStatus: TourSummary['status'],
+  startsAt: string,
+): MyApplication => ({ ...app, id, status, tour: { ...tour, id, status: tourStatus, startsAt } });
 
-describe('myTourDisplay', () => {
-  it('가이드가 탐방을 취소하면 쿠폰 만료 안내', () =>
-    expect(
-      myTourDisplay({ ...app, status: 'CANCELED', tour: { ...tour, status: 'CANCELED' } }, rec),
-    ).toEqual({
-      label: '취소 · 쿠폰 만료',
-      description: '경희대 컴퓨터공학과 탐방 · 가이드가 탐방을 취소했어요',
-      tone: 'neutral',
-      action: null,
-    }));
+describe('groupMyApplications', () => {
+  const ids = (apps: MyApplication[]) => apps.map((a) => a.id);
 
-  it('내가 신청을 취소한 경우', () =>
-    expect(myTourDisplay({ ...app, status: 'CANCELED' }, rec)).toEqual({
-      label: '취소 · 쿠폰 만료',
-      description: '경희대 컴퓨터공학과 탐방 · 신청을 취소했어요',
-      tone: 'neutral',
-      action: null,
-    }));
+  it('신청이 없으면 빈 묶음 셋', () =>
+    expect(groupMyApplications([])).toEqual({ upcoming: [], pending: [], past: [] }));
 
-  it('거절되면 추천 탐방으로 다시 이동', () =>
-    expect(myTourDisplay({ ...app, status: 'REJECTED' }, rec)).toEqual({
-      label: '거절 · 다른 탐방 보기',
-      description: '경희대 컴퓨터공학과 탐방 · 신청 거절',
-      tone: 'danger',
-      action: { label: '추천 탐방으로 다시 이동', to: rec },
-    }));
+  it('승인 + 모집 중 · 마감은 예정, 대기 + 끝나지 않은 탐방은 승인 대기', () => {
+    const g = groupMyApplications([
+      mk(1, 'APPROVED', 'RECRUITING', '2026-11-20T14:00:00+09:00'),
+      mk(2, 'APPROVED', 'CLOSED', '2026-11-12T14:00:00+09:00'),
+      mk(3, 'PENDING', 'RECRUITING', '2026-11-18T14:00:00+09:00'),
+      mk(4, 'PENDING', 'CLOSED', '2026-11-14T14:00:00+09:00'),
+    ]);
+    expect(ids(g.upcoming)).toEqual([2, 1]); // 시작 시각 빠른 순
+    expect(ids(g.pending)).toEqual([4, 3]);
+    expect(g.past).toEqual([]);
+  });
 
-  it('승인 대기 + 취소 가능', () =>
-    expect(myTourDisplay(app, rec)).toEqual({
-      label: '신청 · 가이드 승인 대기',
-      description: '경희대 컴퓨터공학과 탐방 · 11/15(일)',
-      tone: 'warning',
-      action: { label: '승인 전 직접 취소 가능', to: '/my-tours/21' },
-    }));
+  it('탐방이 끝났거나 취소됐거나 신청이 거절 · 취소면 지난 탐방(최근 먼저)', () => {
+    const g = groupMyApplications([
+      mk(1, 'APPROVED', 'COMPLETED', '2026-10-17T14:00:00+09:00'),
+      mk(2, 'APPROVED', 'CANCELED', '2026-10-29T14:00:00+09:00'),
+      mk(3, 'REJECTED', 'RECRUITING', '2026-11-20T14:00:00+09:00'),
+      mk(4, 'CANCELED', 'RECRUITING', '2026-11-03T14:00:00+09:00'),
+      mk(5, 'PENDING', 'COMPLETED', '2026-10-01T14:00:00+09:00'),
+    ]);
+    expect(ids(g.past)).toEqual([3, 4, 2, 1, 5]);
+    expect(g.upcoming).toEqual([]);
+    expect(g.pending).toEqual([]);
+  });
 
-  it('승인 대기 + 취소 불가면 상세 보기', () =>
-    expect(myTourDisplay({ ...app, cancellable: false }, rec).action).toEqual({
-      label: '상세 보기',
-      to: '/my-tours/21',
-    }));
-
-  it('승인 + 완료된 탐방이면 리뷰 쓰기', () =>
-    expect(
-      myTourDisplay(
-        {
-          ...app,
-          status: 'APPROVED',
-          courseStatus: 'CONFIRMED',
-          tour: { ...tour, status: 'COMPLETED' },
-        },
-        rec,
-      ),
-    ).toEqual({
-      label: '탐방 완료 · 리뷰 쓰기',
-      description: '경희대 컴퓨터공학과 탐방 · 다녀온 상점에 리뷰를 남겨 주세요',
-      tone: 'success',
-      action: { label: '쿠폰 쓴 상점 리뷰 쓰기', to: '/my-tours/21/coupons' },
-    }));
-
-  it('승인 + 확정 코스면 지도 링크', () =>
-    expect(myTourDisplay({ ...app, status: 'APPROVED', courseStatus: 'CONFIRMED' }, '/')).toEqual({
-      label: '승인 · 코스 확정',
-      description: '경희대 컴퓨터공학과 탐방 · 지도와 쿠폰이 열렸어요',
-      tone: 'success',
-      action: { label: '코스 지도 보기', to: `/my-tours/${app.id}/course` },
-    }));
-
-  it.each([null, 'DRAFT'] as const)('승인 + 코스 %s면 준비 중', (courseStatus) =>
-    expect(myTourDisplay({ ...app, status: 'APPROVED', courseStatus }, rec)).toEqual({
-      label: '승인 · 코스 준비 중',
-      description: '경희대 컴퓨터공학과 탐방 · 오픈채팅 공개',
-      tone: 'info',
-      action: { label: '확정되면 코스 지도와 쿠폰 열림', to: '/my-tours/21' },
-    }),
-  );
+  it('받은 배열을 바꾸지 않는다', () => {
+    const input = [
+      mk(1, 'APPROVED', 'RECRUITING', '2026-11-20T14:00:00+09:00'),
+      mk(2, 'APPROVED', 'RECRUITING', '2026-11-12T14:00:00+09:00'),
+    ];
+    groupMyApplications(input);
+    expect(ids(input)).toEqual([1, 2]);
+  });
 });
 
 const guideTour = (patch: Partial<GuideTourSummary> & { id: number }): GuideTourSummary => ({
