@@ -337,6 +337,18 @@ describe('발표 모드', () => {
     expect(screen.queryByText('가이드 화면')).toBeNull();
   });
 
+  it('공개 화면(/signup · /consent/…)에서는 발표 모드여도 역할 배지를 그리지 않는다', async () => {
+    useDemoStore.setState({ enabled: true, presentMode: true });
+    const { router } = await renderApp('/', { as: 'student' });
+    expect(await screen.findByText('고교생 화면')).toBeInTheDocument();
+    await act(() => router.navigate('/signup'));
+    await waitFor(() => expect(screen.queryByText('고교생 화면')).toBeNull());
+    await act(() => router.navigate('/consent/x'));
+    expect(screen.queryByText('고교생 화면')).toBeNull();
+    await act(() => router.navigate('/me'));
+    expect(await screen.findByText('고교생 화면')).toBeInTheDocument();
+  });
+
   it('로그아웃하면 역할 배지가 사라진다', async () => {
     useDemoStore.setState({ enabled: true, presentMode: true });
     const { user, router } = await renderApp('/me', { as: 'student' });
@@ -344,6 +356,30 @@ describe('발표 모드', () => {
     await user.click(screen.getByRole('button', { name: '로그아웃' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(screen.queryByText('고교생 화면')).toBeNull();
+  });
+});
+
+describe('P1 계정 전환', () => {
+  it('전체 패널에서 P1 계정을 골라 전환하면 그 계정의 첫 화면으로 간다', async () => {
+    useDemoStore.setState({ enabled: true });
+    const { user, router, queryClient } = await renderApp('/', { as: 'student' });
+    await screen.findByRole('link', { name: '탐색' });
+    await user.selectOptions(
+      within(panel()).getByRole('combobox', { name: 'P1 계정' }),
+      'guide-new@demo.kr',
+    );
+    await user.click(within(panel()).getByRole('button', { name: '이 계정으로 전환' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/verify'));
+    expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: 'guide-new@demo.kr' });
+    expect(useDemoStore.getState().activeDemoEmail).toBe('guide-new@demo.kr');
+  });
+
+  it('발표 모드 막대에는 P1 계정 선택이 없다', async () => {
+    useDemoStore.setState({ enabled: true, presentMode: true });
+    await renderApp('/', { as: 'student' });
+    await screen.findByRole('link', { name: '탐색' });
+    expect(within(panel()).queryByRole('combobox', { name: 'P1 계정' })).toBeNull();
+    expect(within(panel()).queryByRole('button', { name: '이 계정으로 전환' })).toBeNull();
   });
 });
 

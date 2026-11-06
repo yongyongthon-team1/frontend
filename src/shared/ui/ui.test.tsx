@@ -1,9 +1,10 @@
-import { act, render, screen } from '@testing-library/react';
+import { act, fireEvent, render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { Compass, ListChecks } from 'lucide-react';
-import { useState } from 'react';
+import { useState, type ComponentProps } from 'react';
 import { MemoryRouter, Route, Routes, useLocation } from 'react-router';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { testImage } from '@/test/files';
 import { FrameProvider } from './FrameContext';
 import { AiBadge } from './AiBadge';
 import { AiLoading } from './AiLoading';
@@ -18,6 +19,7 @@ import { CodeInput } from './CodeInput';
 import { ConfirmDialog } from './ConfirmDialog';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
+import { FileField } from './FileField';
 import { FilterChips } from './FilterChips';
 import { HeroCard } from './HeroCard';
 import { Illustration } from './Illustration';
@@ -31,12 +33,15 @@ import { SegmentedTabs } from './SegmentedTabs';
 import { segmentedPanelProps } from './segmentedPanel';
 import { Select } from './Select';
 import { Skeleton } from './Skeleton';
+import { StarDisplay, StarRating } from './StarRating';
 import { AiReasonPrefix } from './AiReasonPrefix';
 import { StatusChip } from './StatusChip';
 import { StepList } from './StepList';
 import { Textarea } from './Textarea';
 import { TextField } from './TextField';
+import { ToggleSwitch } from './ToggleSwitch';
 import { TopBar } from './TopBar';
+import { VerificationStatusCard } from '@/features/verification/components/VerificationStatusCard';
 
 afterEach(() => {
   vi.useRealTimers();
@@ -668,6 +673,20 @@ describe('Button V2 변형', () => {
     expect(onClick).toHaveBeenCalledTimes(1);
   });
 
+  it('dangerSoft: danger-soft 바탕 · danger 글자, 높이 56', async () => {
+    const onClick = vi.fn();
+    render(
+      <Button variant="dangerSoft" onClick={onClick}>
+        반려 사유 입력
+      </Button>,
+    );
+    const button = screen.getByRole('button', { name: '반려 사유 입력' });
+    expect(button).toHaveClass('bg-danger-soft', 'text-danger');
+    expect(button.className).toContain('h-[var(--btn-h)]');
+    await userEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
   it('soft: 카드 안 작은 버튼. 접근 이름에 화살표가 섞이지 않는다', () => {
     render(<Button variant="soft">코스 확인하기</Button>);
     const button = screen.getByRole('button', { name: '코스 확인하기' });
@@ -792,6 +811,27 @@ describe('ListRow', () => {
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
     expect(screen.getByText('소프트웨어 전공 탐방')).toBeInTheDocument();
     expect(screen.getByText('승인 대기')).toBeInTheDocument();
+  });
+});
+
+describe('ListRow 버튼 모드', () => {
+  it('onClick만 있고 to가 없으면 같은 모양의 <button>이고 클릭된다', async () => {
+    const onClick = vi.fn();
+    render(<ListRow title="로그아웃" meta="이 기기에서 나가요" onClick={onClick} />);
+    const button = screen.getByRole('button', { name: /로그아웃/ });
+    expect(button).toHaveClass('rounded-[18px]', 'bg-surface');
+    expect(screen.getByText('이 기기에서 나가요')).toBeInTheDocument();
+    await userEvent.click(button);
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
+  it('disabled면 눌러도 호출되지 않는다', async () => {
+    const onClick = vi.fn();
+    render(<ListRow title="로그아웃" onClick={onClick} disabled />);
+    const button = screen.getByRole('button', { name: /로그아웃/ });
+    expect(button).toBeDisabled();
+    await userEvent.click(button);
+    expect(onClick).not.toHaveBeenCalled();
   });
 });
 
@@ -1067,5 +1107,214 @@ describe('HeroCard · PageHeading', () => {
       screen.getByRole('heading', { level: 2, name: '탐방을 신청할까요?' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
+  });
+});
+
+describe('FileField', () => {
+  const fileUser = () => userEvent.setup({ applyAccept: false });
+
+  function setup(props: Partial<ComponentProps<typeof FileField>> = {}) {
+    const onChange = vi.fn();
+    function Harness() {
+      const [file, setFile] = useState<File | null>(null);
+      return (
+        <FileField
+          label="학생증 사진"
+          description="jpg · png · heic, 10MB 이하"
+          accept="image/jpeg,image/png,image/heic,image/heif,.heic,.heif"
+          file={file}
+          onChange={(next) => {
+            onChange(next);
+            setFile(next.file);
+          }}
+          {...props}
+        />
+      );
+    }
+    render(<Harness />);
+    return onChange;
+  }
+
+  it('숨긴 파일 입력의 접근 이름은 label이고, 설명이 보인다', () => {
+    setup();
+    const input = screen.getByLabelText('학생증 사진');
+    expect(input).toHaveAttribute('type', 'file');
+    expect(screen.getByText('jpg · png · heic, 10MB 이하')).toBeInTheDocument();
+  });
+
+  it('파일을 고르면 파일명 · 크기(1MB 이상은 MB, 미만은 KB)와 다시 고르기가 보이고 입력값을 비운다', async () => {
+    const onChange = setup();
+    const input = screen.getByLabelText<HTMLInputElement>('학생증 사진');
+    const file = testImage('id.jpg', { size: Math.round(2.4 * 1024 * 1024) });
+    await fileUser().upload(input, file);
+    expect(onChange).toHaveBeenCalledWith({ file, error: null });
+    expect(screen.getByText('id.jpg · 2.4MB')).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '다시 고르기' })).toBeInTheDocument();
+    expect(input.value).toBe('');
+  });
+
+  it('1MB 미만은 KB로 보인다', async () => {
+    setup();
+    await fileUser().upload(
+      screen.getByLabelText('학생증 사진'),
+      testImage('small.png', { size: 820 * 1024, type: 'image/png' }),
+    );
+    expect(screen.getByText('small.png · 820KB')).toBeInTheDocument();
+  });
+
+  it('validate가 문자열을 주면 그 파일을 버리고 error와 함께 알린다', async () => {
+    const validate = vi.fn(() => '10MB 이하의 사진만 올릴 수 있어요.');
+    const onChange = setup({ validate });
+    const file = testImage('big.jpg', { size: 11 * 1024 * 1024 });
+    await fileUser().upload(screen.getByLabelText('학생증 사진'), file);
+    expect(validate).toHaveBeenCalledWith(file);
+    expect(onChange).toHaveBeenCalledWith({
+      file: null,
+      error: '10MB 이하의 사진만 올릴 수 있어요.',
+    });
+    expect(screen.queryByText(/big\.jpg/)).toBeNull();
+  });
+
+  it('error를 받으면 role=alert로 보인다', () => {
+    setup({ error: '사진을 올려 주세요.' });
+    expect(screen.getByRole('alert')).toHaveTextContent('사진을 올려 주세요.');
+  });
+
+  it('대화상자 취소(파일 없음)는 onChange를 부르지 않는다', () => {
+    const onChange = setup();
+    fireEvent.change(screen.getByLabelText('학생증 사진'), { target: { files: [] } });
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('disabled면 입력이 잠긴다', () => {
+    setup({ disabled: true });
+    expect(screen.getByLabelText('학생증 사진')).toBeDisabled();
+  });
+});
+
+describe('ToggleSwitch', () => {
+  it('role=switch가 aria-checked로 켜짐 상태를 알리고 누르면 반대 값을 알린다', async () => {
+    const onChange = vi.fn();
+    render(
+      <ToggleSwitch
+        label="탐방 알림"
+        description="새 소식을 알려 드려요"
+        checked
+        onChange={onChange}
+      />,
+    );
+    const toggle = screen.getByRole('switch', { name: /탐방 알림/ });
+    expect(toggle).toHaveAttribute('aria-checked', 'true');
+    expect(screen.getByText('새 소식을 알려 드려요')).toBeInTheDocument();
+    await userEvent.click(toggle);
+    expect(onChange).toHaveBeenCalledWith(false);
+  });
+
+  it('꺼짐 → 켜짐, 최소 터치 44, disabled는 호출하지 않는다', async () => {
+    const onChange = vi.fn();
+    const { rerender } = render(
+      <ToggleSwitch label="탐방 알림" checked={false} onChange={onChange} />,
+    );
+    const toggle = screen.getByRole('switch', { name: '탐방 알림' });
+    expect(toggle).toHaveAttribute('aria-checked', 'false');
+    expect(toggle).toHaveClass('min-h-11');
+    await userEvent.click(toggle);
+    expect(onChange).toHaveBeenCalledWith(true);
+    rerender(<ToggleSwitch label="탐방 알림" checked={false} onChange={onChange} disabled />);
+    onChange.mockClear();
+    await userEvent.click(screen.getByRole('switch', { name: '탐방 알림' }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+});
+
+describe('StarRating · StarDisplay', () => {
+  it('fieldset/legend 안에 별점 1~5점 라디오가 있고 별점 4점을 고르면 onChange(4)', async () => {
+    const onChange = vi.fn();
+    render(<StarRating label="상점 별점" value={null} onChange={onChange} />);
+    expect(screen.getByRole('group', { name: '상점 별점' })).toBeInTheDocument();
+    expect(screen.getAllByRole('radio')).toHaveLength(5);
+    for (const n of [1, 2, 3, 4, 5]) {
+      expect(screen.getByRole('radio', { name: `별점 ${n}점` })).not.toBeChecked();
+    }
+    await userEvent.click(screen.getByRole('radio', { name: '별점 4점' }));
+    expect(onChange).toHaveBeenCalledWith(4);
+  });
+
+  it('선택된 값까지 채워지고 그 라디오가 checked다', () => {
+    render(<StarRating label="상점 별점" value={3} onChange={() => {}} />);
+    expect(screen.getByRole('radio', { name: '별점 3점' })).toBeChecked();
+    expect(screen.getByRole('radio', { name: '별점 4점' })).not.toBeChecked();
+    expect(screen.getAllByTestId('star-filled')).toHaveLength(3);
+  });
+
+  it('error · hint 문구를 보이고 disabled는 고를 수 없다', async () => {
+    const onChange = vi.fn();
+    render(
+      <StarRating
+        label="상점 별점"
+        value={null}
+        onChange={onChange}
+        error="별점을 골라 주세요."
+        hint="1점부터 5점까지"
+        disabled
+      />,
+    );
+    expect(screen.getByRole('alert')).toHaveTextContent('별점을 골라 주세요.');
+    expect(screen.getByText('1점부터 5점까지')).toBeInTheDocument();
+    await userEvent.click(screen.getByRole('radio', { name: '별점 2점' }));
+    expect(onChange).not.toHaveBeenCalled();
+  });
+
+  it('StarDisplay: role=img 접근 이름 별점 {value}점', () => {
+    render(<StarDisplay value={4} />);
+    expect(screen.getByRole('img', { name: '별점 4점' })).toBeInTheDocument();
+  });
+});
+
+describe('VerificationStatusCard', () => {
+  it('제목 · 상태 칩 · 설명을 보인다', () => {
+    render(
+      <MemoryRouter>
+        <VerificationStatusCard
+          title="학생증 인증"
+          badge={{ label: '심사 중', tone: 'warning' }}
+          description="1~2일 안에 결과를 알려 드려요."
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('학생증 인증')).toBeInTheDocument();
+    expect(screen.getByText('심사 중')).toBeInTheDocument();
+    expect(screen.getByText('1~2일 안에 결과를 알려 드려요.')).toBeInTheDocument();
+  });
+
+  it('rejectionReason이 있으면 반려 사유 줄, action은 soft 링크', () => {
+    render(
+      <MemoryRouter>
+        <VerificationStatusCard
+          title="학생증 인증"
+          badge={{ label: '반려', tone: 'danger' }}
+          rejectionReason="사진이 흐려요."
+          action={{ label: '다시 제출하기', to: '/verify' }}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByText('반려 사유: 사진이 흐려요.')).toBeInTheDocument();
+    const link = screen.getByRole('link', { name: '다시 제출하기' });
+    expect(link).toHaveAttribute('href', '/verify');
+    expect(link).toHaveClass('bg-brand-soft');
+  });
+
+  it('사유 · action · badge가 없으면 그 줄을 그리지 않고, muted는 회색 면', () => {
+    const { container } = render(
+      <MemoryRouter>
+        <VerificationStatusCard title="보호자 동의" muted>
+          <p>본문</p>
+        </VerificationStatusCard>
+      </MemoryRouter>,
+    );
+    expect(screen.queryByText(/반려 사유/)).toBeNull();
+    expect(screen.queryByRole('link')).toBeNull();
+    expect(screen.getByText('본문')).toBeInTheDocument();
+    expect(container.firstElementChild).toHaveClass('bg-neutral-100');
   });
 });

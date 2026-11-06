@@ -1,6 +1,5 @@
-import { useState } from 'react';
 import { Link } from 'react-router';
-import { useLogout } from '@/features/auth/queries';
+import { LogoutButton } from '@/features/auth/components/LogoutButton';
 import {
   partnershipStateLabel,
   type MyStore,
@@ -39,27 +38,17 @@ function illustrationFor(category: string): IllustrationKind {
 
 /**
  * 맨 위 줄: 왼쪽 로고, 오른쪽 `로그아웃` 텍스트 버튼(사장님 탭에는 MY가 없다 — 2A-R9). 모든 상태에서 보인다.
- * 발표 모드 배지 · 좁은 화면 시연 패널 토글이 오른쪽 위에 겹치므로 버튼은 그만큼 왼쪽으로 비켜 선다(globals.css `--header-action-clear`, 실행 판정: 발표 배지가 머리 줄 조작을 가리지 않음).
+ * 발표 모드 배지 · 좁은 화면 시연 패널 토글이 오른쪽 위에 겹치므로 버튼은 그만큼 왼쪽으로 비켜 선다(globals.css `--header-action-clear`, 실행 판정: 발표 배지가 머리 줄 조작을 가리지 않음). 로그아웃 동작과 연타 잠금은 공용 `LogoutButton`이 가진다.
  */
 function Header() {
-  const logout = useLogout();
-  // 연타해도 로그아웃은 한 번: 진행 중에는 버튼을 잠근다(`PlaceholderPage`의 로그아웃 버튼과 같은 방식).
-  const [pending, setPending] = useState(false);
   return (
     <div className="flex items-center justify-between">
       <BrandMark variant="wordmark" />
-      <button
-        type="button"
-        disabled={pending}
-        aria-busy={pending}
-        onClick={() => {
-          setPending(true);
-          void logout().finally(() => setPending(false));
-        }}
-        className="relative right-[var(--header-action-clear,0px)] -mr-3 inline-flex min-h-11 items-center px-3 text-sm font-bold text-muted hover:text-ink disabled:opacity-50"
-      >
-        로그아웃
-      </button>
+      <LogoutButton
+        variant="ghost"
+        size="sm"
+        className="relative right-[var(--header-action-clear,0px)] -mr-3 w-auto px-3 hover:bg-transparent hover:text-ink"
+      />
     </div>
   );
 }

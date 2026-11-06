@@ -1,6 +1,6 @@
 import { cn } from '@/shared/lib/cn';
 
-export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'soft';
+export type ButtonVariant = 'primary' | 'secondary' | 'ghost' | 'danger' | 'dangerSoft' | 'soft';
 export type ButtonSize = 'lg' | 'sm';
 
 // Button과 버튼 모양 링크(EmptyState 등)가 같은 모양을 쓰도록 클래스만 따로 둔다.
@@ -26,5 +26,8 @@ export function buttonClass(variant: ButtonVariant = 'primary', size: ButtonSize
     variant === 'ghost' && 'bg-transparent text-muted hover:bg-neutral-100 disabled:opacity-60',
     variant === 'danger' &&
       'bg-danger text-on-primary hover:brightness-90 disabled:bg-neutral-100 disabled:text-muted',
+    // 반려 사유 입력 같은 위험 쪽 보조 행동(A02): danger-soft 바탕 · danger 글자.
+    variant === 'dangerSoft' &&
+      'bg-danger-soft text-danger hover:brightness-95 disabled:bg-neutral-100 disabled:text-muted',
   );
 }

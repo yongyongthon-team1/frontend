@@ -52,3 +52,24 @@ test.describe('발표 모드 배지와 헤더 오른쪽 조작', () => {
     await expect(logout).toBeInViewport({ ratio: 1 });
   });
 });
+
+test.describe('전체 시연 패널 높이', () => {
+  test('무대 1280×590: 열린 전체 패널은 세로로 넘치지 않는다(스크롤 없이 모두 보인다)', async ({
+    page,
+  }) => {
+    await page.setViewportSize({ width: 1280, height: 590 });
+    await page.goto('/?demo=1&mode=mock&reset=1&as=student');
+    const panel = page.getByRole('region', { name: '시연 패널' });
+    await expect(panel.getByRole('combobox', { name: 'P1 계정' })).toBeVisible();
+    await expect(panel.getByRole('button', { name: '발표 모드' })).toBeVisible();
+    // 패널을 감싼 옆 슬롯(.mobile-aside)이 max-height + overflow-y: auto라, 넘치면 안쪽 스크롤이 생긴다.
+    const aside = await panel.evaluate((el) => {
+      const slot = el.closest('.mobile-aside');
+      if (!slot) throw new Error('.mobile-aside를 찾지 못했어요');
+      return { scrollHeight: slot.scrollHeight, clientHeight: slot.clientHeight };
+    });
+    expect(aside.scrollHeight, JSON.stringify(aside)).toBeLessThanOrEqual(aside.clientHeight);
+    // 마지막 버튼까지 뷰포트 안에 온전히 보인다.
+    await expect(panel.getByRole('button', { name: '발표 모드' })).toBeInViewport({ ratio: 1 });
+  });
+});

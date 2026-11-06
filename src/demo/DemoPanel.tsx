@@ -5,6 +5,7 @@ import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { qk } from '@/shared/api/queryKeys';
 import {
+  DEMO_P1_ACCOUNTS,
   DEMO_ROLES,
   SEED_CHECKPOINTS,
   type DemoRole,
@@ -42,6 +43,8 @@ const CHECKPOINT_OPTIONS = SEED_CHECKPOINTS.map((value) => ({
   label: CHECKPOINT_LABEL[value],
 }));
 
+const P1_ACCOUNT_OPTIONS = DEMO_P1_ACCOUNTS.map(({ email, label }) => ({ value: email, label }));
+
 const RESET_FAILED = '시연 데이터를 초기화하지 못했어요.';
 
 const errorCode = (error: unknown) => (error instanceof ApiError ? error.code : undefined);
@@ -56,7 +59,7 @@ function resetFailed(error: unknown) {
   toast.error(RESET_FAILED, { description: code ? errorMessage(code) : undefined });
 }
 
-type Action = DemoRole | 'coupon' | 'reset';
+type Action = DemoRole | 'coupon' | 'account' | 'reset';
 
 /**
  * 시연 패널(설계 5.8). DOM 하나이고 배치만 CSS가 바꾼다(판정 Task 21): 폭 900px 이상이면 프레임 옆(`MobileFrame`의
@@ -99,6 +102,7 @@ interface DemoActions {
   running: Action | null;
   switchRole(role: DemoRole): void;
   switchCouponOwner(): void;
+  switchAccount(email: string): void;
   reset(checkpoint: SeedCheckpoint): void;
 }
 
@@ -134,6 +138,7 @@ function useDemoActions(onDone: () => void): DemoActions {
     running,
     switchRole: (role) => void run(role, () => quickLogin(role, deps), switchFailed),
     switchCouponOwner: () => void run('coupon', () => switchToCouponOwner(deps), switchFailed),
+    switchAccount: (email) => void run('account', () => quickLogin({ email }, deps), switchFailed),
     reset: (checkpoint) =>
       void run(
         'reset',
@@ -221,6 +226,7 @@ function FullPanel({ actions }: { actions: DemoActions }) {
   const aiSpeed = useDemoStore((s) => s.aiSpeed);
   const { setApiModeOverride, setMapMode, setAiSpeed, setPresentMode } = useDemoStore.getState();
   const [checkpoint, setCheckpoint] = useState<SeedCheckpoint>('START');
+  const [p1Email, setP1Email] = useState(P1_ACCOUNT_OPTIONS[0]?.value ?? '');
 
   // 가장 작은 무대 뷰포트(1280×590 — 프레임 높이 558px)에서도 스크롤 없이 들어가게 촘촘히 둔다.
   return (
@@ -237,6 +243,26 @@ function FullPanel({ actions }: { actions: DemoActions }) {
       <Group title="역할 전환">
         <div className="grid grid-cols-4 gap-2">
           <RoleButtons actions={actions} />
+        </div>
+        <div className="flex gap-2">
+          <div className="min-w-0 flex-1">
+            <Select
+              label="P1 계정"
+              className="h-11 text-sm"
+              options={P1_ACCOUNT_OPTIONS}
+              value={p1Email}
+              onChange={(e) => setP1Email(e.target.value)}
+            />
+          </div>
+          <Button
+            size="sm"
+            variant="secondary"
+            className="shrink-0"
+            loading={actions.running === 'account'}
+            onClick={() => actions.switchAccount(p1Email)}
+          >
+            이 계정으로 전환
+          </Button>
         </div>
         <Button
           size="sm"
@@ -288,9 +314,6 @@ function FullPanel({ actions }: { actions: DemoActions }) {
             window.location.reload();
           }}
         />
-        <Setting label="백엔드">
-          <HealthBadge />
-        </Setting>
         <Segmented<MapMode>
           label="지도"
           value={mapMode === 'schematic' ? 'schematic' : 'auto'}
@@ -309,14 +332,19 @@ function FullPanel({ actions }: { actions: DemoActions }) {
           ]}
           onChange={setAiSpeed}
         />
-        <Button
-          size="sm"
-          variant="secondary"
-          aria-pressed={false}
-          onClick={() => setPresentMode(true)}
-        >
-          발표 모드
-        </Button>
+        <div className="flex items-center gap-2">
+          <span className="text-sm text-ink">백엔드</span>
+          <HealthBadge />
+          <Button
+            size="sm"
+            variant="secondary"
+            className="ml-auto shrink-0"
+            aria-pressed={false}
+            onClick={() => setPresentMode(true)}
+          >
+            발표 모드
+          </Button>
+        </div>
       </Group>
     </div>
   );
@@ -326,15 +354,6 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
   return (
     <div className="flex flex-col gap-2">
       <h2 className="text-xs font-bold text-muted">{title}</h2>
-      {children}
-    </div>
-  );
-}
-
-function Setting({ label, children }: { label: string; children: ReactNode }) {
-  return (
-    <div className="flex min-h-7 items-center justify-between gap-3">
-      <span className="text-sm text-ink">{label}</span>
       {children}
     </div>
   );

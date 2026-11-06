@@ -120,6 +120,16 @@ describe('레이아웃', () => {
     );
   });
 
+  it.each([
+    ['student', '/verify', 'MY'],
+    ['guide', '/guide/verify', 'MY'],
+    ['owner', '/owner/verify', '내 가게'],
+  ])('%s 인증 화면(%s)에서 %s 탭이 활성', async (as, path, tab) => {
+    await renderApp(path, { as });
+    const nav = await screen.findByRole('navigation', { name: '주요 메뉴' });
+    expect(within(nav).getByRole('link', { name: tab })).toHaveAttribute('aria-current', 'page');
+  });
+
   it('운영자는 탭 없이 로그아웃 버튼', async () => {
     await renderApp('/admin/verifications', { as: 'admin' });
     expect(await screen.findByRole('button', { name: '로그아웃' })).toBeInTheDocument();

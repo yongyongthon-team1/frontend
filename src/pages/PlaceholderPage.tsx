@@ -1,7 +1,5 @@
-import { useState } from 'react';
 import { useLocation } from 'react-router';
-import { useLogout } from '@/features/auth/queries';
-import { Button } from '@/shared/ui/Button';
+import { LogoutButton } from '@/features/auth/components/LogoutButton';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { Page } from '@/shared/ui/Page';
 import { TopBar } from '@/shared/ui/TopBar';
@@ -26,26 +24,8 @@ export function PlaceholderPage({ title, wireframe, showLogout = false }: Placeh
         {wireframe ? (
           <p className="text-center text-sm text-muted">{`와이어프레임: ${wireframe}`}</p>
         ) : null}
-        {showLogout ? <LogoutButton /> : null}
+        {showLogout ? <LogoutButton className="mt-6" /> : null}
       </Page>
     </>
-  );
-}
-
-function LogoutButton() {
-  const logout = useLogout();
-  const [pending, setPending] = useState(false);
-  return (
-    <Button
-      variant="secondary"
-      className="mt-6"
-      loading={pending}
-      onClick={() => {
-        setPending(true);
-        void logout().finally(() => setPending(false));
-      }}
-    >
-      로그아웃
-    </Button>
   );
 }

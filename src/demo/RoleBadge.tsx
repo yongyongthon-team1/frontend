@@ -1,3 +1,4 @@
+import { useLocation } from 'react-router';
 import type { Role } from '@/features/auth/model';
 import { useMe } from '@/features/auth/queries';
 import { useSession } from '@/features/auth/session';
@@ -30,7 +31,10 @@ const TONE_BORDER: Record<Tone, string> = {
  */
 export function RoleBadge() {
   const presentMode = useDemoStore((s) => s.presentMode) === true;
-  return presentMode ? <CurrentRoleBadge /> : null;
+  const { pathname } = useLocation();
+  // 공개 화면(가입 · 보호자 동의)은 로그인한 사람의 화면이 아니다 — 배지가 가입자 · 보호자에게 엉뚱한 역할을 붙이지 않게 숨긴다.
+  const isPublicRoute = pathname === '/signup' || pathname.startsWith('/consent/');
+  return presentMode && !isPublicRoute ? <CurrentRoleBadge /> : null;
 }
 
 /**
