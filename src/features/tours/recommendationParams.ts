@@ -1,6 +1,6 @@
 import type { RecommendationQuery } from './model';
 
-// 추천 검색 조건 ↔ 주소 검색 파라미터. 홈 → 추천 목록 → (학교 · 날짜 다시 선택) → 홈으로 돌아와도 입력이 유지된다.
+// 추천 검색 조건 ↔ 주소 검색 파라미터. 홈 → 추천 목록 → (다시 추천받기) → 홈으로 돌아와도 입력이 유지된다.
 // `universityId`는 주소에서 `school` 키를 쓴다. 빈 값은 싣지 않는다.
 
 export function toSearch(q: RecommendationQuery): string {

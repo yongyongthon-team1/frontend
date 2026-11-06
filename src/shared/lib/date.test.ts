@@ -5,6 +5,8 @@ import {
   endOfSeoulDay,
   formatDuration,
   formatMonthDay,
+  formatDotDate,
+  formatDotDateWeekday,
   formatShortDate,
   formatTime,
   formatTimeRange,
@@ -20,6 +22,10 @@ describe('date', () => {
   it('탐방 날짜 표기', () =>
     expect(formatTourDate('2026-11-15T14:00:00+09:00')).toBe('11월 15일(일)'));
   it('월일 표기', () => expect(formatMonthDay('2026-11-15T14:00:00+09:00')).toBe('11월 15일'));
+  it('점 날짜 (V2 목록 행)', () => {
+    expect(formatDotDate('2026-11-12T14:00:00+09:00')).toBe('11.12');
+    expect(formatDotDateWeekday('2026-11-12T14:00:00+09:00')).toBe('11.12 (목)');
+  });
   it('짧은 날짜', () => expect(formatShortDate('2026-11-15T14:00:00+09:00')).toBe('11/15(일)'));
   it('시각', () => expect(formatTime('2026-11-15T05:00:00Z')).toBe('14:00'));
   it('시간 범위는 en dash', () =>

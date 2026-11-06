@@ -11,6 +11,7 @@
 - MVP 2A Task 1: V2 토큰(`--yy-*`) · Noto Sans KR(npm 번들, Pretendard 제거) · UNIRO 워드마크 · 아이콘 · 3D 일러스트 8종 에셋과 `Illustration` · `BrandMark`를 넣었다.
 - MVP 2A Task 2: 공통 컴포넌트를 V2로 다시 입혔다(버튼 `danger` · `soft` 변형 · 상단 바 · 하단 탭바 · 칩 · 카드 · 입력 · 시트). V2 전용 부품 7종(`ListRow` · `SegmentedTabs` · `FilterChips` · `StepList` · `NumberedList` · `HeroCard` · `PageHeading`)을 `src/shared/ui`에 더했다.
 - MVP 2A Task 3: 역할별 하단 탭을 V2 구조로 바꿨다(가이드 `내 탐방` · `코스 편집` · `MY`, 사장님 `내 가게` · `쿠폰`). 가이드 첫 화면은 `/guide`(자리 화면, Task 9가 채움), `/guide/course`는 다가오는 탐방의 코스로 보낸다. 로그인 화면에 UNIRO 표식 · 슬로건을 더했다.
+- MVP 2A Task 4: 고교생 홈 · 추천 목록을 V2(H01 · H02 · H13)로 다시 그렸다. 홈은 문장 입력 하나(시연 도구가 켜져 있으면 첫 예시 문장이 미리 채워짐)와 모집 중 탐방 최대 3개, 추천 목록은 `{n}개의 탐방을 추천해요.` · 필터 칩(전체 · 학과 키워드 · 학교, 클라이언트에서 거름) · 행 셋째 줄 `날짜 · AI 추천 이유` · `왜 추천했나요?` 상자, 0건이면 H13 카드다. 무대 ① 3개 뷰포트 통과(칩 하단 215px · 이유 줄 하단 307px, 탭바 상단 494px 이상).
 
 ### 다음 할 일
 

@@ -16,8 +16,10 @@ const VARIANTS = [
 ];
 
 /**
- * 발표 모드의 역할 배지(설계 5.8)는 관객이 읽게 16px 이상으로 그리되 TopBar 제목 글자를 덮지 않는다.
- * 제목(h1)은 줄 끝까지 늘어나는 상자라, 글자가 차지한 상자(Range)의 오른쪽 끝을 배지 왼쪽과 비교한다.
+ * 발표 모드의 역할 배지(설계 5.8)는 관객이 읽게 16px 이상으로 그리되 화면 제목 글자를 덮지 않는다. 제목(h1)은 줄 끝까지
+ * 늘어나는 상자라, 글자가 차지한 줄 상자들(Range의 client rects)이 배지 상자와 겹치는지 본다. TopBar 화면은 제목이
+ * 배지와 같은 줄이라 글자 끝이 배지 왼쪽이어야 하고, V2 탭 첫 화면은 제목이 배지 줄 아래라 세로로 비켜 있어야 한다 —
+ * 어느 쪽이든 "겹치지 않는다"가 기준이다.
  * (e2e는 DOM 타입 없이 검사하므로 브라우저 전역 대신 요소의 ownerDocument로 닿는다.)
  */
 async function expectRoleBadgeBesideTitle(page: Page, label: string) {
@@ -27,13 +29,29 @@ async function expectRoleBadgeBesideTitle(page: Page, label: string) {
     parseFloat(el.ownerDocument.defaultView!.getComputedStyle(el).fontSize),
   );
   expect(fontSize, `"${label}" 배지 글자 크기(px)`).toBeGreaterThanOrEqual(16);
-  const titleRight: number = await page.getByRole('heading', { level: 1 }).evaluate((h1) => {
-    const range = h1.ownerDocument.createRange();
-    range.selectNodeContents(h1);
-    return range.getBoundingClientRect().right;
-  });
-  const badgeLeft = (await badge.boundingBox())?.x ?? 0;
-  expect(titleRight, `TopBar 제목 글자 끝이 "${label}" 배지 왼쪽`).toBeLessThanOrEqual(badgeLeft);
+  const lines: Array<{ left: number; right: number; top: number; bottom: number }> = await page
+    .getByRole('heading', { level: 1 })
+    .evaluate((h1) => {
+      const range = h1.ownerDocument.createRange();
+      range.selectNodeContents(h1);
+      const rects = range.getClientRects() as unknown as ArrayLike<{
+        left: number;
+        right: number;
+        top: number;
+        bottom: number;
+      }>;
+      return Array.from(rects, ({ left, right, top, bottom }) => ({ left, right, top, bottom }));
+    });
+  const box = await badge.boundingBox();
+  if (box === null) throw new Error(`화면에 없는 배지: ${label}`);
+  for (const line of lines) {
+    const overlaps =
+      line.left < box.x + box.width &&
+      line.right > box.x &&
+      line.top < box.y + box.height &&
+      line.bottom > box.y;
+    expect(overlaps, `화면 제목 글자가 "${label}" 배지와 겹치지 않는다`).toBe(false);
+  }
 }
 
 for (const { title, link, present } of VARIANTS) {
@@ -44,11 +62,13 @@ for (const { title, link, present } of VARIANTS) {
       if (present) await expectRoleBadgeBesideTitle(page, label);
     };
 
-    // 고교생: 예시 문장 → AI 추천 → 탐방 상세 → 신청서(시연 모드라 미리 채움) → 신청 완료
+    // 고교생: 문장 입력(시연 도구가 켜져 있어 미리 채워져 있다 — 다시 채워도 같다) → AI 추천 → 탐방 상세 →
+    // 신청서(시연 모드라 미리 채움) → 신청 완료
     await page.goto(link);
-    await expect(page.getByRole('button', { name: EXAMPLE_QUERIES[0] })).toBeVisible();
+    const wish = page.getByLabel('하고 싶은 것');
+    await expect(wish).toBeVisible();
     await checkRoleBadge('고교생 화면');
-    await page.getByRole('button', { name: EXAMPLE_QUERIES[0] }).click();
+    await wish.fill(EXAMPLE_QUERIES[0]);
     await page.getByRole('button', { name: '나에게 맞는 탐방 추천받기' }).click();
     await expect(page.getByText('디자인 분야에 관심이 많군요!')).toBeVisible();
     await page.getByText('경희대학교 국제캠퍼스').first().click();
@@ -86,7 +106,11 @@ for (const { title, link, present } of VARIANTS) {
     // 고교생: 내 탐방 → 코스 지도 → 제휴 상점 쿠폰 → 6자리 코드(순서를 바꿨으므로 첫 쿠폰은 상점 1이 아니다)
     await switchRole('고교생');
     // 가이드 탭에도 `내 탐방`이 있으므로, 역할 전환이 끝나(고교생 홈) 그 탭이 사라진 뒤에 누른다.
-    await expect(page.getByRole('heading', { name: '어떤 캠퍼스가 궁금해?' })).toBeVisible();
+    // (고교생 홈의 제목은 바뀔 수 있으니, 역할이 바뀌어도 변하지 않는 신호 — 고교생 탭 `탐색`이 켜진 것 — 를 기다린다.)
+    await expect(page.getByRole('link', { name: '탐색', exact: true })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
     await page.getByRole('link', { name: '내 탐방', exact: true }).click();
     await expect(page.getByRole('heading', { name: '내 탐방 · 신청 상태' })).toBeVisible();
     await checkRoleBadge('고교생 화면');

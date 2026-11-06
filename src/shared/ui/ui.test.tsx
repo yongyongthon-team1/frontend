@@ -947,6 +947,15 @@ describe('HeroCard · PageHeading', () => {
     expect(container.firstChild).toHaveClass('bg-brand-soft');
   });
 
+  it('HeroCard: footer는 글 · 일러스트 줄 밖, 카드 폭 전체', () => {
+    const { container } = render(
+      <HeroCard title="제목" illustration="campus" footer={<p>아래 칸</p>} />,
+    );
+    const footer = screen.getByText('아래 칸').parentElement!;
+    expect(footer.parentElement).toBe(container.firstChild);
+    expect(container.querySelector('img')!.parentElement).not.toBe(container.firstChild);
+  });
+
   it('HeroCard tone local은 local-soft 바탕', () => {
     const { container } = render(<HeroCard title="동네" illustration="cafe" tone="local" />);
     expect(container.firstChild).toHaveClass('bg-local-soft');

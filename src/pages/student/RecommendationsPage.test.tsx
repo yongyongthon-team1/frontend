@@ -2,6 +2,7 @@ import { screen, waitFor, within } from '@testing-library/react';
 import { http, HttpResponse } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useLastQuery } from '@/features/tours/lastQuery';
+import type { Recommendation, RecommendationResult, TourSummary } from '@/features/tours/model';
 import { toSearch } from '@/features/tours/recommendationParams';
 import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
@@ -9,45 +10,129 @@ import { renderApp } from '@/test/renderApp';
 const DESIGN_TEXT = '산업디자인을 공부하고 싶고, 학생들이 주로 어디서 시간을 보내는지 궁금해요.';
 const DESIGN_Q = encodeURIComponent(DESIGN_TEXT);
 
-describe('AI 추천 목록 (hs-s04 · hs-a06)', () => {
+function row(id: number, shortName: string, major: string, reason: string): Recommendation {
+  const tour: TourSummary = {
+    id,
+    title: `${shortName} 탐방 ${id}`,
+    universityId: id,
+    universityName: `${shortName}학교`,
+    universityShortName: shortName,
+    campusName: '본교',
+    major,
+    guideName: '가이드',
+    guideVerified: true,
+    startsAt: `2026-11-1${id}T14:00:00+09:00`,
+    endsAt: null,
+    capacity: 5,
+    approvedCount: 2,
+    remainingSeats: 3,
+    status: 'RECRUITING',
+  };
+  return { tour, reason };
+}
+
+const MIXED: RecommendationResult = {
+  headline: '디자인 분야에 관심이 많군요!',
+  keywords: ['디자인'],
+  fallback: null,
+  items: [
+    row(1, '경희대', '산업디자인학과', '직접 제품을 만드는 경험을 원해서'),
+    row(2, '강남대', '콘텐츠학과', '콘텐츠를 만드는 하루가 궁금해서'),
+    row(3, '경희대', '시각디자인학과', '시각 디자인 수업이 궁금해서'),
+  ],
+};
+
+describe('AI 추천 목록 (hs-s04 · H02 · hs-a06 · H13)', () => {
   beforeEach(() => useLastQuery.setState({ search: null }));
 
-  it('로딩 문구 → 결과(칩 · 제목 · 키워드 · 카드)', async () => {
+  it('로딩 문구 → 결과(제목 · 설명 · 칩 · 행 · 이유 상자)', async () => {
     await renderApp(`/recommendations?q=${DESIGN_Q}`, { as: 'student' });
     expect(screen.getByText('관심사를 분석하고 있어요')).toBeInTheDocument();
     expect(await screen.findByText('디자인 분야에 관심이 많군요!')).toBeInTheDocument();
-    expect(screen.getByText('AI가 관심사를 분석했어요 ✦')).toBeInTheDocument();
-    expect(screen.getByText('추천 이유와 남은 자리를 확인해보세요.')).toBeInTheDocument();
-    expect(
-      screen.getByText('탐방이 없다면 같은 학교의 모집 중 탐방을 보여줘요.'),
-    ).toBeInTheDocument();
-    expect(screen.getAllByText('경희대학교 국제캠퍼스')[0]).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '추천 탐방' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
+      /^\d+개의 탐방을 추천해요\.$/,
+    );
+    expect(screen.getByRole('radiogroup', { name: '추천 필터' })).toBeInTheDocument();
+    expect(screen.getByRole('radio', { name: '전체' })).toBeChecked();
+    expect(screen.getByText('왜 추천했나요?')).toBeInTheDocument();
+    expect(screen.getByLabelText('AI 결과')).toBeInTheDocument();
   });
 
-  it('카드 전체가 탐방 상세로 가는 링크이고 이유 · 잔여 자리가 있다', async () => {
+  it('제목의 개수는 결과 수', async () => {
+    server.use(http.post('/api/recommendations', () => HttpResponse.json(MIXED)));
+    await renderApp(`/recommendations?q=${DESIGN_Q}`, { as: 'student' });
+    expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
+      '3개의 탐방을 추천해요.',
+    );
+  });
+
+  it('행은 탐방 상세로 가는 링크이고 둘째 줄이 제목, 셋째 줄이 날짜 · 추천 이유(2A-R3)', async () => {
     await renderApp(`/recommendations?q=${DESIGN_Q}`, { as: 'student' });
     await screen.findByText('디자인 분야에 관심이 많군요!');
-    const cards = screen.getAllByRole('link', { name: /경희대학교 국제캠퍼스/ });
-    expect(cards[0]).toHaveAttribute('href', '/tours/1');
-    expect(within(cards[0]).getByLabelText('AI 결과')).toBeInTheDocument();
-    expect(within(cards[0]).getByText(/^잔여 \d+자리$/)).toBeInTheDocument();
-    expect(within(cards[0]).getByText('자세히 보기 →')).toBeInTheDocument();
-    expect(screen.queryByRole('link', { name: '자세히 보기 →' })).toBeNull();
-    expect(
-      within(cards[0]).getByText(/^산업디자인학과 · \d\d\/\d\d\([일월화수목금토]\) \d\d:\d\d$/),
-    ).toBeInTheDocument();
+    const list = screen.getByRole('list', { name: '추천 탐방' });
+    const first = within(list).getAllByRole('link')[0];
+    expect(first).toHaveAttribute('href', '/tours/1');
+    expect(within(first).getByText('경희대학교 국제캠퍼스')).toBeInTheDocument();
+    expect(first).toHaveTextContent(/\d\d\.\d\d · /);
+    // 첫 행의 메타에 첫 추천 이유가 들어간다.
+    const line = within(first).getByTestId('recommendation-reason-line');
+    expect(line.textContent).toMatch(/^✦ \d\d\.\d\d · .*관심이 있다고 해서/);
+    // 아래 상자에도 같은 이유(전문)가 있다.
+    const box = screen.getByText('왜 추천했나요?').closest('section')!;
+    expect(box.textContent).toContain(line.textContent!.replace(/^.*? · /, ''));
   });
 
-  it('매칭이 없으면 넓힌 결과', async () => {
+  it('필터 칩: 전체 · 학과 키워드 · 학교 — 학교 칩을 고르면 다른 학교 행이 없다', async () => {
+    server.use(http.post('/api/recommendations', () => HttpResponse.json(MIXED)));
+    const { user } = await renderApp(`/recommendations?q=${DESIGN_Q}`, { as: 'student' });
+    await screen.findByText('디자인 분야에 관심이 많군요!');
+    const chips = within(screen.getByRole('radiogroup', { name: '추천 필터' }));
+    expect(chips.getAllByRole('radio').map((r) => r.textContent)).toEqual([
+      '전체',
+      '디자인',
+      '경희대',
+      '강남대',
+    ]);
+    const list = screen.getByRole('list', { name: '추천 탐방' });
+    expect(within(list).getAllByRole('link')).toHaveLength(3);
+
+    await user.click(chips.getByRole('radio', { name: '경희대' }));
+    expect(chips.getByRole('radio', { name: '경희대' })).toBeChecked();
+    expect(within(list).getAllByRole('link')).toHaveLength(2);
+    expect(within(list).queryByText('강남대학교')).toBeNull();
+    // 제목의 개수는 결과 수 그대로.
+    expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent('3개의 탐방을');
+
+    await user.click(chips.getByRole('radio', { name: '강남대' }));
+    expect(within(list).getAllByRole('link')).toHaveLength(1);
+    expect(within(list).getByText('강남대학교')).toBeInTheDocument();
+    // 이유 상자는 보이는 첫 행의 이유다.
+    expect(screen.getByText('왜 추천했나요?').closest('section')).toHaveTextContent(
+      '콘텐츠를 만드는 하루가 궁금해서',
+    );
+  });
+
+  it('뒤로 가기는 입력을 담아 홈으로', async () => {
+    const { user, router } = await renderApp(`/recommendations?q=${DESIGN_Q}&school=2`, {
+      as: 'student',
+    });
+    await screen.findByText('디자인 분야에 관심이 많군요!');
+    await user.click(screen.getByRole('link', { name: '뒤로 가기' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    expect(await screen.findByLabelText('하고 싶은 것')).toHaveValue(DESIGN_TEXT);
+  });
+
+  it('매칭이 없으면 넓힌 결과: 경고 칩이 제목 위, 제목은 개수', async () => {
     await renderApp('/recommendations?q=%EC%9A%B0%EC%A3%BC%ED%95%AD%EA%B3%B5', { as: 'student' });
     expect(await screen.findByText('조건을 넓혀서 보여 드려요')).toBeInTheDocument();
-    expect(screen.getByText('조건에 맞는 추천이 없어요')).toBeInTheDocument();
-    expect(screen.queryByText('AI가 관심사를 분석했어요 ✦')).toBeNull();
-    expect(screen.getAllByRole('link', { name: /자세히 보기/ }).length).toBeGreaterThan(0);
+    const chip = screen.getByText('조건에 맞는 추천이 없어요');
+    const title = screen.getByRole('heading', { level: 1 });
+    expect(title).toHaveTextContent(/^\d+개의 탐방을 추천해요\.$/);
+    expect(chip.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getAllByRole('link', { name: /\/?경희대|대학교/ }).length).toBeGreaterThan(0);
   });
 
-  it('결과가 하나도 없으면 빈 상태와 다시 선택 링크', async () => {
+  it('결과가 하나도 없으면 H13 추천 0건 카드와 다시 추천받기 링크', async () => {
     server.use(
       http.post('/api/recommendations', () =>
         HttpResponse.json({
@@ -61,23 +146,14 @@ describe('AI 추천 목록 (hs-s04 · hs-a06)', () => {
     await renderApp('/recommendations?q=%EC%9A%B0%EC%A3%BC%ED%95%AD%EA%B3%B5&school=2', {
       as: 'student',
     });
-    expect(await screen.findByText('지금 모집 중인 탐방이 없어요')).toBeInTheDocument();
-    expect(screen.getByText('학교나 날짜를 바꿔 다시 찾아보세요.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '학교 · 날짜 다시 선택' })).toHaveAttribute(
+    expect(await screen.findByText('아직 맞는 탐방이 없어요')).toBeInTheDocument();
+    expect(screen.getByText('추천 0건')).toBeInTheDocument();
+    expect(screen.getByText('관심 문장을 바꿔 다시 검색해 보세요.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /다시 추천받기/ })).toHaveAttribute(
       'href',
       `/?${toSearch({ q: '우주항공', universityId: 2 })}`,
     );
-  });
-
-  it('학교 · 날짜 다시 선택은 입력을 담아 홈으로', async () => {
-    const { user, router } = await renderApp(`/recommendations?q=${DESIGN_Q}&school=2`, {
-      as: 'student',
-    });
-    await screen.findByText('디자인 분야에 관심이 많군요!');
-    await user.click(screen.getByRole('link', { name: '학교 · 날짜 다시 선택' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/'));
-    expect(await screen.findByLabelText('하고 싶은 것')).toHaveValue(DESIGN_TEXT);
-    await waitFor(() => expect(screen.getByLabelText('방문할 학교 (선택)')).toHaveValue('2'));
+    expect(screen.queryByText('왜 추천했나요?')).toBeNull();
   });
 
   it('유효한 검색을 마지막 검색으로 기억한다', async () => {

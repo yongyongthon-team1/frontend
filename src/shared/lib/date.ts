@@ -51,6 +51,17 @@ export function formatShortDate(iso: string): string {
   return `${pad2(p.month)}/${pad2(p.day)}(${p.weekday})`;
 }
 
+/** `11.12` — V2 목록 행의 날짜. */
+export function formatDotDate(iso: string): string {
+  const p = seoulParts(iso);
+  return `${pad2(p.month)}.${pad2(p.day)}`;
+}
+
+/** `11.12 (목)` */
+export function formatDotDateWeekday(iso: string): string {
+  return `${formatDotDate(iso)} (${seoulParts(iso).weekday})`;
+}
+
 export function formatTime(iso: string): string {
   const p = seoulParts(iso);
   return `${pad2(p.hour)}:${pad2(p.minute)}`;

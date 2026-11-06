@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { tourTitle } from './model';
+import { campusLabel, tourTitle } from './model';
+
+describe('campusLabel', () => {
+  it('학교 + 캠퍼스, 본교는 학교만', () => {
+    expect(campusLabel('경희대학교', '국제캠퍼스')).toBe('경희대학교 국제캠퍼스');
+    expect(campusLabel('강남대학교', '본교')).toBe('강남대학교');
+  });
+});
 
 describe('tourTitle', () => {
   it('제목: 대학 줄임 + 캠퍼스 + 학과', () =>

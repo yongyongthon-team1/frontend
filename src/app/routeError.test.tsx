@@ -36,9 +36,7 @@ describe('화면 단위 에러 경계 (설계 5.10)', () => {
 
     await user.click(screen.getByRole('link', { name: '처음 화면으로' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
-    expect(
-      await screen.findByRole('heading', { name: '어떤 캠퍼스가 궁금해?' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /직접 만나보세요/ })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -47,9 +45,7 @@ describe('화면 단위 에러 경계 (설계 5.10)', () => {
     await screen.findByRole('alert');
     await user.click(screen.getByRole('link', { name: '탐색' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
-    expect(
-      await screen.findByRole('heading', { name: '어떤 캠퍼스가 궁금해?' }),
-    ).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: /직접 만나보세요/ })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 });

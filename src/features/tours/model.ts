@@ -61,6 +61,11 @@ export function shortUniversityName(name: string): string {
   return name.endsWith('학교') ? name.slice(0, -'학교'.length) : name;
 }
 
+/** 목록 행의 학교 줄: `경희대학교 국제캠퍼스`. 캠퍼스명이 `본교`면 학교 이름만. */
+export function campusLabel(universityName: string, campusName: string): string {
+  return campusName === '본교' ? universityName : `${universityName} ${campusName}`;
+}
+
 /** 캠퍼스명이 `본교`면 캠퍼스를 생략하고, 학과가 없으면 `캠퍼스 탐방`으로 쓴다. */
 export function tourTitle(
   universityName: string,

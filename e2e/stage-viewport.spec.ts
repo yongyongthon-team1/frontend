@@ -45,21 +45,19 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
   test.describe(`무대 ${stage}`, () => {
     test.use({ viewport: { width, height }, deviceScaleFactor });
 
-    test('① 추천: 첫 관심 키워드 칩과 첫 카드의 추천 이유', async ({ page }) => {
+    test('① 추천: 첫 관심 키워드 칩과 첫 행의 추천 이유', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&as=student');
-      await page.getByRole('button', { name: EXAMPLE_QUERIES[0] }).click();
+      await page.getByLabel('하고 싶은 것').fill(EXAMPLE_QUERIES[0]);
       await page.getByRole('button', { name: '나에게 맞는 탐방 추천받기' }).click();
-      await expect(
-        page.getByRole('heading', { name: '디자인 분야에 관심이 많군요!' }),
-      ).toBeVisible();
+      await expect(page.getByText('디자인 분야에 관심이 많군요!')).toBeVisible();
 
-      // 관심 키워드 칩이 화면의 첫 목록이고, 추천 이유는 카드 안에서 AI 배지가 붙은 상자다.
+      // 첫 키워드 칩 = 필터 칩 줄의 `전체` 다음 칩(학과에 든 키워드 칩, 없으면 학교 칩)이고, 추천 이유는 첫 행의 셋째 줄이다.
       const main = page.getByRole('main');
-      const firstKeyword = main.getByRole('list').first().getByRole('listitem').first();
-      const firstCard = main.getByRole('link', { name: /자세히 보기/ }).first();
-      const firstReason = firstCard
-        .locator('div')
-        .filter({ has: page.getByRole('group', { name: 'AI 결과' }) });
+      const firstKeyword = main
+        .getByRole('radiogroup', { name: '추천 필터' })
+        .getByRole('radio')
+        .nth(1);
+      const firstReason = main.getByTestId('recommendation-reason-line').first();
       await expectVisibleWithoutScroll(page, [firstKeyword, firstReason]);
       await screenshot(page, 1);
     });

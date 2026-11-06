@@ -1,29 +1,34 @@
-import { TriangleAlert } from 'lucide-react';
-import { useEffect, useMemo } from 'react';
+import { ChevronLeft, TriangleAlert } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
 import { Link, Navigate, useLocation } from 'react-router';
-import { TourCard } from '@/features/tours/components/TourCard';
+import { ALL_CHIP, buildFilterChips, filterItems } from '@/features/tours/filterChips';
 import { useLastQuery } from '@/features/tours/lastQuery';
+import { campusLabel } from '@/features/tours/model';
 import { useRecommendations } from '@/features/tours/queries';
 import { fromSearch, toSearch } from '@/features/tours/recommendationParams';
-import { cn } from '@/shared/lib/cn';
-import { formatShortDate, formatTime } from '@/shared/lib/date';
+import { formatDotDate } from '@/shared/lib/date';
+import { AiBadge } from '@/shared/ui/AiBadge';
 import { AiLoading } from '@/shared/ui/AiLoading';
-import { buttonClass } from '@/shared/ui/buttonStyles';
-import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
-import { KeywordChips } from '@/shared/ui/KeywordChips';
+import { FilterChips } from '@/shared/ui/FilterChips';
+import { Illustration } from '@/shared/ui/Illustration';
+import { ListRow } from '@/shared/ui/ListRow';
 import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { StatusChip } from '@/shared/ui/StatusChip';
-import { TopBar } from '@/shared/ui/TopBar';
 
 const LOADING_STEPS = ['관심사를 분석하고 있어요', '탐방을 비교하고 있어요'];
 
-/** AI 추천 탐방 목록(hs-s04) · 추천 0건 대체 목록(hs-a06). 검색 조건은 주소에 있다. */
+/**
+ * AI 추천 탐방 목록(hs-s04 · V2 H02) · 추천 0건(hs-a06 · V2 H13). 검색 조건은 주소에 있다.
+ * 행의 셋째 줄은 `{MM.DD} · {추천 이유}`(판정 2A-R3) — 무대에서 첫 추천 이유가 스크롤 없이 보여야 해서다.
+ */
 export function RecommendationsPage() {
   const { search } = useLocation();
   const q = useMemo(() => fromSearch(search), [search]);
   const setLastSearch = useLastQuery((s) => s.setSearch);
   const recommendations = useRecommendations(q);
+  const [filter, setFilter] = useState(ALL_CHIP);
 
   // 상세에서 `다른 추천 보기`로 이 목록에 돌아올 수 있게 마지막 검색을 기억한다.
   useEffect(() => {
@@ -35,71 +40,109 @@ export function RecommendationsPage() {
   const backToForm = `/?${toSearch(q)}`;
   const { data: result } = recommendations;
 
-  return (
-    <>
-      <TopBar title="추천 탐방" back="/" />
-      <Page>
-        {recommendations.isError ? (
-          <ErrorState
-            error={recommendations.error}
-            onRetry={() => void recommendations.refetch()}
-          />
-        ) : result === undefined ? (
-          <AiLoading steps={LOADING_STEPS} />
-        ) : (
-          <>
-            {result.fallback ? (
-              <StatusChip tone="warning" icon={<TriangleAlert className="size-4" />}>
-                조건에 맞는 추천이 없어요
-              </StatusChip>
-            ) : (
-              <StatusChip>AI가 관심사를 분석했어요 ✦</StatusChip>
-            )}
-            <h2 className="mt-4 text-2xl leading-snug font-bold text-ink">{result.headline}</h2>
-            <div className="mt-3">
-              <KeywordChips keywords={result.keywords} />
-            </div>
-            <p className="mt-3 text-sm text-muted">추천 이유와 남은 자리를 확인해보세요.</p>
+  const chips = result ? buildFilterChips(result) : [];
+  const active = chips.some((c) => c.value === filter) ? filter : ALL_CHIP;
+  const shown = result ? filterItems(result.items, active) : [];
 
-            {result.items.length === 0 ? (
-              <EmptyState
-                title="지금 모집 중인 탐방이 없어요"
-                description="학교나 날짜를 바꿔 다시 찾아보세요."
-                action={{ label: '학교 · 날짜 다시 선택', to: backToForm }}
+  return (
+    <Page className="pt-2">
+      <div className="flex h-12 items-center">
+        <Link
+          to={backToForm}
+          aria-label="뒤로 가기"
+          className="-ml-2.5 flex size-11 items-center justify-center rounded-full text-ink hover:bg-neutral-100"
+        >
+          <ChevronLeft aria-hidden className="size-6" />
+        </Link>
+      </div>
+
+      {recommendations.isError && result === undefined ? (
+        <ErrorState error={recommendations.error} onRetry={() => void recommendations.refetch()} />
+      ) : result === undefined ? (
+        <AiLoading steps={LOADING_STEPS} />
+      ) : (
+        <>
+          <div className="flex items-start justify-between gap-3">
+            <div className="min-w-0 flex-1">
+              {result.fallback ? (
+                <StatusChip tone="warning" icon={<TriangleAlert className="size-4" />}>
+                  조건에 맞는 추천이 없어요
+                </StatusChip>
+              ) : null}
+              <PageHeading
+                className={result.fallback ? 'mt-3' : undefined}
+                title={
+                  result.items.length === 0
+                    ? '다른 탐방도\n찾아볼까요?'
+                    : `${result.items.length}개의 탐방을\n추천해요.`
+                }
+                description={result.headline}
               />
-            ) : (
-              <>
-                <ul className="mt-4 flex flex-col gap-3">
-                  {result.items.map(({ tour, reason }) => (
-                    <li key={tour.id}>
-                      <TourCard
-                        to={`/tours/${tour.id}`}
-                        title={`${tour.universityName} ${tour.campusName}`}
-                        lines={[
-                          `${tour.major ? `${tour.major} · ` : ''}${formatShortDate(tour.startsAt)} ${formatTime(tour.startsAt)}`,
-                        ]}
-                        reason={reason}
-                        footer={
-                          <>
-                            <span>잔여 {tour.remainingSeats}자리</span>
-                            <span>자세히 보기 →</span>
-                          </>
-                        }
-                      />
-                    </li>
-                  ))}
-                </ul>
-                <Link to={backToForm} className={cn(buttonClass('secondary'), 'mt-5')}>
-                  학교 · 날짜 다시 선택
-                </Link>
-                <p className="mt-3 px-1 text-sm text-muted">
-                  탐방이 없다면 같은 학교의 모집 중 탐방을 보여줘요.
-                </p>
-              </>
-            )}
-          </>
-        )}
-      </Page>
-    </>
+            </div>
+            <Illustration
+              kind="campus"
+              className="h-auto max-h-[72px] w-auto max-w-[96px] shrink-0 object-contain"
+            />
+          </div>
+
+          {result.items.length === 0 ? (
+            <section className="mt-5 rounded-xl bg-surface p-5">
+              <StatusChip tone="info">추천 0건</StatusChip>
+              <h2 className="mt-3 text-lg font-bold text-ink">아직 맞는 탐방이 없어요</h2>
+              <p className="mt-1 text-[13px] text-muted">관심 문장을 바꿔 다시 검색해 보세요.</p>
+              <Link
+                to={backToForm}
+                className="mt-4 flex min-h-11 items-center rounded-md bg-brand-soft px-4 text-[13px] font-bold text-brand"
+              >
+                다시 추천받기 ›
+              </Link>
+            </section>
+          ) : (
+            <>
+              <div className="mt-4">
+                <FilterChips
+                  label="추천 필터"
+                  chips={chips.map(({ value, label, kind }) => ({
+                    value,
+                    label,
+                    kind: kind === 'school' ? 'school' : 'keyword',
+                  }))}
+                  value={active}
+                  onChange={setFilter}
+                />
+              </div>
+              <ul aria-label="추천 탐방" className="mt-4 rounded-xl bg-surface">
+                {shown.map(({ tour, reason }) => (
+                  <li
+                    key={tour.id}
+                    className="relative before:absolute before:inset-x-4 before:top-0 before:h-px before:bg-border first:before:hidden"
+                  >
+                    <ListRow
+                      to={`/tours/${tour.id}`}
+                      eyebrow={campusLabel(tour.universityName, tour.campusName)}
+                      title={tour.title}
+                      metaTone="brand"
+                      meta={
+                        <span data-testid="recommendation-reason-line" className="block truncate">
+                          <span aria-hidden>✦ </span>
+                          {formatDotDate(tour.startsAt)} · {reason}
+                        </span>
+                      }
+                    />
+                  </li>
+                ))}
+              </ul>
+              <section className="mt-5 rounded-xl bg-brand-soft p-5">
+                <div className="-mt-1 -ml-3 flex items-center gap-1">
+                  <AiBadge />
+                  <p className="text-[13px] font-bold text-brand">왜 추천했나요?</p>
+                </div>
+                <p className="mt-1 text-[15px] leading-[1.5] text-ink">{shown[0]?.reason}</p>
+              </section>
+            </>
+          )}
+        </>
+      )}
+    </Page>
   );
 }
