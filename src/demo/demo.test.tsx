@@ -66,7 +66,7 @@ describe('시연 패널', () => {
     expect(keysBefore).toBeGreaterThan(0);
     const clear = vi.spyOn(queryClient, 'clear');
     await user.click(screen.getByRole('button', { name: '가이드' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide'));
     expect(clear).toHaveBeenCalled();
     expect(screen.queryByText('신청 · 가이드 승인 대기')).toBeNull();
     // 판정 G2: 이전 역할의 데이터가 캐시에 남지 않는다.
@@ -103,12 +103,12 @@ describe('시연 패널', () => {
       const stopEmails = useDemoStore.subscribe((s) => demoEmails.push(s.activeDemoEmail));
 
       await user.click(screen.getByRole('button', { name: '가이드' }));
-      await screen.findByRole('heading', { name: '내가 개설한 탐방' });
+      await screen.findByRole('link', { name: '내가 개설한 탐방' }); // /guide 자리 화면(Task 9가 G01로 채운다)
       stopRouter();
       stopTokens();
       stopEmails();
 
-      expect(visits.map((v) => v.path)).toEqual(['/guide/tours']); // /login을 거치지 않는다
+      expect(visits.map((v) => v.path)).toEqual(['/guide']); // /login을 거치지 않는다
       expect(visits[0]!.token).not.toBe(studentToken);
       expect(visits[0]!.token).not.toBeNull();
       expect(tokens).not.toContain(null);
@@ -153,12 +153,10 @@ describe('시연 패널', () => {
 
       await user.click(screen.getByRole('button', { name: '가이드' }));
       await user.click(screen.getByRole('button', { name: '사장님' }));
-      await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours'));
+      await waitFor(() => expect(router.state.location.pathname).toBe('/guide'));
       expect(logins.count).toBe(1);
       // 늦춘 요청이 다음 테스트까지 남지 않게 새 화면의 데이터를 받을 때까지 기다린다(다음 테스트는 목업 DB · 세션을 새로 만든다).
-      expect((await screen.findAllByRole('link', { name: '신청자 보기' })).length).toBeGreaterThan(
-        0,
-      );
+      expect(await screen.findByRole('link', { name: '내가 개설한 탐방' })).toBeInTheDocument();
     });
   });
 
@@ -322,7 +320,7 @@ describe('발표 모드', () => {
   it('역할 배지는 발표 모드에서만', async () => {
     useDemoStore.setState({ enabled: true });
     await renderApp('/guide/tours', { as: 'guide' });
-    await screen.findByRole('link', { name: '운영' });
+    await screen.findByRole('link', { name: '코스 편집' });
     expect(screen.queryByText('가이드 화면')).toBeNull();
   });
 

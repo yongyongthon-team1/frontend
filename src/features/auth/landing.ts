@@ -17,7 +17,7 @@ export function getLandingPath(me: Me): string {
         return '/guide/verify';
       }
       if (!me.guideProfile?.major) return '/guide/me';
-      return '/guide/tours';
+      return '/guide';
     case 'OWNER':
       if (!me.businessVerified) return '/owner/verify';
       if (me.storeId === null) return '/owner/store/connect';

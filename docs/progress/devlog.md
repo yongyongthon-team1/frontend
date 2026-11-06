@@ -10,6 +10,7 @@
 - 화면 41장 이미지 · 토큰(`--yy-*`) · 화면별 문구 · 라우트 대응 · V2가 바꾼 것 11건을 `docs/reference/design-v2.md`에 정리했다. 결정 0010: V2가 있는 화면은 V2가 와이어보다 앞서고, P1 화면과 골든 패스 화면을 V2로 만든다.
 - MVP 2A Task 1: V2 토큰(`--yy-*`) · Noto Sans KR(npm 번들, Pretendard 제거) · UNIRO 워드마크 · 아이콘 · 3D 일러스트 8종 에셋과 `Illustration` · `BrandMark`를 넣었다.
 - MVP 2A Task 2: 공통 컴포넌트를 V2로 다시 입혔다(버튼 `danger` · `soft` 변형 · 상단 바 · 하단 탭바 · 칩 · 카드 · 입력 · 시트). V2 전용 부품 7종(`ListRow` · `SegmentedTabs` · `FilterChips` · `StepList` · `NumberedList` · `HeroCard` · `PageHeading`)을 `src/shared/ui`에 더했다.
+- MVP 2A Task 3: 역할별 하단 탭을 V2 구조로 바꿨다(가이드 `내 탐방` · `코스 편집` · `MY`, 사장님 `내 가게` · `쿠폰`). 가이드 첫 화면은 `/guide`(자리 화면, Task 9가 채움), `/guide/course`는 다가오는 탐방의 코스로 보낸다. 로그인 화면에 UNIRO 표식 · 슬로건을 더했다.
 
 ### 다음 할 일
 

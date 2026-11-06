@@ -38,6 +38,24 @@ export interface GuideTourSummary extends TourSummary {
   courseStatus: CourseStatus | null;
 }
 
+/** 가이드 홈 · `코스 편집` 탭이 집중할 탐방: 모집 중 · 마감 중 `startsAt`이 가장 이른 것(없으면 null). */
+export function pickFocusTour(tours: GuideTourSummary[]): GuideTourSummary | null {
+  let focus: GuideTourSummary | null = null;
+  for (const tour of tours) {
+    if (tour.status !== 'RECRUITING' && tour.status !== 'CLOSED') continue;
+    if (focus === null || Date.parse(tour.startsAt) < Date.parse(focus.startsAt)) focus = tour;
+  }
+  return focus;
+}
+
+/** 그 탐방의 코스로 가는 길: 확정 → 확정 점검, 초안 → 편집, 코스 없음 → 승인자가 있으면 초안 생성, 없으면 신청자 보기. */
+export function guideCoursePath(tour: GuideTourSummary): string {
+  const base = `/guide/tours/${tour.id}`;
+  if (tour.courseStatus === 'CONFIRMED') return `${base}/course/confirm`;
+  if (tour.courseStatus === 'DRAFT') return `${base}/course/edit`;
+  return tour.counts.approved >= 1 ? `${base}/course/draft?generate=1` : `${base}/applicants`;
+}
+
 export const APPLICATION_STATUS_LABEL: Record<ApplicationStatus, string> = {
   PENDING: '승인 대기',
   APPROVED: '승인됨',

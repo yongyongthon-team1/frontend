@@ -1,8 +1,10 @@
-import { CircleUser, ClipboardList, List, Search, Store } from 'lucide-react';
+import { CircleUser, List, Route, Search, Store, TicketCheck } from 'lucide-react';
 import type { Role } from '@/features/auth/model';
 import type { TabItem } from '@/shared/ui/BottomTabBar';
 
-// 역할별 하단 탭(설계 5.3). 가이드 · 사장님의 `탐색`은 같은 둘러보기 화면이다. 운영자는 탭 없이 상단에 로그아웃.
+// 역할별 하단 탭(V2 GNB · 판정 2A-R8/R9). 운영자는 탭 없이 상단에 로그아웃.
+// 가이드: `내 탐방`(G01 홈과 개설 탐방 · 신청자) · `코스 편집`(다가오는 탐방의 코스 화면 — 코스 URL 전부) · `MY`.
+// 사장님: `내 가게` · `쿠폰`. MY 탭이 없으므로 로그아웃은 내 가게 화면 안에 둔다.
 export const TABS: Record<Role, TabItem[]> = {
   HIGH_SCHOOL: [
     {
@@ -16,19 +18,30 @@ export const TABS: Record<Role, TabItem[]> = {
     { to: '/me', label: 'MY', icon: CircleUser },
   ],
   UNIVERSITY: [
-    { to: '/explore', label: '탐색', icon: Search },
-    { to: '/guide/tours', label: '운영', icon: ClipboardList, match: ['/guide/tours'] },
-    { to: '/guide/me', label: 'MY', icon: CircleUser },
+    {
+      to: '/guide',
+      label: '내 탐방',
+      icon: List,
+      end: true,
+      match: ['/guide/tours'],
+      exclude: [/^\/guide\/tours\/\d+\/course(\/|$)/],
+    },
+    {
+      to: '/guide/course',
+      label: '코스 편집',
+      icon: Route,
+      match: ['/guide/course', /^\/guide\/tours\/\d+\/course(\/|$)/],
+    },
+    { to: '/guide/me', label: 'MY', icon: CircleUser, match: ['/guide/me', '/guide/verify'] },
   ],
   OWNER: [
-    { to: '/explore', label: '탐색', icon: Search },
+    { to: '/owner/store', label: '내 가게', icon: Store, match: ['/owner/store'] },
     {
-      to: '/owner/store',
-      label: '운영',
-      icon: Store,
-      match: ['/owner/store', '/owner/coupons', '/owner/report'],
+      to: '/owner/coupons/redeem',
+      label: '쿠폰',
+      icon: TicketCheck,
+      match: ['/owner/coupons'],
     },
-    { to: '/owner/me', label: 'MY', icon: CircleUser },
   ],
   ADMIN: [],
 };

@@ -82,10 +82,10 @@ describe('레이아웃', () => {
   it.each([
     [
       'guide',
-      '/guide/tours',
+      '/guide',
       [
-        ['탐색', '/explore'],
-        ['운영', '/guide/tours'],
+        ['내 탐방', '/guide'],
+        ['코스 편집', '/guide/course'],
         ['MY', '/guide/me'],
       ],
     ],
@@ -93,9 +93,8 @@ describe('레이아웃', () => {
       'owner',
       '/owner/store',
       [
-        ['탐색', '/explore'],
-        ['운영', '/owner/store'],
-        ['MY', '/owner/me'],
+        ['내 가게', '/owner/store'],
+        ['쿠폰', '/owner/coupons/redeem'],
       ],
     ],
   ])('%s 하단 탭', async (as, path, tabs) => {
@@ -103,6 +102,22 @@ describe('레이아웃', () => {
     const nav = await screen.findByRole('navigation', { name: '주요 메뉴' });
     const links = within(nav).getAllByRole('link');
     expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual(tabs);
+  });
+
+  it('가이드 첫 화면 자리: 내가 개설한 탐방 링크, 코스 편집 탭 아님', async () => {
+    await renderApp('/guide', { as: 'guide' });
+    expect(await screen.findByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
+      'href',
+      '/guide/tours',
+    );
+    const nav = screen.getByRole('navigation', { name: '주요 메뉴' });
+    expect(within(nav).getByRole('link', { name: '내 탐방' })).toHaveAttribute(
+      'aria-current',
+      'page',
+    );
+    expect(within(nav).getByRole('link', { name: '코스 편집' })).not.toHaveAttribute(
+      'aria-current',
+    );
   });
 
   it('운영자는 탭 없이 로그아웃 버튼', async () => {
@@ -141,6 +156,10 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/reviews/new', 'HIGH_SCHOOL'],
   ['/verify', 'HIGH_SCHOOL'],
   ['/me', 'HIGH_SCHOOL'],
+  ['/guide', 'UNIVERSITY'],
+  ['/guide/course', 'UNIVERSITY'],
+  ['/guide/tours/1/course/confirm', 'UNIVERSITY'],
+  ['/my-tours/1/cancel', 'HIGH_SCHOOL'],
   ['/guide/tours', 'UNIVERSITY'],
   ['/guide/tours/1/applicants', 'UNIVERSITY'],
   ['/guide/tours/1/course/draft', 'UNIVERSITY'],

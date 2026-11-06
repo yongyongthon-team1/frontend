@@ -59,8 +59,11 @@ for (const { title, link, present } of VARIANTS) {
 
     // 가이드: 김민지 승인 → AI 코스 초안 → 둘째 지점을 아래로 → 확정(쿠폰 발급)
     await switchRole('가이드');
-    await expect(page.getByRole('heading', { name: '내가 개설한 탐방' })).toBeVisible();
+    // 가이드 첫 화면은 /guide(자리 화면 — Task 9가 홈으로 채운다). 개설한 탐방 목록으로 들어간다.
+    await expect(page.getByRole('heading', { name: '내 탐방', exact: true })).toBeVisible();
     await checkRoleBadge('가이드 화면');
+    await page.getByRole('link', { name: '내가 개설한 탐방' }).click();
+    await expect(page.getByRole('heading', { name: '내가 개설한 탐방' })).toBeVisible();
     await page.getByRole('link', { name: '신청자 보기' }).first().click();
     // 승인 토스트에도 이름이 들어가므로 신청자 카드(article) 안에서 찾는다.
     const applicant = page.locator('article', { hasText: '김민지' });
@@ -82,6 +85,8 @@ for (const { title, link, present } of VARIANTS) {
 
     // 고교생: 내 탐방 → 코스 지도 → 제휴 상점 쿠폰 → 6자리 코드(순서를 바꿨으므로 첫 쿠폰은 상점 1이 아니다)
     await switchRole('고교생');
+    // 가이드 탭에도 `내 탐방`이 있으므로, 역할 전환이 끝나(고교생 홈) 그 탭이 사라진 뒤에 누른다.
+    await expect(page.getByRole('heading', { name: '어떤 캠퍼스가 궁금해?' })).toBeVisible();
     await page.getByRole('link', { name: '내 탐방', exact: true }).click();
     await expect(page.getByRole('heading', { name: '내 탐방 · 신청 상태' })).toBeVisible();
     await checkRoleBadge('고교생 화면');

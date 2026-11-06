@@ -43,6 +43,8 @@
 | `hs-a04` | 탐방 신청서 | `/tours/:tourId/apply` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `hs-a05` | 내 탐방 상태별 목록 | `/my-tours` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | `hs-a06` | 탐방 추천·신청 예외 상태 | `/recommendations` · `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
+| `G01` | 가이드 홈 (V2) | `/guide` | P0 | 🟨 | ⬜ | ⬜ | ⬜ | ⬜ |
+| — | 코스 편집 탭 (다가오는 탐방의 코스로 이동) | `/guide/course` | P0 | 🟨 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s01` | 가이드 프로필 | `/guide/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s02` | 탐방 개설 | `/guide/tours/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-s03` | 신청자 관리 | `/guide/tours/:tourId/applicants` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |

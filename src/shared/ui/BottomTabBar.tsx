@@ -9,8 +9,13 @@ export interface TabItem {
   icon: LucideIcon;
   /** true면 `to`와 정확히 같은 경로에서만 활성(하위 경로 제외). */
   end?: boolean;
-  /** 이 경로 접두사 아래 화면에서도 활성으로 친다(예: 탐색 탭 → `/recommendations`). `'/'`는 `/`만 맞는다. */
-  match?: string[];
+  /**
+   * 이 경로 아래 화면에서도 활성으로 친다. 문자열은 접두사(예: 탐색 탭 → `/recommendations`, `'/'`는 `/`만),
+   * RegExp는 경로 전체에 `test`한다(예: 가이드 코스 화면 `/guide/tours/3/course/edit`).
+   */
+  match?: (string | RegExp)[];
+  /** 이 정규식에 맞는 경로면 다른 규칙과 상관없이 비활성(예: `내 탐방` 탭 아래 코스 화면은 `코스 편집` 탭 몫). */
+  exclude?: RegExp[];
 }
 
 export function BottomTabBar({ tabs }: { tabs: TabItem[] }) {

@@ -7,11 +7,11 @@ import { useLogin } from '@/features/auth/queries';
 import { cn } from '@/shared/lib/cn';
 import { errorMessage } from '@/shared/lib/errors';
 import { preventImeEnter } from '@/shared/lib/ime';
+import { BrandMark } from '@/shared/ui/BrandMark';
 import { Button } from '@/shared/ui/Button';
 import { buttonClass } from '@/shared/ui/buttonStyles';
 import { InfoCard } from '@/shared/ui/InfoCard';
 import { TextField } from '@/shared/ui/TextField';
-import { TopBar } from '@/shared/ui/TopBar';
 
 const loginSchema = z.object({
   email: z
@@ -32,7 +32,7 @@ function nextPath(next: string | null): string | null {
   return next;
 }
 
-/** 로그인(hs-s01). 성공하면 `next` 또는 내 첫 화면으로 간다. */
+/** 로그인(hs-s01, V2에는 없는 화면 — 브랜드 표식 + 슬로건 + V2 입력 · 버튼으로 맞춘다). 성공하면 `next` 또는 내 첫 화면으로 간다. */
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -61,9 +61,18 @@ export function LoginPage() {
 
   return (
     <>
-      <TopBar title="반가워요! 👋" />
-      <main className="px-[var(--gutter)] pb-8">
-        <h2 className="mt-4 text-2xl leading-snug font-bold whitespace-pre-line text-ink">
+      <main className="px-[var(--gutter)] pt-10 pb-8">
+        <header className="flex flex-col items-center gap-3 text-center">
+          <div aria-hidden>
+            <BrandMark variant="icon" />
+          </div>
+          <h1>
+            <span className="sr-only">유니로 </span>
+            <BrandMark variant="wordmark" />
+          </h1>
+          <p className="text-sm font-medium text-muted">“ 대학으로, 동네로, 유니로. ”</p>
+        </header>
+        <h2 className="mt-8 text-2xl leading-snug font-bold whitespace-pre-line text-ink">
           {'대학생이 직접 안내하는\n나만의 캠퍼스 탐방'}
         </h2>
         <InfoCard

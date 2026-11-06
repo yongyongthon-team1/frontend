@@ -11,6 +11,7 @@ import { Badge } from './Badge';
 import { BrandMark } from './BrandMark';
 import { BottomSheet } from './BottomSheet';
 import { BottomTabBar } from './BottomTabBar';
+import { TABS } from '@/app/tabs';
 import { isTabActive } from './tabActive';
 import { Button } from './Button';
 import { CodeInput } from './CodeInput';
@@ -288,6 +289,51 @@ describe('isTabActive', () => {
     const t = tab('/home', ['/']);
     expect(isTabActive('/', t)).toBe(true);
     expect(isTabActive('/anything', t)).toBe(false);
+  });
+});
+
+describe('isTabActive: RegExp · exclude · 가이드/사장님 탭', () => {
+  const tab = (to: string, extra: object = {}) => ({ to, label: 'x', icon: Compass, ...extra });
+
+  it('match의 RegExp는 경로 전체에 test한다', () => {
+    const t = tab('/a', { match: [/^\/b\/\d+\/c(\/|$)/] });
+    expect(isTabActive('/b/3/c', t)).toBe(true);
+    expect(isTabActive('/b/3/c/d', t)).toBe(true);
+    expect(isTabActive('/b/x/c', t)).toBe(false);
+  });
+
+  it('exclude에 맞으면 다른 규칙과 상관없이 비활성', () => {
+    const t = tab('/a', { match: ['/a'], exclude: [/^\/a\/hidden/] });
+    expect(isTabActive('/a/shown', t)).toBe(true);
+    expect(isTabActive('/a/hidden', t)).toBe(false);
+  });
+
+  const activeOf = (role: 'UNIVERSITY' | 'OWNER' | 'HIGH_SCHOOL', pathname: string) =>
+    TABS[role].filter((t) => isTabActive(pathname, t)).map((t) => t.label);
+
+  it.each([
+    ['/guide', ['내 탐방']],
+    ['/guide/tours', ['내 탐방']],
+    ['/guide/tours/1/applicants', ['내 탐방']],
+    ['/guide/tours/1/course', ['코스 편집']],
+    ['/guide/tours/1/course/edit', ['코스 편집']],
+    ['/guide/tours/1/course/confirm', ['코스 편집']],
+    ['/guide/course', ['코스 편집']],
+    ['/guide/me', ['MY']],
+    ['/guide/verify', ['MY']],
+  ])('가이드 %s → %j만 활성', (pathname, labels) => {
+    expect(activeOf('UNIVERSITY', pathname)).toEqual(labels);
+  });
+
+  it.each([
+    ['/owner/store', ['내 가게']],
+    ['/owner/coupons/redeem', ['쿠폰']],
+  ])('사장님 %s → %j만 활성', (pathname, labels) => {
+    expect(activeOf('OWNER', pathname)).toEqual(labels);
+  });
+
+  it('고교생 탭 라벨은 그대로', () => {
+    expect(TABS.HIGH_SCHOOL.map((t) => t.label)).toEqual(['탐색', '내 탐방', 'MY']);
   });
 });
 

@@ -1,6 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import type { TourSummary } from '@/features/tours/model';
-import { myTourDisplay, type MyApplication } from './model';
+import {
+  guideCoursePath,
+  myTourDisplay,
+  pickFocusTour,
+  type GuideTourSummary,
+  type MyApplication,
+} from './model';
 
 const tour: TourSummary = {
   id: 7,
@@ -109,4 +115,58 @@ describe('myTourDisplay', () => {
       action: { label: '확정되면 코스 지도와 쿠폰 열림', to: '/my-tours/21' },
     }),
   );
+});
+
+const guideTour = (patch: Partial<GuideTourSummary> & { id: number }): GuideTourSummary => ({
+  ...tour,
+  counts: { total: 0, pending: 0, approved: 0 },
+  courseStatus: null,
+  ...patch,
+});
+
+describe('pickFocusTour', () => {
+  it('목록이 비면 null', () => expect(pickFocusTour([])).toBeNull());
+
+  it('모집 중 · 마감 중 startsAt이 가장 이른 탐방', () => {
+    const late = guideTour({ id: 1, startsAt: '2026-11-20T14:00:00+09:00' });
+    const early = guideTour({ id: 2, startsAt: '2026-11-12T14:00:00+09:00', status: 'CLOSED' });
+    const mid = guideTour({ id: 3, startsAt: '2026-11-15T14:00:00+09:00' });
+    expect(pickFocusTour([late, early, mid])?.id).toBe(2);
+  });
+
+  it('취소 · 완료된 탐방은 건너뛴다', () => {
+    const done = guideTour({ id: 1, startsAt: '2026-11-01T14:00:00+09:00', status: 'COMPLETED' });
+    const canceled = guideTour({
+      id: 2,
+      startsAt: '2026-11-02T14:00:00+09:00',
+      status: 'CANCELED',
+    });
+    const open = guideTour({ id: 3, startsAt: '2026-11-30T14:00:00+09:00' });
+    expect(pickFocusTour([done, canceled, open])?.id).toBe(3);
+    expect(pickFocusTour([done, canceled])).toBeNull();
+  });
+});
+
+describe('guideCoursePath', () => {
+  const counts = (approved: number) => ({ total: approved, pending: 0, approved });
+
+  it('코스 확정 → 확정 점검', () =>
+    expect(
+      guideCoursePath(guideTour({ id: 4, courseStatus: 'CONFIRMED', counts: counts(2) })),
+    ).toBe('/guide/tours/4/course/confirm'));
+
+  it('코스 초안 → 편집', () =>
+    expect(guideCoursePath(guideTour({ id: 4, courseStatus: 'DRAFT', counts: counts(2) }))).toBe(
+      '/guide/tours/4/course/edit',
+    ));
+
+  it('코스 없음 + 승인 1명 이상 → 초안 생성', () =>
+    expect(guideCoursePath(guideTour({ id: 4, counts: counts(1) }))).toBe(
+      '/guide/tours/4/course/draft?generate=1',
+    ));
+
+  it('코스 없음 + 승인 0명 → 신청자 보기', () =>
+    expect(guideCoursePath(guideTour({ id: 4, counts: counts(0) }))).toBe(
+      '/guide/tours/4/applicants',
+    ));
 });

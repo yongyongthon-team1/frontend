@@ -48,16 +48,16 @@ describe('getLandingPath', () => {
   it('가이드: 프로필이 없어도 /guide/me', () =>
     expect(getLandingPath({ ...base, role: 'UNIVERSITY' })).toBe('/guide/me'));
 
-  it('가이드: 학과가 있으면 /guide/tours', () =>
+  it('가이드: 학과가 있으면 /guide', () =>
     expect(
       getLandingPath({
         ...base,
         role: 'UNIVERSITY',
         guideProfile: { universityId: 2, major: '컴퓨터공학과', introduction: null },
       }),
-    ).toBe('/guide/tours'));
+    ).toBe('/guide'));
 
-  it('가이드: 대기 중 인증은 학과가 있으면 /guide/tours', () =>
+  it('가이드: 대기 중 인증은 학과가 있으면 /guide', () =>
     expect(
       getLandingPath({
         ...base,
@@ -65,7 +65,7 @@ describe('getLandingPath', () => {
         verificationStatus: 'PENDING',
         guideProfile: { universityId: 2, major: '컴퓨터공학과', introduction: null },
       }),
-    ).toBe('/guide/tours'));
+    ).toBe('/guide'));
 
   it('사장님: 사업자 인증 전이면 /owner/verify', () =>
     expect(getLandingPath({ ...base, role: 'OWNER', businessVerified: false })).toBe(

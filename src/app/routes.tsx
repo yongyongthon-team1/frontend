@@ -3,6 +3,8 @@ import { ApplicantsPage } from '@/pages/guide/ApplicantsPage';
 import { CourseConfirmedPage } from '@/pages/guide/CourseConfirmedPage';
 import { CourseDraftPage } from '@/pages/guide/CourseDraftPage';
 import { CourseEditPage } from '@/pages/guide/CourseEditPage';
+import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
+import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
@@ -104,6 +106,10 @@ export const routes: RouteObject[] = [
                     element: <CouponListPage />,
                   },
                   {
+                    path: '/my-tours/:applicationId/cancel',
+                    element: <PlaceholderPage title="신청 취소" wireframe="h11" />, // Task 6
+                  },
+                  {
                     path: '/coupons/:couponId',
                     element: <CouponDetailPage />,
                   },
@@ -128,6 +134,14 @@ export const routes: RouteObject[] = [
               {
                 element: <RequireRole role="UNIVERSITY" />,
                 children: [
+                  {
+                    path: '/guide',
+                    element: <GuideHomePage />, // Task 9가 G01 홈으로 채운다
+                  },
+                  {
+                    path: '/guide/course',
+                    element: <GuideCourseRedirect />, // `코스 편집` 탭 → 다가오는 탐방의 코스
+                  },
                   {
                     path: '/guide/tours',
                     element: <GuideToursPage />,
@@ -155,6 +169,10 @@ export const routes: RouteObject[] = [
                   {
                     path: '/guide/tours/:tourId/course/stops/pick',
                     element: <PlaceholderPage title="주변 상점 선택" wireframe="guide-a03" />,
+                  },
+                  {
+                    path: '/guide/tours/:tourId/course/confirm',
+                    element: <PlaceholderPage title="코스 확정 전 점검" wireframe="g08" />, // Task 10
                   },
                   {
                     path: '/guide/tours/:tourId/course/confirmed',

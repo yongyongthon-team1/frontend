@@ -5,6 +5,15 @@ import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
 
 describe('로그인 (hs-s01)', () => {
+  it('브랜드 표식 · 슬로건 · 기존 안내 문구를 보인다', async () => {
+    await renderApp('/login');
+    expect(screen.getByRole('img', { name: 'UNIRO' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: /유니로\s*UNIRO/ })).toBeInTheDocument();
+    expect(screen.getByText('“ 대학으로, 동네로, 유니로. ”')).toBeInTheDocument();
+    expect(screen.getByText('이메일로 시작하기')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '새 계정 만들기' })).toBeInTheDocument();
+  });
+
   it('데모 계정 로그인 → 첫 화면', async () => {
     const { user, router } = await renderApp('/login');
     await user.type(screen.getByLabelText('이메일 주소'), 'student@demo.kr');
@@ -48,7 +57,7 @@ describe('로그인 (hs-s01)', () => {
     await user.type(screen.getByLabelText('이메일 주소'), 'guide@demo.kr');
     await user.type(screen.getByLabelText('비밀번호'), 'demo1234');
     await user.click(screen.getByRole('button', { name: '로그인' }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide'));
   });
 
   it('빈 칸 · 이메일 형식은 필드 아래에 안내하고 요청하지 않는다', async () => {
