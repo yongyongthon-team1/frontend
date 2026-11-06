@@ -5,8 +5,9 @@ import { expect, test } from './fixtures';
 
 // 무대 노트북 화면 점검(Review Focus 3 · 판정 28 · 30). 골든 패스 핵심 정보 — 관심 키워드 · 첫 추천 이유, 코스 완성
 // 지점, 쿠폰 코드 — 가 스크롤 없이, 다른 요소에 덮이지 않고 보여야 한다. 뷰포트는 브라우저 UI를 뺀 실제 페이지
-// 영역이다. 폰 프레임 높이가 min(844px, 뷰포트 높이 − 32px)이라 TopBar(68px)와 하단 탭(81px) 사이 본문은
-// 439 · 419 · 409px뿐이다(설계 5.7의 무대 400px 예산). 실패하면 단언을 느슨하게 하지 말고 화면 배치를 고친다.
+// 영역이다. 폰 프레임 높이가 min(844px, 뷰포트 높이 − 32px)이라 TopBar 하단(프레임 위 16 + 56 = 뷰포트 y 72px)과
+// 하단 탭(80px) 사이 본문은 452 · 432 · 422px뿐이다(Task 10 실측, 설계 5.7의 무대 400px 예산). 실패하면 단언을
+// 느슨하게 하지 말고 화면 배치를 고친다.
 const STAGE_VIEWPORTS = [
   { width: 1366, height: 620, deviceScaleFactor: 1 },
   { width: 1280, height: 600, deviceScaleFactor: 1 },
@@ -47,6 +48,8 @@ async function expectVisibleWithoutScroll(page: Page, targets: Locator[]) {
           xs.map((fx) => {
             const x = rect.x + rect.width * fx;
             const y = rect.y + rect.height * fy;
+            // 한계: elementFromPoint는 `pointer-events: none` 겹침(발표 모드 역할 배지 같은 장식)을
+            // 건너뛰므로 그런 덮임은 잡지 못한다.
             const top = el.ownerDocument.elementFromPoint(x, y);
             return {
               point: `(${fx * 100}%, ${fy * 100}%) = (${Math.round(x)}, ${Math.round(y)})`,

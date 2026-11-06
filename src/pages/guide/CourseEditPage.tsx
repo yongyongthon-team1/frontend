@@ -1,5 +1,5 @@
 import { Menu } from 'lucide-react';
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { InsightCard } from '@/features/campuses/components/InsightCard';
@@ -64,8 +64,33 @@ export function CourseEditPage() {
   const [note, setNote] = useState('');
   const [deleteStopId, setDeleteStopId] = useState<number | null>(null);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
+  const listRef = useRef<HTMLOListElement>(null);
+  const scheduleHeadingRef = useRef<HTMLHeadingElement>(null);
+  /** 지점 시트를 연 `≡`의 지점과 그때의 순서 — 창이 다 닫히면 포커스를 이리로 돌려준다. */
+  const focusReturn = useRef<{ stopId: number; index: number } | null>(null);
   const course = courseQuery.data;
+  const loadedStops = course?.stops;
+  const busy = reorder.isPending || updateStop.isPending || deleteStop.isPending || drafting;
+  const overlayOpen = sheetStopId !== null || noteStopId !== null || deleteStopId !== null;
   const base = `/guide/tours/${tourId}`;
+
+  // 지점 시트 → 한줄평 · 빼기 창은 한 번에 닫히고 열려서, 창이 닫힐 때 Radix가 포커스를 돌려줄 곳(사라진 시트 버튼)이
+  // 없다(포커스가 body로 떨어진다). 창이 모두 닫히고 요청이 끝나면 그 지점의 `≡`로 돌려준다 — 빠진 지점이면 같은
+  // 자리의 다음(없으면 이전) 지점, 지점이 하나도 없으면 일정 소제목. 순서를 바꾼 지점은 새 자리의 `≡`가 받는다.
+  useEffect(() => {
+    const target = focusReturn.current;
+    if (target === null || overlayOpen || busy || loadedStops === undefined) return;
+    focusReturn.current = null;
+    const stop =
+      loadedStops.find((s) => s.id === target.stopId) ??
+      loadedStops[target.index] ??
+      loadedStops[target.index - 1];
+    const button =
+      stop === undefined
+        ? null
+        : listRef.current?.querySelector<HTMLButtonElement>(`button[data-stop-id="${stop.id}"]`);
+    (button ?? scheduleHeadingRef.current)?.focus();
+  }, [overlayOpen, busy, loadedStops]);
   const topBar = <TopBar title="탐방 코스 편집" back={`${base}/applicants`} />;
 
   if (course === undefined) {
@@ -94,7 +119,6 @@ export function CourseEditPage() {
   if (course.status === 'CONFIRMED') return <Navigate to={`${base}/course/confirm`} replace />;
 
   const { tour, stops } = course;
-  const busy = reorder.isPending || updateStop.isPending || deleteStop.isPending || drafting;
   const durations = stopDurations(stops, tour.endsAt);
   const kinds = courseKinds(stops).join('·');
   const hasPartner = partnerStopCount(stops) > 0;
@@ -169,7 +193,12 @@ export function CourseEditPage() {
         </div>
 
         <div className="mt-4 flex items-center justify-between gap-3">
-          <h3 className="text-lg leading-[1.4] font-bold text-ink">{`일정 · ${stops.length}개 장소`}</h3>
+          {/* 지점이 모두 빠지면 포커스가 이 제목으로 돌아온다(tabIndex -1: 탭 순서에는 넣지 않는다). */}
+          <h3
+            ref={scheduleHeadingRef}
+            tabIndex={-1}
+            className="text-lg leading-[1.4] font-bold text-ink"
+          >{`일정 · ${stops.length}개 장소`}</h3>
           <Button
             variant="ghost"
             size="sm"
@@ -188,14 +217,17 @@ export function CourseEditPage() {
           </StatusChip>
         )}
 
-        <ol aria-label="코스 지점" className="mt-2 flex flex-col gap-2">
+        <ol ref={listRef} aria-label="코스 지점" className="mt-2 flex flex-col gap-2">
           {stops.map((stop, index) => (
             <StopCard
               key={stop.id}
               stop={stop}
               minutes={durations[index] ?? null}
               busy={busy}
-              onEdit={() => setSheetStopId(stop.id)}
+              onEdit={() => {
+                focusReturn.current = { stopId: stop.id, index };
+                setSheetStopId(stop.id);
+              }}
             />
           ))}
         </ol>
@@ -274,7 +306,8 @@ export function CourseEditPage() {
 
 /**
  * G03 지점 카드: 시간 알약 · 이름 · `{한줄평 또는 AI 추천 이유} · {N분}`(한 줄, 이유만 말줄임) · 오른쪽 `≡`(지점 시트).
- * 한줄평이 없어 AI 추천 이유를 보일 때만 앞에 ✦를 붙인다(1단계 규칙: AI 결과에는 ✦).
+ * 한줄평이 없어 AI 추천 이유를 보일 때만 앞에 ✦와 화면 낭독기용 `AI 추천 이유:`를 붙인다(1단계 규칙: AI 결과에는 ✦ ·
+ * `AI 결과` 표시). 가이드 한줄평에는 붙이지 않는다.
  */
 function StopCard({
   stop,
@@ -301,9 +334,12 @@ function StopCard({
             {detail === null ? null : (
               <span className="min-w-0 truncate">
                 {fromAi ? (
-                  <span aria-hidden className="mr-0.5 text-brand">
-                    ✦
-                  </span>
+                  <>
+                    <span aria-hidden className="mr-0.5 text-brand">
+                      ✦
+                    </span>
+                    <span className="sr-only">AI 추천 이유: </span>
+                  </>
                 ) : null}
                 {detail}
               </span>
@@ -319,6 +355,7 @@ function StopCard({
       <button
         type="button"
         aria-label={`${stop.name} 편집`}
+        data-stop-id={stop.id}
         disabled={busy}
         onClick={onEdit}
         className="-my-2 flex size-11 shrink-0 items-center justify-center rounded-full text-muted hover:bg-neutral-100 disabled:cursor-not-allowed disabled:text-neutral-300 disabled:hover:bg-transparent"

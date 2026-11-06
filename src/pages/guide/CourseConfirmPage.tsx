@@ -19,6 +19,8 @@ import { TopBar } from '@/shared/ui/TopBar';
 import { toneTextClass } from '@/shared/ui/tone';
 
 const TITLE = '코스 확정 · 쿠폰 발급';
+/** AI 초안(다시 만들기)이 진행 중이라 확정을 잠글 때의 사유. 1단계 생성 로딩 문구 `코스를 짜고 있어요`를 이었다. */
+const DRAFTING_REASON = 'AI가 코스를 짜고 있어요. 끝나면 확정할 수 있어요.';
 
 /**
  * 코스 확정 전 점검 · 완료(V2 G08 · guide-s06 · 판정 2A-R10). 초안 코스면 점검 화면(소요 · 지점 분류 요약, `승인된 고교생
@@ -131,12 +133,14 @@ function CourseCheck({ course }: { course: Course }) {
             disabled={!ready || drafting}
             loading={confirm.isPending}
             hint={
-              ready
-                ? undefined
-                : {
+              !ready
+                ? {
                     reason: '제휴 상점을 1곳 이상 넣어 주세요.',
                     action: { label: '코스 편집으로', to: `${base}/course/edit` },
                   }
+                : drafting
+                  ? { reason: DRAFTING_REASON }
+                  : undefined
             }
             onClick={onConfirm}
           >

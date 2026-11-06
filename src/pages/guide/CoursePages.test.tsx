@@ -102,8 +102,9 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
         '16:00 서천 밥상',
       ]),
     );
+    // 순서 변경이 끝나면 포커스는 옮긴 지점의 새 자리 `≡`로 돌아온다(시트가 닫히며 body로 떨어지지 않는다).
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: '예술·디자인대학 편집' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: '서천 밥상 편집' })).toHaveFocus(),
     );
 
     const first = await openStopSheet(user, '예술·디자인대학');
@@ -111,6 +112,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     expect(within(first).getByRole('button', { name: '아래로 이동' })).toBeEnabled();
     await user.click(within(first).getByRole('button', { name: '닫기' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
+    expect(screen.getByRole('button', { name: '예술·디자인대학 편집' })).toHaveFocus();
 
     const last = await openStopSheet(user, '서천 밥상');
     expect(within(last).getByRole('button', { name: '위로 이동' })).toBeEnabled();
@@ -146,6 +148,16 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     expect(cta.compareDocumentPosition(insight) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
     // 옛 와이어프레임 기준 문구는 쓰지 않는다
     expect(screen.queryByText('지역 데이터 점수 · 제휴 여부 · 리뷰 요약')).toBeNull();
+  });
+
+  it('AI 결과 표시: 히어로 배지 하나 + AI 추천 이유를 보이는 지점마다 화면 낭독기용 표시', async () => {
+    await openCourse();
+    // 1단계의 "✦ 배지 4개"(위쪽 칩 + 지점 3곳)와 같은 뜻 — 지점의 ✦는 장식이라 숨기고 글로 읽힌다.
+    expect(screen.getAllByRole('group', { name: 'AI 결과' })).toHaveLength(1);
+    expect(within(stopList()).getAllByText('AI 추천 이유:')).toHaveLength(3);
+    expect(
+      within(stopCard('서천 밥상')).getByText(/^신청자 2명이/).parentElement,
+    ).toHaveTextContent(/^✦AI 추천 이유: 신청자 2명이/);
   });
 
   it('StrictMode로 다시 마운트돼도 초안 생성 요청은 한 번이고, 성공하면 편집 주소로 replace', async () => {
@@ -249,6 +261,12 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     await user.click(within(sheet).getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(within(stopCard('서천 밥상')).getByText('양이 많아 든든해요')).toBeInTheDocument();
+    // 가이드 한줄평에는 AI 표시가 없다
+    expect(within(stopCard('서천 밥상')).queryByText('AI 추천 이유:')).toBeNull();
+    // 한줄평 창이 닫히면 포커스는 그 지점의 `≡`로 돌아온다
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '서천 밥상 편집' })).toHaveFocus(),
+    );
 
     // 다시 열면 지금 한줄평이 채워져 있다
     await user.click(
@@ -262,10 +280,14 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     await user.click(within(sheet).getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(within(stopCard('서천 밥상')).getByText(/^신청자 2명이/)).toBeInTheDocument();
+    expect(within(stopCard('서천 밥상')).getByText('AI 추천 이유:')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '서천 밥상 편집' })).toHaveFocus(),
+    );
   });
 
-  it('지점을 모두 빼면 이 코스로 확정하기는 비활성 + 사유, 제휴 안내는 경고 칩', async () => {
-    const { user } = await openCourse();
+  it('지점을 모두 빼면 이 코스로 확정하기는 비활성 + 사유, 제휴 안내는 경고, 포커스는 이웃 지점 · 소제목으로', async () => {
+    const { user, router } = await openCourse();
     for (let left = 3; left > 0; left--) {
       const name = within(stopList()).getAllByRole('heading')[0]!.textContent!;
       await waitFor(() =>
@@ -284,16 +306,26 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
       await waitFor(() =>
         expect(within(stopList()).queryAllByRole('listitem')).toHaveLength(left - 1),
       );
+      // 뺀 지점의 `≡`는 사라졌다 — 포커스는 같은 자리의 다음 지점, 남은 지점이 없으면 일정 소제목으로 간다.
+      const next = within(stopList()).queryAllByRole('heading')[0]?.textContent;
+      await waitFor(() =>
+        expect(
+          next === undefined
+            ? screen.getByRole('heading', { name: `일정 · 0개 장소` })
+            : screen.getByRole('button', { name: `${next} 편집` }),
+        ).toHaveFocus(),
+      );
     }
     const toConfirm = screen.getByRole('button', { name: '이 코스로 확정하기' });
     expect(toConfirm).toBeDisabled();
     expect(toConfirm).toHaveAccessibleDescription('지점이 하나 이상 있어야 확정할 수 있어요.');
     expect(screen.getByRole('heading', { name: '일정 · 0개 장소' })).toBeInTheDocument();
-    // 제휴 지점이 0이면 캡션이 경고 칩이 된다(같은 문구). 다시 만들기는 같은 화면에서 누를 수 있다.
-    expect(screen.getByText('코스에 제휴 가게 1곳 이상 포함해 주세요.').closest('div')).toHaveClass(
-      'bg-local-soft',
-    );
+    // 다시 만들기는 같은 화면에서 누를 수 있다. 제휴 안내는 그대로 보이고, 확정 점검은 미충족이다.
     expect(screen.getByRole('button', { name: '다시 만들기' })).toBeEnabled();
+    expect(screen.getByText('코스에 제휴 가게 1곳 이상 포함해 주세요.')).toBeInTheDocument();
+    await router.navigate('/guide/tours/1/course/confirm');
+    expect(await screen.findByText('미충족')).toBeInTheDocument();
+    expect(screen.getByText('0개 장소로 구성했어요.')).toBeInTheDocument();
   });
 
   it('초안을 만든 뒤 신청자 관리로 돌아가면 코스 버튼은 코스 이어서 편집, 탐방 목록도 다시 불러온다', async () => {
@@ -413,6 +445,27 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
     expect(toEdit).toHaveAttribute('href', '/guide/tours/1/course/edit');
     await user.click(toEdit);
     expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+  });
+
+  it('AI 초안을 다시 만드는 중이면 코스 확정하기는 비활성 + 사유, 끝나면 풀린다', async () => {
+    const { user, router } = await openCourse();
+    // AI 응답이 늦어야 다시 만들기가 진행 중인 채로 확정 점검에 들어올 수 있다.
+    setMockLatency({ base: 0, ai: 400 });
+    await user.click(screen.getByRole('button', { name: '다시 만들기' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: '다시 만들기' }),
+    );
+    await router.navigate('/guide/tours/1/course/confirm');
+    const confirm = await screen.findByRole('button', { name: '코스 확정하기' });
+    expect(screen.getByText('충족')).toBeInTheDocument();
+    expect(confirm).toBeDisabled();
+    expect(confirm).toHaveAccessibleDescription(
+      'AI가 코스를 짜고 있어요. 끝나면 확정할 수 있어요.',
+    );
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '코스 확정하기' })).toBeEnabled(),
+    );
+    expect(screen.getByRole('button', { name: '코스 확정하기' })).not.toHaveAccessibleDescription();
   });
 
   it('코스 확정하기를 연타해도 확정 요청은 한 번이고, 같은 화면이 완료 상태로 바뀐다', async () => {
