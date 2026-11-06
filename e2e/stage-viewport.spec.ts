@@ -30,17 +30,20 @@ const COVER_SAMPLES_Y = [0.15, 0.5, 0.85];
  * 않아서 탭 위치는 따로 재고, 덮임은 요소 상자의 3×3 점마다 그 점의 맨 위 요소(`elementFromPoint`)가 대상 안에
  * 있는지로 본다 — 하단에 붙은 버튼 같은 것이 핵심 정보를 가리면 실패한다(판정 R4).
  */
-async function expectVisibleWithoutScroll(page: Page, targets: Locator[]) {
+async function expectVisibleWithoutScroll(page: Page, targets: Locator[], name: string) {
   // 글꼴이 다 와야 줄바꿈 · 높이가 무대와 같다.
   await page.waitForFunction("document.fonts.status === 'loaded'");
   await expect(page.getByRole('main')).toHaveJSProperty('scrollTop', 0);
   const tabBar = page.getByRole('navigation', { name: '주요 메뉴' });
   await expect(tabBar).toBeVisible();
   const tabBarTop = (await boxOf(tabBar)).y;
+  const mainTop = (await boxOf(page.getByRole('main'))).y;
+  let lowest = 0;
   for (const target of targets) {
     await expect(target).toBeInViewport({ ratio: 1 });
     const box = await boxOf(target);
     expect(box.y + box.height, `${target}의 하단이 하단 탭 위`).toBeLessThanOrEqual(tabBarTop);
+    lowest = Math.max(lowest, box.y + box.height);
     const samples = await target.evaluate(
       (el, { xs, ys }) => {
         const rect = el.getBoundingClientRect();
@@ -67,6 +70,13 @@ async function expectVisibleWithoutScroll(page: Page, targets: Locator[]) {
       );
     }
   }
+  // 실측 기록(README 무대 실측표의 출처): 본문 시작(main 상단)에서 가장 아래 대상의 하단까지가 사용 높이, 하단 탭 위까지가 가용 높이다.
+  const used = lowest - mainTop;
+  const available = tabBarTop - mainTop;
+  test.info().annotations.push({
+    type: 'stage-measure',
+    description: `${name}: 사용 ${used}px / 가용 ${available}px / 여유 ${available - used}px`,
+  });
 }
 
 for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
@@ -90,7 +100,7 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
         .getByRole('radio')
         .nth(1);
       const firstReason = main.getByTestId('recommendation-reason-line').first();
-      await expectVisibleWithoutScroll(page, [firstKeyword, firstReason]);
+      await expectVisibleWithoutScroll(page, [firstKeyword, firstReason], '① 추천');
       await screenshot(page, 1);
     });
 
@@ -108,7 +118,7 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
         .getByRole('list', { name: '코스 지점' })
         .getByRole('listitem');
       await expect(stops).toHaveCount(3);
-      await expectVisibleWithoutScroll(page, await stops.all());
+      await expectVisibleWithoutScroll(page, await stops.all(), '② 코스 완성');
       await screenshot(page, 2);
     });
 
@@ -123,7 +133,7 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
       await expect(code.or(firstCoupon)).toBeVisible();
       if (!(await code.isVisible())) await firstCoupon.click();
       await expect(code).toHaveText(/^\d{3} \d{3}$/);
-      await expectVisibleWithoutScroll(page, [code]);
+      await expectVisibleWithoutScroll(page, [code], '③ 쿠폰');
       await screenshot(page, 3);
     });
   });

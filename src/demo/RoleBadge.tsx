@@ -1,15 +1,26 @@
 import type { Role } from '@/features/auth/model';
 import { useMe } from '@/features/auth/queries';
 import { useSession } from '@/features/auth/session';
+import { cn } from '@/shared/lib/cn';
 import type { Tone } from '@/shared/lib/types';
 import { Badge } from '@/shared/ui/Badge';
 import { useDemoStore } from './demoStore';
 
+// V2 톤(칩 바탕 -soft + 같은 색 테두리 · 점). 글자는 본문색이다 — 연한 바탕 위의 success · 복숭아 글자는 대비가 낮아
+// 무대에서 읽히지 않는다(StatusChip의 warning과 같은 판단). 테두리가 있어 콘텐츠 위에 겹쳐도 경계가 보인다(그림자 없음).
 const ROLE_BADGE: Record<Role, { label: string; tone: Tone }> = {
   HIGH_SCHOOL: { label: '고교생 화면', tone: 'info' },
   UNIVERSITY: { label: '가이드 화면', tone: 'success' },
   OWNER: { label: '사장님 화면', tone: 'warning' },
   ADMIN: { label: '운영자 화면', tone: 'neutral' },
+};
+
+const TONE_BORDER: Record<Tone, string> = {
+  neutral: 'border-neutral-300',
+  info: 'border-brand',
+  success: 'border-success',
+  warning: 'border-local',
+  danger: 'border-danger',
 };
 
 /**
@@ -32,8 +43,11 @@ function CurrentRoleBadge() {
   const badge = me ? (ROLE_BADGE[me.role] as (typeof ROLE_BADGE)[Role] | undefined) : undefined;
   if (token === null || badge === undefined) return null;
   return (
-    <div className="role-badge rounded-full bg-bg shadow-md">
-      <Badge tone={badge.tone} className="px-3 py-2 text-base font-bold">
+    <div className="role-badge rounded-full bg-bg">
+      <Badge
+        tone={badge.tone}
+        className={cn('border-2 px-3 py-1.5 text-base font-bold', TONE_BORDER[badge.tone])}
+      >
         {badge.label}
       </Badge>
     </div>

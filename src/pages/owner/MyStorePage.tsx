@@ -36,7 +36,10 @@ function illustrationFor(category: string): IllustrationKind {
   return 'daily';
 }
 
-/** 맨 위 줄: 왼쪽 로고, 오른쪽 `로그아웃` 텍스트 버튼(사장님 탭에는 MY가 없다 — 2A-R9). 모든 상태에서 보인다. */
+/**
+ * 맨 위 줄: 왼쪽 로고, 오른쪽 `로그아웃` 텍스트 버튼(사장님 탭에는 MY가 없다 — 2A-R9). 모든 상태에서 보인다.
+ * 발표 모드 배지 · 좁은 화면 시연 패널 토글이 오른쪽 위에 겹치므로 버튼은 그만큼 왼쪽으로 비켜 선다(globals.css `--header-action-clear`, 판정 R13).
+ */
 function Header() {
   const logout = useLogout();
   return (
@@ -45,7 +48,7 @@ function Header() {
       <button
         type="button"
         onClick={() => void logout()}
-        className="-mr-3 inline-flex min-h-11 items-center px-3 text-sm font-bold text-muted hover:text-ink"
+        className="relative right-[var(--header-action-clear,0px)] -mr-3 inline-flex min-h-11 items-center px-3 text-sm font-bold text-muted hover:text-ink"
       >
         로그아웃
       </button>

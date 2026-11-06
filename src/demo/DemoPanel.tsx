@@ -15,9 +15,9 @@ import { cn } from '@/shared/lib/cn';
 import { errorMessage } from '@/shared/lib/errors';
 import { ApiError, request } from '@/shared/lib/http';
 import type { Tone } from '@/shared/lib/types';
-import { Badge } from '@/shared/ui/Badge';
 import { Button } from '@/shared/ui/Button';
 import { Select } from '@/shared/ui/Select';
+import { StatusChip } from '@/shared/ui/StatusChip';
 import { useBootStatus } from './bootStatus';
 import { useDemoStore, validLastCoupon, type AiSpeed, type MapMode } from './demoStore';
 import { quickLogin, switchToCouponOwner } from './quickLogin';
@@ -77,7 +77,7 @@ export function DemoPanel() {
         aria-expanded={open}
         aria-controls={bodyId}
         onClick={() => setOpen((v) => !v)}
-        className="flex size-11 items-center justify-center rounded-full border border-border bg-bg text-ink shadow-md min-[900px]:hidden"
+        className="flex size-11 items-center justify-center rounded-full border border-border bg-surface text-ink min-[900px]:hidden"
       >
         <SlidersHorizontal aria-hidden className="size-5" />
       </button>
@@ -181,7 +181,7 @@ function RoleButtons({
 function RoleBar({ actions }: { actions: DemoActions }) {
   const coupon = validLastCoupon(useDemoStore((s) => s.lastCoupon));
   return (
-    <div className="flex flex-col gap-2 rounded-lg border border-border bg-bg p-2 shadow-md">
+    <div className="flex flex-col gap-2 rounded-lg border border-border bg-surface p-2">
       <RoleButtons actions={actions} ownerToCoupon={coupon !== null} />
       <RoleBarStatus />
     </div>
@@ -201,12 +201,12 @@ function RoleBarStatus() {
       <li className="text-muted">{apiMode === 'real' ? '실서버' : '목업'}</li>
       {aiSpeed === 'slow' ? (
         <li>
-          <Badge tone="warning">AI 느리게</Badge>
+          <StatusChip tone="warning">AI 느리게</StatusChip>
         </li>
       ) : null}
       {mapMode === 'schematic' ? (
         <li>
-          <Badge tone="warning">지도 도식</Badge>
+          <StatusChip tone="warning">지도 도식</StatusChip>
         </li>
       ) : null}
     </ul>
@@ -224,9 +224,12 @@ function FullPanel({ actions }: { actions: DemoActions }) {
 
   // 가장 작은 무대 뷰포트(1280×590 — 프레임 높이 558px)에서도 스크롤 없이 들어가게 촘촘히 둔다.
   return (
-    <div className="flex w-80 max-w-[calc(100vw-24px)] flex-col gap-3 rounded-lg border border-border bg-bg p-3 shadow-md">
+    <div className="flex w-80 max-w-[calc(100vw-24px)] flex-col gap-3 rounded-lg border border-border bg-surface p-3">
       {mockWorkerFailed ? (
-        <p role="alert" className="rounded-sm bg-danger/10 px-3 py-2 text-sm font-bold text-danger">
+        <p
+          role="alert"
+          className="rounded-sm bg-danger-soft px-3 py-2 text-sm font-bold text-danger"
+        >
           목업 워커를 켜지 못했어요
         </p>
       ) : null}
@@ -245,9 +248,7 @@ function FullPanel({ actions }: { actions: DemoActions }) {
         >
           쿠폰 가게 사장님으로 전환
         </Button>
-        {coupon !== null ? (
-          <p className="px-1 text-sm text-muted">{`최근 쿠폰 ${coupon.code}`}</p>
-        ) : null}
+        {coupon !== null ? <StatusChip tone="info">{`최근 쿠폰 ${coupon.code}`}</StatusChip> : null}
       </Group>
 
       <Group title="시연 데이터">
@@ -360,7 +361,7 @@ function Segmented<T extends string>({
       <div
         role="group"
         aria-labelledby={labelId}
-        className="flex overflow-hidden rounded-sm border border-border"
+        className="flex overflow-hidden rounded-md bg-neutral-100"
       >
         {options.map(([option, text]) => (
           <button
@@ -372,7 +373,7 @@ function Segmented<T extends string>({
             }}
             className={cn(
               'min-h-11 px-3 text-sm font-bold',
-              option === value ? 'bg-primary text-on-primary' : 'bg-bg text-ink hover:bg-surface',
+              option === value ? 'bg-brand text-on-primary' : 'text-muted hover:bg-neutral-300/40',
             )}
           >
             {text}
@@ -397,5 +398,5 @@ function HealthBadge() {
       : health.status === 'error'
         ? ['danger', '응답 없음']
         : ['neutral', '확인 중'];
-  return <Badge tone={tone}>{label}</Badge>;
+  return <StatusChip tone={tone}>{label}</StatusChip>;
 }

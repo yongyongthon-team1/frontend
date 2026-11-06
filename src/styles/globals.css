@@ -161,10 +161,34 @@
     pointer-events: none;
   }
 
+  /*
+   * 헤더 오른쪽 조작(사장님 내 가게의 `로그아웃`)이 발표 모드 배지 · 좁은 화면의 시연 패널 토글에 덮이지 않게 하는
+   * 비킴 폭(--header-action-clear). 조작은 `right: var(--header-action-clear, 0px)`로 왼쪽으로 옮겨 선다(레이아웃 불변).
+   * 배지 폭(--role-badge-w)은 가장 긴 라벨 `고교생 화면`이 들어가는 값이다. 배지는 프레임 오른쪽 가장자리에서
+   * 20px(좁은 화면 + 토글이면 64px), 조작 상자의 오른쪽 끝은 8px(-mr-3)이라 그 차이 + 여유 4px를 더한다.
+   */
+  .mobile-device {
+    --role-badge-w: 140px;
+    --header-action-clear: 0px;
+  }
+
+  .mobile-device:has(.role-badge) {
+    --header-action-clear: calc(var(--role-badge-w) + 16px);
+  }
+
   @media (max-width: 899.98px) {
     /* 좁은 화면에서는 시연 패널 토글(오른쪽 위 44px)이 있으면 배지가 그 왼쪽으로 비킨다. */
     .mobile-device:has(.mobile-aside:not(:empty)) .role-badge {
       right: calc(12px + 44px + 8px);
+    }
+
+    /* 토글만 있으면 토글 폭(12 + 44)에서 조작 끝(8)을 뺀 만큼, 배지도 있으면 배지 폭을 더한 만큼 비킨다. */
+    .mobile-device:has(.mobile-aside:not(:empty)) {
+      --header-action-clear: 52px;
+    }
+
+    .mobile-device:has(.mobile-aside:not(:empty)):has(.role-badge) {
+      --header-action-clear: calc(var(--role-badge-w) + 60px);
     }
   }
 
