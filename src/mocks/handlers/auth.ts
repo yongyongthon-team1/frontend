@@ -1,49 +1,49 @@
-import { http, HttpResponse } from 'msw';
-import type { LoginResponse } from '@/features/auth/model';
+import { http } from 'msw';
 import { mockNow } from '@/mocks/clock';
 import { createSession, getDb, mutate } from '@/mocks/db/store';
 import { delayBase } from '@/mocks/latency';
 import { saveGuideProfile, signUp, updateStudentProfile } from '@/mocks/rules/auth';
 import { MockApiError } from '@/mocks/rules/errors';
-import { toMe } from '@/mocks/rules/views';
-import { api, bearerToken, readBody, requireUser, withErrors } from './util';
+import { toWireLogin, toWireMe, toWireSignupResult } from '@/mocks/wire/auth';
+import { ok, withWire } from '@/mocks/wire/envelope';
+import { api, bearerToken, readBody, requireUser } from './util';
+
+// 사용자 · 인증(U-01~U-04). 응답은 백엔드 봉투(`ok`)이고 본문은 snake_case다(`readBody`가 camel로 되돌려 규칙에 준다).
 
 export const authHandlers = [
+  // 로그인(U-02). 토큰과 작은 `user`만 준다 — 내 정보는 `GET /users/me`가 준다.
   http.post(
     api('/auth/login'),
-    withErrors(async ({ request }) => {
+    withWire(async ({ request }) => {
       await delayBase();
       const body = await readBody(request);
-      const result = mutate((db): LoginResponse => {
+      const data = mutate((db) => {
         const email = typeof body.email === 'string' ? body.email.trim().toLowerCase() : '';
         const user = db.users.find((u) => u.email === email);
         if (!user || user.password !== body.password) {
           throw new MockApiError(401, 'INVALID_CREDENTIALS');
         }
-        return { token: createSession(db, user.id), me: toMe(db, user.id) };
+        return toWireLogin(db, user.id, createSession(db, user.id));
       });
-      return HttpResponse.json(result);
+      return ok(data);
     }),
   ),
 
-  // 가입(#1, P1). 로그인 없이 부르고(`requireUser` 없음) 성공하면 바로 로그인된 응답(토큰 + Me)을 201로 준다.
+  // 가입(U-01). 로그인 없이 부르고(`requireUser` 없음) 201과 만들어진 사용자만 준다(토큰 없음 — 이어서 로그인한다).
   http.post(
     api('/auth/signup'),
-    withErrors(async ({ request }) => {
+    withWire(async ({ request }) => {
       await delayBase();
       const body = await readBody(request);
-      const result = mutate((db): LoginResponse => {
-        const user = signUp(db, body, mockNow());
-        return { token: createSession(db, user.id), me: toMe(db, user.id) };
-      });
-      return HttpResponse.json(result, { status: 201 });
+      const user = mutate((db) => signUp(db, body, mockNow()));
+      return ok(toWireSignupResult(user), 201);
     }),
   ),
 
-  // 세션이 없어도 204다(이미 로그아웃된 상태와 같다).
+  // 세션이 없어도 200이다(이미 로그아웃된 상태와 같다).
   http.post(
     api('/auth/logout'),
-    withErrors(async ({ request }) => {
+    withWire(async ({ request }) => {
       await delayBase();
       const token = bearerToken(request);
       if (token !== null) {
@@ -51,46 +51,46 @@ export const authHandlers = [
           db.sessions = db.sessions.filter((s) => s.token !== token);
         });
       }
-      return new HttpResponse(null, { status: 204 });
+      return ok(null);
     }),
   ),
 
   http.get(
-    api('/me'),
-    withErrors(async ({ request }) => {
+    api('/users/me'),
+    withWire(async ({ request }) => {
       await delayBase();
       const db = getDb();
-      return HttpResponse.json(toMe(db, requireUser(request, db).id));
+      return ok(toWireMe(db, requireUser(request, db).id, mockNow()));
     }),
   ),
 
-  // 고교생 프로필 저장(#2, P1). 새 Me를 돌려준다.
-  http.put(
-    api('/me/student-profile'),
-    withErrors(async ({ request }) => {
+  // 내 정보 수정(U-03). 아무 역할이나 부르고, 고교생이 아니면서 학교 · 학년 · 관심 학과를 보내면 규칙이 403을 던진다.
+  http.patch(
+    api('/users/me'),
+    withWire(async ({ request }) => {
       await delayBase();
       const body = await readBody(request);
-      const me = mutate((db) => {
-        const user = requireUser(request, db, 'HIGH_SCHOOL');
+      const data = mutate((db) => {
+        const user = requireUser(request, db);
         updateStudentProfile(db, user.id, body, mockNow());
-        return toMe(db, user.id);
+        return toWireMe(db, user.id, mockNow());
       });
-      return HttpResponse.json(me);
+      return ok(data);
     }),
   ),
 
-  // 가이드 프로필 저장(#3, P1). 새 Me를 돌려준다.
+  // 가이드 프로필 저장(U-04). `{ major, intro }`를 돌려준다.
   http.put(
-    api('/me/guide-profile'),
-    withErrors(async ({ request }) => {
+    api('/users/me/guide-profile'),
+    withWire(async ({ request }) => {
       await delayBase();
       const body = await readBody(request);
-      const me = mutate((db) => {
+      const data = mutate((db) => {
         const user = requireUser(request, db, 'UNIVERSITY');
-        saveGuideProfile(db, user.id, body, mockNow());
-        return toMe(db, user.id);
+        const row = saveGuideProfile(db, user.id, body, mockNow());
+        return { major: row.major, intro: row.introduction };
       });
-      return HttpResponse.json(me);
+      return ok(data);
     }),
   ),
 ];

@@ -45,6 +45,15 @@ describe('getLandingPath', () => {
       }),
     ).toBe('/guide/me'));
 
+  it('가이드: 승인돼도 학과가 공백뿐이면 /guide/me (hasGuideProfile 기준)', () =>
+    expect(
+      getLandingPath({
+        ...base,
+        role: 'UNIVERSITY',
+        guideProfile: { universityId: 2, major: '  ', introduction: null },
+      }),
+    ).toBe('/guide/me'));
+
   it('가이드: 프로필이 없어도 /guide/me', () =>
     expect(getLandingPath({ ...base, role: 'UNIVERSITY' })).toBe('/guide/me'));
 

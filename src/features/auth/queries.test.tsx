@@ -22,10 +22,17 @@ beforeEach(() => {
 afterEach(() => configureHttp({ getToken: () => null }));
 
 describe('useSignup', () => {
-  it('성공하면 이전 캐시를 비운 다음 토큰 · 내 정보를 넣는다 (useLogin과 같은 순서)', async () => {
+  it('성공하면 이전 캐시를 비운 다음 토큰 · 내 정보를 넣는다 (useLogin과 같은 순서: clear → setToken → setQueryData)', async () => {
     queryClient.setQueryData(qk.myApplications, ['이전 사용자']);
     const order: string[] = [];
     vi.spyOn(queryClient, 'clear').mockImplementation(() => order.push('clear'));
+    const setQueryData = queryClient.setQueryData.bind(queryClient);
+    const setQueryDataSpy = vi
+      .spyOn(queryClient, 'setQueryData')
+      .mockImplementation((...args: Parameters<typeof setQueryData>) => {
+        order.push('setQueryData');
+        return setQueryData(...args);
+      });
     const stop = useSession.subscribe(() => order.push('setToken'));
     const { result } = renderHook(() => useSignup(), { wrapper });
 
@@ -39,7 +46,11 @@ describe('useSignup', () => {
     );
     stop();
 
-    expect(order).toEqual(['clear', 'setToken']);
+    expect(order).toEqual(['clear', 'setToken', 'setQueryData']);
+    expect(setQueryDataSpy).toHaveBeenCalledWith(
+      qk.me,
+      expect.objectContaining({ email: 'fresh@demo.kr' }),
+    );
     expect(useSession.getState().token).not.toBeNull();
     expect(queryClient.getQueryData(qk.me)).toMatchObject({
       email: 'fresh@demo.kr',
@@ -101,7 +112,9 @@ describe('useSaveGuideProfile', () => {
     for (const key of Object.values(keys)) queryClient.setQueryData(key, 'cached');
     const { result } = renderHook(() => useSaveGuideProfile(), { wrapper });
 
-    await act(() => result.current.mutateAsync({ major: '컴퓨터공학과', introduction: null }));
+    await act(() =>
+      result.current.mutateAsync({ major: '컴퓨터공학과', introduction: '안녕하세요.' }),
+    );
 
     const invalidated = (key: readonly unknown[]) =>
       queryClient.getQueryState(key)?.isInvalidated ?? false;
@@ -113,7 +126,7 @@ describe('useSaveGuideProfile', () => {
     expect(invalidated(keys.guideTourDetail)).toBe(false);
     expect(invalidated(keys.myApplications)).toBe(false);
     expect(queryClient.getQueryData(qk.me)).toMatchObject({
-      guideProfile: { major: '컴퓨터공학과', introduction: null },
+      guideProfile: { major: '컴퓨터공학과', introduction: '안녕하세요.' },
     });
   });
 });

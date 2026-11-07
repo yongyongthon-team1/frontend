@@ -86,12 +86,12 @@
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
-| auth | `POST /api/auth/login` | hs-s01 로그인 | ⬜ | ✅ | ⬜ | ⬜ |
-| auth | `POST /api/auth/logout` | hs-a03 · guide-s01 · `/owner/me` (로그아웃) | ⬜ | ✅ | ⬜ | ⬜ |
-| auth | `GET /api/me` | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 | ⬜ | ✅ | ⬜ | ⬜ |
-| auth | #1 `POST /api/auth/signup` | hs-a01 회원가입 (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
-| auth | #2 `PUT /api/me/student-profile` | hs-a03 내 정보 수정 `/me/edit` (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
-| auth | #3 `PUT /api/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | `POST /api/auth/login` (U-02, 백엔드 와이어 · 이어서 `GET /users/me`로 합성) | hs-s01 로그인 · 빠른 로그인 · 원클릭 링크 · 401 재로그인 | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | `POST /api/auth/logout` (U-02) | hs-a03 · guide-s01 · `/owner/me` (로그아웃) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | `GET /api/users/me` (U-03, 사장님은 `GET /users/me/store`로 가게 id 합성) | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | #1 `POST /api/auth/signup` (U-01, 토큰 없음 → 이어서 로그인) | hs-a01 회원가입 (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | #2 `PATCH /api/users/me` (U-03) | hs-a03 내 정보 수정 `/me/edit` (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | #3 `PUT /api/users/me/guide-profile` (U-04) | guide-s01 가이드 프로필 `/guide/me/profile` (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses` (D-01, 백엔드 와이어) | hs-s03, guide-s02 | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses/:campusId/insight` (확장 · 목업 전용, 봉투) | hs-s04, guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `POST /api/recommendations` | hs-s03, hs-s04, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |

@@ -1,11 +1,18 @@
 import { http, HttpResponse } from 'msw';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type {
   ApplicantsBoard,
   GuideTourSummary,
   MyApplication,
 } from '@/features/applications/model';
-import type { LoginResponse, Me } from '@/features/auth/model';
+import {
+  fetchMe,
+  login as apiLogin,
+  logout,
+  patchMe,
+  postSignup,
+  putGuideProfile,
+} from '@/features/auth/api';
 import { getInsight, listCampuses } from '@/features/campuses/api';
 import type { Coupon, CouponLookup, RedeemResult } from '@/features/coupons/model';
 import type { Course } from '@/features/courses/model';
@@ -18,23 +25,44 @@ import { configureHttp, request, upload } from '@/shared/lib/http';
 import { MockApiError } from '@/mocks/rules/errors';
 import { server } from '@/mocks/node';
 import { testImage } from '@/test/files';
+import {
+  GUIDE_PROFILE_OK,
+  LOGIN_OK,
+  LOGOUT_OK,
+  ME_HIGH_SCHOOL,
+  ME_UNIVERSITY,
+  SIGNUP_OK,
+} from '@/test/fixtures/backend/auth';
 import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
 import { MY_STORE } from '@/test/fixtures/backend/stores';
-import { expectWireShape, rawFetch } from '@/test/wire';
-import { fieldError, formFile, readBody, readForm, withErrors } from './util';
+import { expectWireShape, rawFetch, wireFail } from '@/test/wire';
+import { fieldError } from '@/mocks/rules/errors';
+import { formFile, readBody, readForm, withErrors } from './util';
 
 // 핸들러를 실제 HTTP 클라이언트로 부른다. 테스트 setup이 전체 핸들러를 건 MSW 서버를 켜고,
 // 지연을 0으로 두고, 매 테스트 전에 오늘 기준 시드(START)로 DB를 되돌린다.
 
 afterEach(() => configureHttp({ getToken: () => null }));
 
+/** 합성 로그인(`POST /auth/login` → `GET /users/me`)으로 로그인하고 그 토큰으로 이후 요청을 보낸다. */
 async function login(email: string) {
-  const r = await request<LoginResponse>('/auth/login', {
-    method: 'POST',
-    body: { email, password: 'demo1234' },
-  });
+  const r = await apiLogin({ email, password: 'demo1234' });
   configureHttp({ getToken: () => r.token });
   return r;
+}
+
+/** 이 콜백을 도는 동안 나간 요청을 `메서드 경로`(`/api` 뗌)로 모은다. */
+async function requestsDuring(run: () => Promise<unknown>): Promise<string[]> {
+  const seen: string[] = [];
+  server.events.on('request:start', ({ request }) => {
+    const url = new URL(request.url);
+    if (url.pathname.startsWith('/api/')) {
+      seen.push(`${request.method} ${url.pathname.replace(/^\/api/, '')}`);
+    }
+  });
+  await run();
+  server.events.removeAllListeners('request:start');
+  return seen;
 }
 
 const userId = (email: string) => getDb().users.find((u) => u.email === email)!.id;
@@ -57,37 +85,120 @@ const DEMO_TOUR_TITLE = '경희대 국제캠퍼스 산업디자인학과 탐방'
 const DEMO_OPEN_CHAT = 'https://open.kakao.com/o/demo-khu-design';
 
 describe('auth', () => {
-  it('로그인 → /me', async () => {
-    await login('student@demo.kr');
-    expect((await request<Me>('/me')).role).toBe('HIGH_SCHOOL');
+  it('로그인 → 합성 Me: 요청은 POST /auth/login → GET /users/me 두 번, 그 토큰으로 fetchMe()가 된다', async () => {
+    let result: Awaited<ReturnType<typeof login>> | undefined;
+    const seen = await requestsDuring(async () => {
+      result = await login('student@demo.kr');
+    });
+    expect(seen).toEqual(['POST /auth/login', 'GET /users/me']);
+    expect(result!.token).toEqual(expect.any(String));
+    expect(result!.me.studentProfile?.highSchoolName).toBe('수원영통고등학교');
+    expect((await fetchMe()).role).toBe('HIGH_SCHOOL');
   });
 
-  it('틀린 비밀번호는 401 INVALID_CREDENTIALS', async () =>
-    await expect(
-      request('/auth/login', {
-        method: 'POST',
-        body: { email: 'student@demo.kr', password: 'x' },
-      }),
-    ).rejects.toMatchObject({ status: 401, code: 'INVALID_CREDENTIALS' }));
+  it('사장님 로그인은 GET /users/me/store까지 요청 셋이고 가게 id · 사업자 인증이 합성된다', async () => {
+    const seen = await requestsDuring(async () => {
+      expect((await login('owner1@demo.kr')).me).toMatchObject({
+        storeId: 1,
+        businessVerified: true,
+      });
+    });
+    expect(seen).toEqual(['POST /auth/login', 'GET /users/me', 'GET /users/me/store']);
+  });
+
+  it('가게 연결 전 사장님(owner-nostore)은 storeId null', async () => {
+    expect((await login('owner-nostore@demo.kr')).me).toMatchObject({
+      role: 'OWNER',
+      storeId: null,
+      businessVerified: true, // 사업자 인증은 끝났고 가게만 아직 연결 전
+    });
+  });
+
+  it('가이드 로그인: 목업 확장 campus_id가 guideProfile.universityId가 된다 (guide-dku → 3)', async () => {
+    expect((await login('guide-dku@demo.kr')).me.guideProfile?.universityId).toBe(3);
+  });
+
+  it('로그인 와이어: 명세 L-02 응답과 같은 모양(access_token · user)', async () => {
+    const res = await rawFetch<{ code: string; data: unknown }>('/auth/login', {
+      method: 'POST',
+      body: { email: 'student@demo.kr', password: 'demo1234' },
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe('S200');
+    expectWireShape(res.body.data, LOGIN_OK.data);
+  });
+
+  it('GET /users/me 와이어: 고교생은 명세 그대로(확장 없음), 가이드는 확장 campus_id만 더한다', async () => {
+    const student = await rawFetch<{ code: string; data: unknown }>('/users/me', {
+      method: 'GET',
+      token: (await login('student@demo.kr')).token,
+    });
+    expect(student.status).toBe(200);
+    expect(student.body.code).toBe('S200');
+    expectWireShape(student.body.data, ME_HIGH_SCHOOL.data);
+
+    const guide = await rawFetch<{ code: string; data: unknown }>('/users/me', {
+      method: 'GET',
+      token: (await login('guide-dku@demo.kr')).token,
+    });
+    expect(guide.status).toBe(200);
+    expectWireShape(guide.body.data, ME_UNIVERSITY.data, ['campus_id']);
+    expect(guide.body.data).toMatchObject({ campus_id: 3, school_name: '단국대학교 죽전캠퍼스' });
+  });
+
+  it('틀린 비밀번호는 INVALID_CREDENTIALS(E401_INVALID_CREDENTIALS)이고 세션 만료(onUnauthorized)를 부르지 않는다', async () => {
+    const onUnauthorized = vi.fn();
+    configureHttp({ getToken: () => 'some-session', onUnauthorized });
+    await expect(apiLogin({ email: 'student@demo.kr', password: 'x' })).rejects.toMatchObject({
+      status: 401,
+      code: 'INVALID_CREDENTIALS',
+      backendCode: 'E401_INVALID_CREDENTIALS',
+    });
+    expect(onUnauthorized).not.toHaveBeenCalled();
+  });
+
+  it('fetchMe(token)은 그 토큰으로 부르고 401이어도 세션을 끊지 않는다, 토큰 인자 없는 401은 한 번 끊는다', async () => {
+    const onUnauthorized = vi.fn();
+    configureHttp({ getToken: () => 'some-session', onUnauthorized });
+    await expect(fetchMe('mock-unknown')).rejects.toMatchObject({ status: 401 });
+    expect(onUnauthorized).not.toHaveBeenCalled();
+    await expect(fetchMe()).rejects.toMatchObject({ status: 401 });
+    expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
 
   it('없는 이메일도 401 INVALID_CREDENTIALS', async () =>
-    await expect(
-      request('/auth/login', {
-        method: 'POST',
-        body: { email: 'nobody@demo.kr', password: 'demo1234' },
-      }),
-    ).rejects.toMatchObject({ status: 401, code: 'INVALID_CREDENTIALS' }));
+    await expect(apiLogin({ email: 'nobody@demo.kr', password: 'demo1234' })).rejects.toMatchObject(
+      { status: 401, code: 'INVALID_CREDENTIALS' },
+    ));
 
   it('토큰이 없거나 모르는 토큰이면 401 UNAUTHORIZED', async () => {
-    await expect(request('/me')).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+    await expect(fetchMe()).rejects.toMatchObject({
+      status: 401,
+      code: 'UNAUTHORIZED',
+      backendCode: 'E401',
+    });
     configureHttp({ getToken: () => 'mock-unknown' });
-    await expect(request('/me')).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+    await expect(fetchMe()).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
   });
 
-  it('로그아웃은 204이고 그 토큰은 더 쓸 수 없다', async () => {
+  it('로그아웃은 200 S200 data null이고 그 토큰은 더 쓸 수 없다', async () => {
     const { token } = await login('student@demo.kr');
-    expect((await rawFetch('/auth/logout', { method: 'POST', token })).status).toBe(204);
-    await expect(request('/me')).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+    const res = await rawFetch<{ code: string; data: unknown }>('/auth/logout', {
+      method: 'POST',
+      token,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe(LOGOUT_OK.code);
+    expect(res.body.data).toBeNull();
+    const after = await rawFetch<{ code: string }>('/users/me', { method: 'GET', token });
+    expect(after.status).toBe(401);
+    expect(after.body.code).toBe('E401');
+  });
+
+  it('logout()은 토큰을 폐기한다', async () => {
+    await login('student@demo.kr');
+    await logout();
+    await expect(fetchMe()).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
   });
 
   it('고교생 Me: 인증 · 보호자 동의 · 학생 프로필', async () => {
@@ -134,9 +245,9 @@ describe('auth', () => {
         });
       });
     consent('2999-01-01T09:00:00+09:00');
-    expect((await request<Me>('/me')).guardianStatus).toBe('PENDING');
+    expect((await fetchMe()).guardianStatus).toBe('PENDING');
     consent('2000-01-01T09:00:00+09:00');
-    expect((await request<Me>('/me')).guardianStatus).toBe('EXPIRED');
+    expect((await fetchMe()).guardianStatus).toBe('EXPIRED');
   });
 
   it('가이드 Me: 가이드 프로필 · 재학 인증', async () => {
@@ -155,10 +266,10 @@ describe('auth', () => {
     });
   });
 
-  it('사장님 Me: 사업자 인증 · 내 가게', async () => {
+  it('사장님 Me: 사업자 인증(APPROVED) · 내 가게', async () => {
     expect((await login('owner1@demo.kr')).me).toMatchObject({
       role: 'OWNER',
-      verificationStatus: 'NONE',
+      verificationStatus: 'APPROVED',
       guardianStatus: 'NONE',
       studentProfile: null,
       guideProfile: null,
@@ -902,20 +1013,33 @@ describe('사장님 내 가게 (GET /users/me/store)', () => {
   });
 });
 
-describe('가입 · 프로필 (POST /auth/signup · PUT /me/student-profile · PUT /me/guide-profile)', () => {
+describe('가입 · 프로필 (POST /auth/signup · PATCH /users/me · PUT /users/me/guide-profile)', () => {
   const signupBody = {
     email: 'Fresh@Demo.kr',
     password: 'demo1234',
     name: '한새봄',
-    role: 'HIGH_SCHOOL',
+    role: 'HIGH_SCHOOL' as const,
   };
 
-  it('가입은 로그인 없이 201과 토큰 + Me를 주고, 그 토큰으로 /me를 읽는다', async () => {
-    const res = await rawFetch('/auth/signup', { method: 'POST', body: signupBody });
+  it('가입 와이어: 로그인 없이 201 S201, 토큰 없이 명세 U-01 응답과 같은 모양', async () => {
+    const res = await rawFetch<{ code: string; data: unknown }>('/auth/signup', {
+      method: 'POST',
+      body: signupBody,
+    });
     expect(res.status).toBe(201);
-    const { token, me } = res.body as LoginResponse;
-    expect(token).toEqual(expect.any(String));
-    expect(me).toMatchObject({
+    expect(res.body.code).toBe('S201');
+    expectWireShape(res.body.data, SIGNUP_OK.data); // access_token이 있으면 "명세에 없는 키"로 실패한다
+    expect(res.body.data).toMatchObject({ email: 'fresh@demo.kr', name: '한새봄' });
+  });
+
+  it('postSignup: 응답에 토큰이 없어도 이어서 로그인해 토큰 + Me를 준다 (요청 셋: 가입 → 로그인 → 내 정보)', async () => {
+    let result: Awaited<ReturnType<typeof postSignup>> | undefined;
+    const seen = await requestsDuring(async () => {
+      result = await postSignup(signupBody);
+    });
+    expect(seen).toEqual(['POST /auth/signup', 'POST /auth/login', 'GET /users/me']);
+    expect(result!.token).toEqual(expect.any(String));
+    expect(result!.me).toMatchObject({
       email: 'fresh@demo.kr',
       name: '한새봄',
       role: 'HIGH_SCHOOL',
@@ -925,98 +1049,161 @@ describe('가입 · 프로필 (POST /auth/signup · PUT /me/student-profile · P
       guideProfile: null,
     });
 
-    configureHttp({ getToken: () => token });
-    expect(await request<Me>('/me')).toEqual(me);
+    configureHttp({ getToken: () => result!.token });
+    expect(await fetchMe()).toEqual(result!.me);
   });
 
   it('가입한 계정으로 같은 자격으로 다시 로그인할 수 있다', async () => {
-    await rawFetch('/auth/signup', { method: 'POST', body: signupBody });
-    const { me } = await request<LoginResponse>('/auth/login', {
-      method: 'POST',
-      body: { email: 'fresh@demo.kr', password: 'demo1234' },
-    });
+    await postSignup(signupBody);
+    const { me } = await apiLogin({ email: 'fresh@demo.kr', password: 'demo1234' });
     expect(me.name).toBe('한새봄');
   });
 
-  it('칸 오류는 400 VALIDATION과 fieldErrors, 중복 이메일은 409 EMAIL_DUPLICATE의 fieldErrors.email', async () => {
-    await expect(
-      request('/auth/signup', {
-        method: 'POST',
-        body: { ...signupBody, password: '123' },
-        auth: false,
-      }),
-    ).rejects.toMatchObject({
-      status: 400,
-      code: 'VALIDATION',
-      fieldErrors: { password: expect.any(String) },
-    });
-    await expect(
-      request('/auth/signup', {
-        method: 'POST',
-        body: { ...signupBody, email: 'STUDENT@demo.kr' },
-        auth: false,
-      }),
-    ).rejects.toMatchObject({
+  it('중복 이메일은 EMAIL_DUPLICATE(E409)와 fieldErrors.email, 실패한 가입은 아무것도 남기지 않는다', async () => {
+    await expect(postSignup({ ...signupBody, email: 'STUDENT@demo.kr' })).rejects.toMatchObject({
       status: 409,
       code: 'EMAIL_DUPLICATE',
-      fieldErrors: { email: expect.any(String) },
+      backendCode: 'E409',
+      fieldErrors: { email: '이미 가입된 이메일이에요.' },
     });
-    // 실패한 가입은 아무것도 남기지 않는다.
     expect(getDb().users.filter((u) => u.email === 'fresh@demo.kr')).toHaveLength(0);
   });
 
-  it('고교생 프로필 저장은 새 Me를 주고 이름도 바뀐다, 고교생이 아니면 403, 로그인 전이면 401', async () => {
-    await login('student@demo.kr');
-    const me = await request<Me>('/me/student-profile', {
-      method: 'PUT',
-      body: { name: '김민지2', highSchoolName: '수원고', grade: 3, interestedMajor: null },
+  it('칸 오류: 영문만 있는 비밀번호는 fieldErrors.password, 이름 21자는 fieldErrors.name (VALIDATION)', async () => {
+    await expect(postSignup({ ...signupBody, password: 'abcdefgh' })).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      backendCode: 'E400',
+      fieldErrors: { password: '비밀번호는 영문과 숫자를 섞어 8자 이상으로 입력해 주세요.' },
+    });
+    await expect(postSignup({ ...signupBody, name: '가'.repeat(21) })).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { name: '이름은 1~20자로 입력해 주세요.' },
+    });
+  });
+
+  it('칸 오류가 없는 실서버 중복 응답(E409, errors 없음)도 fieldErrors.email을 채운다', async () => {
+    server.use(http.post('/api/auth/signup', () => wireFail('E409')));
+    await expect(postSignup(signupBody)).rejects.toMatchObject({
+      status: 409,
+      code: 'EMAIL_DUPLICATE',
+      backendCode: 'E409',
+      fieldErrors: { email: '이미 가입된 이메일이에요.' },
+    });
+  });
+
+  it('patchMe: 새 Me를 주고(이름도 바뀐다) PATCH 응답은 GET /users/me와 같은 모양', async () => {
+    const { token } = await login('student@demo.kr');
+    const me = await patchMe({
+      name: '김민지2',
+      highSchoolName: '수원고',
+      grade: 3,
+      interestedMajor: null,
     });
     expect(me).toMatchObject({
       name: '김민지2',
       studentProfile: { highSchoolName: '수원고', grade: 3, interestedMajor: null },
     });
-    expect(await request<Me>('/me')).toEqual(me);
-    await expect(
-      request('/me/student-profile', {
-        method: 'PUT',
-        body: { name: '김민지', highSchoolName: null, grade: 5, interestedMajor: null },
-      }),
-    ).rejects.toMatchObject({ status: 400, fieldErrors: { grade: expect.any(String) } });
+    expect(await fetchMe()).toEqual(me);
 
-    await login('guide@demo.kr');
-    await expect(request('/me/student-profile', { method: 'PUT', body: me })).rejects.toMatchObject(
-      { status: 403, code: 'FORBIDDEN' },
-    );
-    configureHttp({ getToken: () => null });
-    await expect(request('/me/student-profile', { method: 'PUT', body: {} })).rejects.toMatchObject(
-      {
-        status: 401,
-      },
-    );
+    const raw = await rawFetch<{ code: string; data: unknown }>('/users/me', {
+      method: 'PATCH',
+      token,
+      body: { name: '김민지3' },
+    });
+    expect(raw.status).toBe(200);
+    expect(raw.body.code).toBe('S200');
+    expectWireShape(raw.body.data, ME_HIGH_SCHOOL.data);
+    // 보낸 필드만 바뀐다.
+    expect(await fetchMe()).toMatchObject({
+      name: '김민지3',
+      studentProfile: { highSchoolName: '수원고', grade: 3 },
+    });
   });
 
-  it('가이드 프로필 저장은 새 Me를 주고 학교는 그대로, 가이드가 아니면 403', async () => {
-    const before = (await login('guide@demo.kr')).me.guideProfile!;
-    const me = await request<Me>('/me/guide-profile', {
-      method: 'PUT',
-      body: { major: '컴퓨터공학과', introduction: '' },
-    });
-    expect(me.guideProfile).toEqual({
-      universityId: before.universityId,
-      major: '컴퓨터공학과',
-      introduction: null,
-    });
-    await expect(
-      request('/me/guide-profile', {
-        method: 'PUT',
-        body: { major: '가'.repeat(31), introduction: null },
-      }),
-    ).rejects.toMatchObject({ status: 400, fieldErrors: { major: expect.any(String) } });
-
+  it('patchMe 칸 오류: 학교 51자는 school_name → fieldErrors.highSchoolName, 학년 5는 fieldErrors.grade, 관심 학과 31자는 fieldErrors.interestedMajor', async () => {
     await login('student@demo.kr');
+    const input = { name: '김민지', highSchoolName: null, grade: null, interestedMajor: null };
+    await expect(patchMe({ ...input, highSchoolName: 'x'.repeat(51) })).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { highSchoolName: '학교 이름은 50자 이하로 입력해 주세요.' },
+    });
+    await expect(patchMe({ ...input, grade: 5 })).rejects.toMatchObject({
+      status: 400,
+      fieldErrors: { grade: expect.any(String) },
+    });
+    await expect(patchMe({ ...input, interestedMajor: 'x'.repeat(31) })).rejects.toMatchObject({
+      status: 400,
+      fieldErrors: { interestedMajor: '관심 학과는 30자 이하로 입력해 주세요.' },
+    });
+  });
+
+  it('patchMe: 가이드가 학교를 보내면 403 FORBIDDEN, 로그인 전이면 401', async () => {
+    await login('guide@demo.kr');
     await expect(
-      request('/me/guide-profile', { method: 'PUT', body: { major: 'x', introduction: null } }),
+      patchMe({ name: '박서준', highSchoolName: '수원고', grade: null, interestedMajor: null }),
     ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+    configureHttp({ getToken: () => null });
+    await expect(
+      patchMe({ name: '박서준', highSchoolName: null, grade: null, interestedMajor: null }),
+    ).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('가이드는 이름만 보내면 바꿀 수 있다', async () => {
+    const { token } = await login('guide@demo.kr');
+    const raw = await rawFetch<{ code: string }>('/users/me', {
+      method: 'PATCH',
+      token,
+      body: { name: '새이름' },
+    });
+    expect(raw.status).toBe(200);
+    expect((await fetchMe()).name).toBe('새이름');
+  });
+
+  it('putGuideProfile: 새 Me를 주고 학교는 그대로, 와이어는 명세 U-04 응답과 같은 모양', async () => {
+    const { token, me: before } = await login('guide@demo.kr');
+    const me = await putGuideProfile({ major: '컴퓨터공학과', introduction: '안녕하세요.' });
+    expect(me.guideProfile).toEqual({
+      universityId: before.guideProfile!.universityId,
+      major: '컴퓨터공학과',
+      introduction: '안녕하세요.',
+    });
+
+    const raw = await rawFetch<{ code: string; data: unknown }>('/users/me/guide-profile', {
+      method: 'PUT',
+      token,
+      body: { major: '컴퓨터공학과', intro: '안녕하세요.' },
+    });
+    expect(raw.status).toBe(200);
+    expect(raw.body.code).toBe('S200');
+    expectWireShape(raw.body.data, GUIDE_PROFILE_OK.data);
+  });
+
+  it('putGuideProfile 칸 오류: 소개 빈 문자열은 intro → fieldErrors.introduction, 학과 31자는 fieldErrors.major', async () => {
+    await login('guide@demo.kr');
+    await expect(
+      putGuideProfile({ major: '컴퓨터공학과', introduction: '' }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { introduction: '소개는 1~200자로 입력해 주세요.' },
+    });
+    await expect(
+      putGuideProfile({ major: '가'.repeat(31), introduction: '안녕하세요.' }),
+    ).rejects.toMatchObject({ status: 400, fieldErrors: { major: expect.any(String) } });
+    await expect(
+      putGuideProfile({ major: '컴퓨터공학과', introduction: '가'.repeat(201) }),
+    ).rejects.toMatchObject({ status: 400, fieldErrors: { introduction: expect.any(String) } });
+  });
+
+  it('putGuideProfile: 가이드가 아니면 403 FORBIDDEN', async () => {
+    await login('student@demo.kr');
+    await expect(putGuideProfile({ major: 'x', introduction: '소개' })).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
   });
 });
 

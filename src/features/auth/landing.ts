@@ -1,3 +1,4 @@
+import { hasGuideProfile } from './guide';
 import type { Me } from './model';
 
 /** 로그인 직후(또는 `/`) 역할과 인증 상태에 따라 처음 보여줄 화면. */
@@ -16,7 +17,7 @@ export function getLandingPath(me: Me): string {
       if (me.verificationStatus === 'NONE' || me.verificationStatus === 'REJECTED') {
         return '/guide/verify';
       }
-      if (!me.guideProfile?.major) return '/guide/me';
+      if (!hasGuideProfile(me)) return '/guide/me';
       return '/guide';
     case 'OWNER':
       if (!me.businessVerified) return '/owner/verify';

@@ -41,7 +41,7 @@ export interface LoginResponse {
 export type SignupRole = Exclude<Role, 'ADMIN'>;
 export const SIGNUP_ROLES: readonly SignupRole[] = ['HIGH_SCHOOL', 'UNIVERSITY', 'OWNER'];
 
-/** #1 `POST /api/auth/signup` 요청. */
+/** `POST /auth/signup` 요청(U-01). */
 export interface SignupInput {
   email: string;
   password: string;
@@ -49,7 +49,7 @@ export interface SignupInput {
   role: SignupRole;
 }
 
-/** #2 `PUT /api/me/student-profile` 요청. PUT이라 네 키를 모두 보낸다. */
+/** `PATCH /users/me` 요청(U-03)의 화면 쪽 이름. 어댑터가 네 칸을 모두 보낸다(`null`은 지움). */
 export interface StudentProfileInput {
   name: string;
   highSchoolName: string | null;
@@ -57,15 +57,19 @@ export interface StudentProfileInput {
   interestedMajor: string | null;
 }
 
-/** #3 `PUT /api/me/guide-profile` 요청. 학교는 받지 않는다(재학 인증 제출 때 정해진다). */
+/** `PUT /users/me/guide-profile` 요청(U-04)의 화면 쪽 이름(`intro`). 학교는 받지 않는다(재학 인증 제출 때 정해진다). */
 export interface GuideProfileInput {
   major: string;
-  introduction: string | null;
+  introduction: string;
 }
 
 export const PASSWORD_MIN_LENGTH = 8;
+/** 영문과 숫자를 섞은 8자 이상(U-01 `password`). */
+export const PASSWORD_PATTERN = /^(?=.*[A-Za-z])(?=.*\d).{8,}$/;
 export const EMAIL_MAX_LENGTH = 255;
-/** 이름 · 고교 이름 · 관심 학과의 최대 글자 수. */
-export const PROFILE_TEXT_MAX = 100;
+/** 이름의 최대 글자 수(가입 · 내 정보 수정). */
+export const NAME_MAX = 20;
+export const HIGH_SCHOOL_NAME_MAX = 50;
+export const INTEREST_MAJOR_MAX = 30;
 export const GUIDE_MAJOR_MAX = 30;
-export const GUIDE_INTRO_MAX = 300;
+export const GUIDE_INTRO_MAX = 200;

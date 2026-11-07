@@ -8,10 +8,14 @@ import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
 import { wireFail } from '@/test/wire';
 
-/** `renderApp`은 목업 DB를 새로 만들므로, DB를 고친 뒤에 내 가게로 이동해 그 값으로 그린다. */
-async function renderStore(patch?: Parameters<typeof mutate>[0]) {
+/**
+ * `renderApp`은 목업 DB를 새로 만들므로, DB를 고친 뒤에 내 가게로 이동해 그 값으로 그린다. `beforeNavigate`는 앱이 뜬 뒤
+ * 이동하기 전에 돈다 — 내 정보(`GET /users/me`) 합성이 `GET /users/me/store`를 부르므로 그 응답을 덮어쓰는 시험은 여기서 덮어쓴다.
+ */
+async function renderStore(patch?: Parameters<typeof mutate>[0], beforeNavigate?: () => void) {
   const app = await renderApp('/owner/coupons/redeem', { as: 'owner' });
   if (patch) mutate(patch);
+  beforeNavigate?.();
   await app.router.navigate('/owner/store');
   return app;
 }
@@ -99,8 +103,9 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
   });
 
   it('불러오는 동안은 Skeleton, 로그아웃은 그때도 보인다', async () => {
-    server.use(http.get('/api/users/me/store', () => new Promise<never>(() => {})));
-    await renderStore();
+    await renderStore(undefined, () =>
+      server.use(http.get('/api/users/me/store', () => new Promise<never>(() => {}))),
+    );
     expect(await screen.findByRole('button', { name: '로그아웃' })).toBeInTheDocument();
     expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
     // 화면 낭독기용 h1만 있고(눈에 보이는 제목은 데이터가 온 뒤에), 가게 제목은 아직 없다.
@@ -110,8 +115,9 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
   });
 
   it('조회가 실패하고 받은 데이터가 없으면 ErrorState와 다시 시도', async () => {
-    server.use(http.get('/api/users/me/store', () => wireFail('E400')));
-    const { user } = await renderStore();
+    const { user } = await renderStore(undefined, () =>
+      server.use(http.get('/api/users/me/store', () => wireFail('E400'))),
+    );
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: '내 가게' })).toBeInTheDocument();
     expect(screen.queryByText('아직 연결된 가게가 없어요.')).not.toBeInTheDocument();

@@ -4,20 +4,15 @@ import type {
   GuideTourSummary,
   MyApplication,
 } from '@/features/applications/model';
-import type { GuardianStatus, Me } from '@/features/auth/model';
+import type { Me } from '@/features/auth/model';
+import { fromWireMe } from '@/features/auth/wire';
 import { computeCouponState, type Coupon } from '@/features/coupons/model';
 import { slotTimes, type Course, type CourseStop } from '@/features/courses/model';
 import type { TourDetail, TourSummary } from '@/features/tours/model';
 import { COURSE_CRITERIA } from '@/mocks/ai/course';
 import { mockNow } from '@/mocks/clock';
-import type {
-  ApplicationRow,
-  CouponRow,
-  CourseStopRow,
-  DB,
-  GuardianConsentRow,
-  TourRow,
-} from '@/mocks/db/schema';
+import type { ApplicationRow, CouponRow, CourseStopRow, DB, TourRow } from '@/mocks/db/schema';
+import { toWireMe } from '@/mocks/wire/auth';
 import { seoulDateKey } from '@/shared/lib/date';
 import { isCancellable, remainingSeats } from './applications';
 import { MockApiError } from './errors';
@@ -44,52 +39,15 @@ export function newestFirst(a: ApplicationRow, b: ApplicationRow): number {
   return Date.parse(b.createdAt) - Date.parse(a.createdAt) || b.id - a.id;
 }
 
-/** 대기 동의는 링크 기한(`expiresAt`)이 지나면 EXPIRED, 기록이 없으면 NONE(미요청). */
-function guardianStatusOf(consent: GuardianConsentRow | undefined, now: Date): GuardianStatus {
-  if (!consent) return 'NONE';
-  if (
-    consent.status === 'PENDING' &&
-    consent.expiresAt !== null &&
-    Date.parse(consent.expiresAt) < now.getTime()
-  ) {
-    return 'EXPIRED';
-  }
-  return consent.status;
-}
-
-/** 로그인한 사용자. 프로필은 역할에 맞는 것만 준다(고교생 → 학생 프로필, 대학생 → 가이드 프로필). */
+/**
+ * 로그인한 사용자. 프로필은 역할에 맞는 것만 준다(고교생 → 학생 프로필, 대학생 → 가이드 프로필).
+ * 같은 값의 출처가 둘이 되지 않게 와이어 뷰(`toWireMe`)를 어댑터(`fromWireMe`)로 읽는다(2C-R26). 내 가게 id는 가게 행의 소유자다.
+ */
 export function toMe(db: DB, userId: number, now: Date = mockNow()): Me {
-  const user = db.users.find((u) => u.id === userId);
-  if (!user) throw new MockApiError(401, 'UNAUTHORIZED');
-  const verification = db.verifications.find((v) => v.id === userId);
-  const student = db.studentProfiles.find((p) => p.id === userId);
-  const guide = db.guideProfiles.find((p) => p.id === userId);
-  return {
-    id: user.id,
-    email: user.email,
-    name: user.name,
-    role: user.role,
-    verificationStatus: verification?.status ?? 'NONE',
-    rejectionReason: verification?.rejectionReason ?? null,
-    guardianStatus: guardianStatusOf(
-      db.guardianConsents.find((g) => g.id === userId),
-      now,
-    ),
-    studentProfile:
-      user.role === 'HIGH_SCHOOL' && student
-        ? {
-            highSchoolName: student.highSchoolName,
-            grade: student.grade,
-            interestedMajor: student.interestedMajor,
-          }
-        : null,
-    guideProfile:
-      user.role === 'UNIVERSITY' && guide
-        ? { universityId: guide.universityId, major: guide.major, introduction: guide.introduction }
-        : null,
-    businessVerified: db.businessVerifications.find((b) => b.id === userId)?.isVerified ?? false,
-    storeId: db.stores.find((s) => s.ownerId === userId)?.id ?? null,
-  };
+  return fromWireMe(
+    toWireMe(db, userId, now),
+    db.stores.find((s) => s.ownerId === userId)?.id ?? null,
+  );
 }
 
 export function toTourSummary(db: DB, tour: TourRow): TourSummary {

@@ -60,12 +60,6 @@ const EXTENSIONS: string[] = ['GET /health', 'POST /demo/reset', 'GET /campuses/
 
 /** 아직 목업이 없는 백엔드 경로. 도메인 태스크가 자기 줄을 지운다. 끝에 남는 20개는 2B 몫이다. */
 const NOT_MOCKED: string[] = [
-  'POST /auth/signup',
-  'POST /auth/login',
-  'POST /auth/logout',
-  'GET /users/me',
-  'PATCH /users/me',
-  'PUT /users/me/guide-profile',
   'POST /verifications/enrollment',
   'POST /guardian-consents',
   'GET /guardian-consents/:consentToken',
@@ -108,9 +102,6 @@ const NOT_MOCKED: string[] = [
 
 /** 아직 바꾸지 않은 옛 경로(전환 기간). 도메인 태스크가 자기 줄을 지운다. */
 const LEGACY: string[] = [
-  'POST /auth/login',
-  'POST /auth/logout',
-  'GET /me',
   'POST /recommendations',
   'GET /tours',
   'GET /tours/:id',
@@ -133,9 +124,6 @@ const LEGACY: string[] = [
   'GET /me/coupons/:id',
   'GET /owner/coupons/:code',
   'POST /owner/coupons/:code/redeem',
-  'POST /auth/signup',
-  'PUT /me/student-profile',
-  'PUT /me/guide-profile',
 ];
 
 const label = (h: { info: { method: unknown; path: unknown } }) =>

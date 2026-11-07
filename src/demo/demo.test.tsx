@@ -137,11 +137,7 @@ describe('시연 패널', () => {
       const token = useSession.getState().token;
       const clear = vi.spyOn(queryClient, 'clear');
       // 로그인 실패 401은 세션 만료가 아니다 — 지금 세션의 복구 · 로그아웃을 부르면 안 된다.
-      server.use(
-        http.post('/api/auth/login', () =>
-          HttpResponse.json({ code: 'INVALID_CREDENTIALS', message: 'x' }, { status: 401 }),
-        ),
-      );
+      server.use(http.post('/api/auth/login', () => wireFail('E401_INVALID_CREDENTIALS')));
 
       await user.click(screen.getByRole('button', { name: '가이드' }));
       expect(await screen.findByText('이메일 또는 비밀번호가 맞지 않아요.')).toBeInTheDocument();

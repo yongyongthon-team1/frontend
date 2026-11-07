@@ -9,13 +9,14 @@ import {
 import { useCallback } from 'react';
 import { useNavigate } from 'react-router';
 import { qk } from '@/shared/api/queryKeys';
-import { fetchMe, login, logout, postSignup, putGuideProfile, putStudentProfile } from './api';
+import { fetchMe, login, logout, patchMe, postSignup, putGuideProfile } from './api';
 import type { Me } from './model';
 import { useSession } from './session';
 
 /** `['me']` 쿼리 정의. `useMe`와 테스트 하네스(`renderApp`)가 같이 쓴다. */
 export function meQueryOptions() {
-  return queryOptions({ queryKey: qk.me, queryFn: fetchMe });
+  // `fetchMe`를 그대로 넣지 않는다 — TanStack이 컨텍스트 객체를 첫 인자(`token`)로 넘긴다.
+  return queryOptions({ queryKey: qk.me, queryFn: () => fetchMe() });
 }
 
 /**
@@ -62,7 +63,7 @@ export function useSignup() {
 export function useUpdateStudentProfile() {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: putStudentProfile,
+    mutationFn: patchMe,
     onSuccess: (me) => {
       queryClient.setQueryData(qk.me, me);
     },
