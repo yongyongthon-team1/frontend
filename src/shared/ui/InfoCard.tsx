@@ -12,6 +12,7 @@ export function InfoCard({
   children,
   footer,
   className,
+  labelledBy,
 }: {
   title: ReactNode;
   description?: ReactNode;
@@ -20,9 +21,13 @@ export function InfoCard({
   children?: ReactNode;
   footer?: ReactNode;
   className?: string;
+  /** 제목 요소의 id. 주면 카드가 그 제목을 이름으로 가진 영역(`region`)이 된다. */
+  labelledBy?: string;
 }) {
+  const Root = labelledBy ? 'section' : 'div';
   return (
-    <div
+    <Root
+      aria-labelledby={labelledBy}
       className={cn(
         'rounded-lg p-4',
         tone === 'default' ? (muted ? 'bg-neutral-100' : toneBg.default) : toneBg[tone],
@@ -33,6 +38,6 @@ export function InfoCard({
       {description ? <div className="mt-1.5 text-[13px] text-muted">{description}</div> : null}
       {children ? <div className="mt-3">{children}</div> : null}
       {footer ? <div className="mt-4">{footer}</div> : null}
-    </div>
+    </Root>
   );
 }

@@ -49,7 +49,7 @@ export interface SignupInput {
   role: SignupRole;
 }
 
-/** `PATCH /users/me` 요청(U-03)의 화면 쪽 이름. 어댑터가 네 칸을 모두 보낸다(`null`은 지움). */
+/** `PATCH /users/me` 요청(U-03)의 화면 쪽 이름. 어댑터가 학교 · 관심 학과의 `null`은 지움으로 보내고, 학년이 `null`이면 `grade` 키를 뺀다. */
 export interface StudentProfileInput {
   name: string;
   highSchoolName: string | null;

@@ -1,5 +1,5 @@
 import { ChevronRight } from 'lucide-react';
-import type { ReactNode } from 'react';
+import { useId, type ReactNode } from 'react';
 import { Link } from 'react-router';
 import type { ActionLink, Tone } from '@/shared/lib/types';
 import { buttonClass } from '@/shared/ui/buttonStyles';
@@ -17,7 +17,10 @@ export interface VerificationStatusCardProps {
   children?: ReactNode;
 }
 
-/** 인증 단계 카드(재학 인증 · 보호자 동의 · 사업자 인증 …): 제목 + 오른쪽 상태 칩, 반려 사유 줄, 다음 행동 링크. */
+/**
+ * 인증 단계 카드(재학 인증 · 보호자 동의 · 사업자 인증 …): 제목 + 오른쪽 상태 칩, 반려 사유 줄, 다음 행동 링크.
+ * 제목을 이름으로 가진 영역(region)이라 E2E가 클래스 이름 대신 역할로 카드를 찾는다.
+ */
 export function VerificationStatusCard({
   title,
   badge,
@@ -27,6 +30,7 @@ export function VerificationStatusCard({
   muted = false,
   children,
 }: VerificationStatusCardProps) {
+  const titleId = useId();
   const body = (
     <>
       {rejectionReason ? (
@@ -45,10 +49,13 @@ export function VerificationStatusCard({
   );
   return (
     <InfoCard
+      labelledBy={titleId}
       muted={muted}
       title={
         <div className="flex items-start justify-between gap-3">
-          <span className="min-w-0">{title}</span>
+          <span id={titleId} className="min-w-0">
+            {title}
+          </span>
           {badge ? (
             <StatusChip tone={badge.tone} className="shrink-0">
               {badge.label}

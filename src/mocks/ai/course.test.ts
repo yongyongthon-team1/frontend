@@ -168,7 +168,7 @@ describe('generateCourseDraft', () => {
       [1, '14:00'],
       [2, '15:10'],
       [3, '16:00'],
-      [4, '16:50'],
+      [4, '16:15'],
     ]);
     expect(stops[3]).toMatchObject({
       partnershipId: 4,

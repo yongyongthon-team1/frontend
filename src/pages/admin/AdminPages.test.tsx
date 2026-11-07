@@ -41,7 +41,7 @@ function capture(method: string, path: string): { count: () => number; bodies: u
   return { count: () => count, bodies };
 }
 
-const step1 = () => screen.getByText('STEP 1 · 재학 인증').closest('div.rounded-lg') as HTMLElement;
+const step1 = () => screen.getByRole('region', { name: 'STEP 1 · 재학 인증' });
 
 describe('A01 인증 심사 목록 (owner-s06)', () => {
   it('제목 · 소제목 `대기 3건` · 오래된 제출 순(한도윤이 첫 카드, `학교 확인`), 탭 · 처리 완료는 없다', async () => {

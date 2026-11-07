@@ -73,7 +73,8 @@ export async function postSignup(input: SignupInput): Promise<LoginResponse> {
 }
 
 /**
- * 고교생 프로필(이름 포함) 저장(U-03 `PATCH /users/me`). 네 칸을 모두 보내고(`null`은 지움) 새 `Me`를 다시 읽는다.
+ * 고교생 프로필(이름 포함) 저장(U-03 `PATCH /users/me`). 학교 · 관심 학과는 `null`로 지우고, 학년이 `null`이면(인증 전) `grade` 키를 아예 빼서
+ * 실서버가 `grade: null`을 거절하지 않게 한다. 저장 뒤 새 `Me`를 다시 읽는다.
  * 학교 · 관심 학과의 칸 오류는 화면 칸 이름(`highSchoolName` · `interestedMajor`)으로 돌려준다.
  */
 export async function patchMe(input: StudentProfileInput): Promise<Me> {
@@ -82,7 +83,7 @@ export async function patchMe(input: StudentProfileInput): Promise<Me> {
     body: {
       name: input.name,
       schoolName: input.highSchoolName,
-      grade: input.grade,
+      ...(input.grade === null ? {} : { grade: input.grade }),
       interestMajor: input.interestedMajor,
     },
     fieldMap: { school_name: 'highSchoolName', interest_major: 'interestedMajor' },

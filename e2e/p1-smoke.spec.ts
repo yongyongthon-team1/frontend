@@ -166,4 +166,6 @@ test('사장님 온보딩: 사업자 인증 → 가게 연결 → 제휴 저장 
 
   await expectOpen(page, /\/owner\/store$/);
   await expect(page.getByText('카페 단풍', { exact: true })).toBeVisible();
+  // 방금 저장한 제휴 혜택이 내 가게 화면에 보인다.
+  await expect(page.getByText('음료 10% 할인')).toBeVisible();
 });

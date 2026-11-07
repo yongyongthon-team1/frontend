@@ -38,14 +38,8 @@ test.describe('/verify', () => {
     ).toBeVisible();
   }
 
-  const step1 = (page: Page) =>
-    page
-      .getByText('STEP 1 · 재학 인증', { exact: true })
-      .locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]');
-  const step2 = (page: Page) =>
-    page
-      .getByText('STEP 2 · 보호자 동의 요청', { exact: true })
-      .locator('xpath=ancestor::div[contains(@class,"rounded-lg")][1]');
+  const step1 = (page: Page) => page.getByRole('region', { name: 'STEP 1 · 재학 인증' });
+  const step2 = (page: Page) => page.getByRole('region', { name: 'STEP 2 · 보호자 동의 요청' });
 
   test('① newbie가 실제 jpg를 올려 재학 인증을 제출하면 심사 중', async ({ page }) => {
     await switchTo(page, 'newbie@demo.kr');

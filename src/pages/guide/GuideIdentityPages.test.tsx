@@ -43,8 +43,7 @@ function capture(method: string, pathPrefix: string): { count: () => number; bod
 }
 
 const univSelect = () => screen.getByRole('combobox', { name: '용용톤 참여 대학 선택' });
-const statusCard = () =>
-  screen.getByText(/^재학 인증 상태 · /).closest('div.rounded-lg') as HTMLElement;
+const statusCard = () => screen.getByRole('region', { name: /^재학 인증 상태 · / });
 
 describe('/guide/verify 대학생 재학 인증', () => {
   it('guide-new: 제목 · 칩 · 대학 선택 · 사진 칸 · 안내 · 각주, 뒤로 가기 없음 · MY 탭 활성', async () => {

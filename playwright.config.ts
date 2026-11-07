@@ -3,7 +3,7 @@ import { defineConfig, devices } from '@playwright/test';
 const PORT = 4173;
 const LOCAL_URL = `http://localhost:${PORT}`;
 // 실서버 스모크(`E2E_REAL=1`)는 실서버에 닿는 배포를 `E2E_BASE_URL`로 가리킨다 — 그때는 목업 빌드를 띄우지 않는다.
-const BASE_URL = process.env.E2E_BASE_URL ?? LOCAL_URL;
+const BASE_URL = process.env.E2E_BASE_URL || LOCAL_URL;
 
 export default defineConfig({
   testDir: 'e2e',

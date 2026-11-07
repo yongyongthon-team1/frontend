@@ -41,7 +41,7 @@ npm run e2e
 - `e2e/review-loop.spec.ts`: 쿠폰 사용 → 방문 리뷰 쓰기 → 상점 시트의 새 AI 요약 → 사장님 리포트.
 - `e2e/verify.spec.ts`: 재학 인증 사진 업로드와 같은 탭 보호자 동의 · `동의 완료로 건너뛰기`가 새로고침 없이 반영되는지.
 - `e2e/p1-smoke.spec.ts`: 역할마다 P1 화면을 앱 안 링크로 열어 `곧 열려요.` 자리 화면이 없는지(자리 화면은 `/explore`뿐), 그리고 사장님 온보딩(사업자 인증 → 가게 연결 → 제휴 저장)을 처음부터 끝까지.
-- `e2e/real-smoke.spec.ts`: 실서버 스모크(쓰기 없음). `E2E_REAL=1`일 때만 돌고 아니면 건너뛴다. 목업 빌드의 `/api`는 실서버가 아니므로 `E2E_BASE_URL`로 실서버에 닿는 배포를 가리킨다. 예: `E2E_REAL=1 E2E_BASE_URL=https://<배포 주소> npm run e2e -- e2e/real-smoke.spec.ts` (`E2E_BASE_URL`을 주면 목업 빌드를 띄우지 않는다).
+- `e2e/real-smoke.spec.ts`: 실서버 스모크(쓰기 없음). `E2E_REAL=1`일 때만 돌고 아니면 건너뛴다. 목업 빌드의 `/api`는 실서버가 아니므로 `E2E_BASE_URL`로 실서버에 닿는 배포를 가리킨다. 예: `E2E_REAL=1 E2E_BASE_URL=https://<배포 주소> npm run e2e -- e2e/real-smoke.spec.ts` (`E2E_BASE_URL`을 주면 목업 빌드를 띄우지 않는다). 이 대상은 `real-smoke` 전용이고, 시연 도구가 켜진 배포여야 한다(다른 E2E는 목업 빌드로 돈다).
 
 사장님은 하단 탭 `내 가게`(`/owner/store`) · `쿠폰`(`/owner/coupons/redeem`) 두 개이고 MY 탭이 없어 로그아웃은 내 가게 오른쪽 위에 있다. 가이드는 로그인하면 `/guide`(내 탐방)에서 시작한다.
 

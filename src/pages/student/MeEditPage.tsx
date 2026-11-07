@@ -32,7 +32,7 @@ function validate(name: string, school: string, major: string): Errors {
 }
 
 /**
- * 폼. 학년은 칸이 없고 지금 값을 그대로 함께 보낸다(`PATCH`가 네 칸을 모두 보내서 재학 인증이 정한 학년을 지우지 않는다).
+ * 폼. 학년은 칸이 없고 지금 값이 있으면 그대로 함께 보낸다(재학 인증이 정한 학년을 지우지 않는다). 아직 없으면(`null`) 어댑터가 `grade` 키를 뺀다.
  * 학교 · 관심 전공을 비우면 지움(`null`)이다. 저장은 연타해도 요청이 한 번이다(`locked`).
  */
 function EditForm({ me }: { me: Me }) {

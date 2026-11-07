@@ -1314,4 +1314,16 @@ describe('VerificationStatusCard', () => {
     expect(screen.getByText('본문')).toBeInTheDocument();
     expect(container.firstElementChild).toHaveClass('bg-neutral-100');
   });
+
+  it('제목을 이름으로 가진 영역(region)이다 — 상태 칩은 이름에 들어가지 않는다 (E2E가 역할로 찾는다)', () => {
+    render(
+      <MemoryRouter>
+        <VerificationStatusCard
+          title="STEP 1 · 재학 인증"
+          badge={{ label: '심사 중', tone: 'info' }}
+        />
+      </MemoryRouter>,
+    );
+    expect(screen.getByRole('region', { name: 'STEP 1 · 재학 인증' })).toHaveTextContent('심사 중');
+  });
 });

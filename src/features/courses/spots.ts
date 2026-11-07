@@ -84,12 +84,12 @@ function toSpotInput(slot: Slot, startTime: string): SpotInput {
 }
 
 /**
- * 지금 코스에 편집 하나를 적용한 전체 `spots`. 시각은 위치 슬롯(`slotTimes`: 시작 + 0 · 70 · 120 · 170 · 220분, 그 뒤 50분씩)이다.
+ * 지금 코스에 편집 하나를 적용한 전체 `spots`. 시각은 위치 슬롯(`slotTimes`: 시작 + 0 · 70 · 120 · 170 · 220분)이고, 탐방 종료를 넘기는 곳은 종료까지 고르게 나눈다.
  * `comment`는 한줄평이 있을 때만 넣는다 — 전체 교체라 빠지면 한줄평이 없어진다.
  */
 export function buildSpots(course: Course, edit: SpotEdit): SpotInput[] {
   const slots = [...course.stops].sort((a, b) => a.order - b.order).map(toSlot);
   const next = applyEdit(slots, edit);
-  const times = slotTimes(course.tour.startsAt, next.length);
+  const times = slotTimes(course.tour.startsAt, next.length, course.tour.endsAt);
   return next.map((slot, i) => toSpotInput(slot, times[i]));
 }

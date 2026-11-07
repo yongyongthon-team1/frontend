@@ -164,6 +164,41 @@ describe('useUpdateStudentProfile', () => {
   });
 });
 
+describe('patchMe 요청 본문 (최종 리뷰 I1)', () => {
+  async function patchBody(grade: 1 | 2 | 3 | null): Promise<Record<string, unknown>> {
+    loginAs('newbie@demo.kr');
+    let body: Record<string, unknown> | null = null;
+    server.use(
+      http.patch('/api/users/me', async ({ request }) => {
+        body = (await request.json()) as Record<string, unknown>;
+        return wireOk(null);
+      }),
+    );
+    const { result } = renderHook(() => useUpdateStudentProfile(), { wrapper });
+    await act(() =>
+      result.current.mutateAsync({
+        name: '새이름',
+        highSchoolName: null,
+        grade,
+        interestedMajor: null,
+      }),
+    );
+    expect(body).not.toBeNull();
+    return body as unknown as Record<string, unknown>;
+  }
+
+  it('학년이 없는 학생(newbie)의 H17 저장은 grade 키를 보내지 않는다', async () => {
+    const body = await patchBody(null);
+    expect(body).not.toHaveProperty('grade');
+    // 학교 · 관심 학과의 null은 "지움"이라 그대로 보낸다.
+    expect(body).toMatchObject({ name: '새이름', school_name: null, interest_major: null });
+  });
+
+  it('학년이 있으면 그대로 보낸다', async () => {
+    expect(await patchBody(2)).toMatchObject({ grade: 2 });
+  });
+});
+
 describe('useSaveGuideProfile', () => {
   it('새 Me를 넣고 가이드 탐방 · 신청자 · 코스 · 탐방 조회를 무효화한다 (가이드 탐방 상세 키는 건드리지 않는다)', async () => {
     loginAs('guide@demo.kr');

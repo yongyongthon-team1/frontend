@@ -110,6 +110,16 @@ describe('useLinkStore', () => {
     expect(queryClient.getQueryData(qk.me)).toMatchObject({ businessVerified: true });
   });
 
+  it('성공하면 연결 전에 받아 둔 가게 리포트("연결된 가게가 없어요")도 다시 읽게 한다 (최종 리뷰 Minor 2)', async () => {
+    serveLinked();
+    const { invalidate, wrapper } = setup();
+    const { result } = renderHook(() => useLinkStore(), { wrapper });
+    await act(async () => {
+      await result.current.mutateAsync({ storeId: 201 });
+    });
+    expect(has(invalidate, qk.storeReport)).toBe(true);
+  });
+
   it('STORE_ALREADY_LINKED는 검색 결과를, STORE_LIMIT · BIZ_NOT_VERIFIED는 내 정보 · 내 가게를 다시 읽게 한다', async () => {
     const { invalidate, wrapper } = setup();
     const { result } = renderHook(() => useLinkStore(), { wrapper });

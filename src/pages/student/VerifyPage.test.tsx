@@ -32,9 +32,8 @@ const demoOn = () => useDemoStore.setState({ enabled: true });
 /** 업로드 시험은 accept 걸러내기를 끈다(PDF 같은 틀린 파일이 칸에 들어와야 우리 검사를 볼 수 있다). */
 const uploader = () => userEvent.setup({ applyAccept: false });
 
-const step1 = () => screen.getByText('STEP 1 · 재학 인증').closest('div.rounded-lg') as HTMLElement;
-const step2 = () =>
-  screen.getByText('STEP 2 · 보호자 동의 요청').closest('div.rounded-lg') as HTMLElement;
+const step1 = () => screen.getByRole('region', { name: 'STEP 1 · 재학 인증' });
+const step2 = () => screen.getByRole('region', { name: 'STEP 2 · 보호자 동의 요청' });
 
 /** 나간 요청 중 이 메서드 · 경로(접두)의 본문을 모은다(JSON이면 파싱, multipart면 칸 이름 목록). */
 function capture(method: string, pathPrefix: string): { count: () => number; bodies: unknown[] } {
@@ -382,6 +381,24 @@ describe('재학 인증 · 보호자 동의 (/verify)', () => {
       expect(await within(step2()).findByText('동의 완료')).toBeInTheDocument();
       expect(screen.getByText('보호자가 동의했어요.')).toBeInTheDocument();
       expect(screen.queryByRole('link', { name: OPEN_PAGE })).not.toBeInTheDocument();
+      expect(screen.queryByRole('button', { name: SKIP })).not.toBeInTheDocument();
+    });
+
+    it('같은 탭 동의 뒤 돌아오면 내 정보를 다시 읽는 동안 동의 완료로 건너뛰기는 잠겨 있다 (최종 리뷰 Minor 3)', async () => {
+      demoOn();
+      const { user, router } = await renderApp('/verify', { as: 'waiting@demo.kr' });
+      await user.click(await screen.findByRole('link', { name: OPEN_PAGE }));
+      await user.click(await screen.findByRole('button', { name: '안내 확인 후 동의하기' }));
+      expect(await screen.findByText('동의를 마쳤어요')).toBeInTheDocument();
+      setMockLatency({ base: 250, ai: 0 }); // 돌아온 /verify의 내 정보 다시 읽기를 느리게 한다
+      await user.click(screen.getByRole('link', { name: '학생 화면으로 돌아가기' }));
+
+      await waitFor(() => expect(router.state.location.pathname).toBe('/verify'));
+      // 캐시된 대기 카드가 보이지만, 다시 읽는 동안에는 누를 수 없다.
+      const skip = await screen.findByRole('button', { name: SKIP });
+      expect(skip).toBeDisabled();
+      // 다시 읽기가 끝나면 동의 완료로 바뀌고 건너뛰기는 사라진다.
+      expect(await within(step2()).findByText('동의 완료')).toBeInTheDocument();
       expect(screen.queryByRole('button', { name: SKIP })).not.toBeInTheDocument();
     });
 

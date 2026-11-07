@@ -57,9 +57,10 @@ export function useRedeemCoupon(): UseMutationResult<RedeemResult, ApiError, str
       queryClient.setQueryData(qk.couponLookup(code), result.coupon);
       void queryClient.invalidateQueries({ queryKey: qk.storeReport });
     },
-    // 사용 처리는 됐는데 뒤따르는 다시 확인이 실패해 오류가 된 경우에도 조회 결과가 낡은 USABLE로 남지 않게 다시 불러온다.
+    // 사용 처리는 됐는데 뒤따르는 다시 확인이 실패해 오류가 된 경우에도 조회 결과가 낡은 USABLE로, 가게 리포트가 낡은 방문 수로 남지 않게 다시 불러온다.
     onError: (_error, code) => {
       void queryClient.invalidateQueries({ queryKey: qk.couponLookup(code) });
+      void queryClient.invalidateQueries({ queryKey: qk.storeReport });
     },
   });
 }

@@ -252,9 +252,12 @@ function ConsentRequestForm() {
 /**
  * 시연 조작(2B′-R10): 같은 탭에서 보호자 페이지를 열거나 동의를 건너뛴다. 건너뛰기는 되돌릴 수 없어 처리 중에 잠기고
  * 연타해도 요청은 한 번이다. 성공하면 훅이 내 정보를 다시 읽어 이 카드가 `동의 완료`로 바뀐다(새로고침 없이).
+ * 보호자 페이지에서 동의하고 돌아오면 캐시된 대기 카드가 먼저 보이므로, 내 정보를 다시 읽는 동안에는 건너뛰기를 잠근다
+ * (이미 처리된 요청으로 무대에서 오류 토스트가 뜨지 않게).
  */
 function DemoConsentTools({ token }: { token: string }) {
   const queryClient = useQueryClient();
+  const refreshing = useMe().isFetching;
   const decide = useDecideConsent(token);
   const locked = useRef(false);
 
@@ -289,7 +292,7 @@ function DemoConsentTools({ token }: { token: string }) {
         variant="secondary"
         size="sm"
         loading={decide.isPending}
-        disabled={decide.isPending}
+        disabled={decide.isPending || refreshing}
         onClick={onSkip}
       >
         동의 완료로 건너뛰기

@@ -29,6 +29,36 @@ describe('slotTimes', () => {
       '17:40',
       '18:30',
     ]));
+
+  describe('탐방 종료 시각(endsAt)을 알 때 (최종 리뷰 I2)', () => {
+    const START = '2026-11-15T14:00:00+09:00';
+    const END = '2026-11-15T16:30:00+09:00';
+
+    it('3곳은 endsAt이 있어도 그대로다(골든 패스 · 스테이지 ②가 기대는 시각)', () =>
+      expect(slotTimes(START, 3, END)).toEqual(['14:00', '15:10', '16:00']));
+
+    it('4번째 곳은 탐방 안(16:15)에 들어온다', () =>
+      expect(slotTimes(START, 4, END)).toEqual(['14:00', '15:10', '16:00', '16:15']));
+
+    it('5곳이면 넘친 두 곳을 16:00과 종료 사이에 고르게 5분 단위로 놓는다', () =>
+      expect(slotTimes(START, 5, END)).toEqual(['14:00', '15:10', '16:00', '16:10', '16:20']));
+
+    it('endsAt이 null이면 지금까지처럼 위치 슬롯 그대로다', () =>
+      expect(slotTimes(START, 4, null)).toEqual(['14:00', '15:10', '16:00', '16:50']));
+
+    it('창이 넓으면 슬롯을 그대로 쓰고 다섯 곳 넘게만 끝까지 나눈다', () => {
+      const wide = '2026-11-15T19:00:00+09:00';
+      expect(slotTimes(START, 5, wide)).toEqual(['14:00', '15:10', '16:00', '16:50', '17:40']);
+      expect(slotTimes(START, 6, wide)).toEqual([
+        '14:00',
+        '15:10',
+        '16:00',
+        '16:50',
+        '17:40',
+        '18:20',
+      ]);
+    });
+  });
 });
 
 describe('studentCourseLabel', () => {

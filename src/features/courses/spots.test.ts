@@ -101,7 +101,7 @@ describe('buildSpots (2C-R13)', () => {
       ]);
     });
 
-    it('다섯 곳 넘게 있으면 다섯째 뒤로는 50분씩(slotTimes와 같다)', () => {
+    it('탐방 시간(14:00–16:30)을 넘기는 곳은 3번째 뒤로 종료까지 고르게 나눈다(slotTimes와 같다)', () => {
       const seven: Course = {
         ...COURSE,
         stops: Array.from({ length: 7 }, (_, i) =>
@@ -110,8 +110,8 @@ describe('buildSpots (2C-R13)', () => {
       };
       const spots = buildSpots(seven, { kind: 'note', stopId: 1, description: '' });
       const times = spots.map((s) => s.startTime);
-      expect(times).toEqual(['14:00', '15:10', '16:00', '16:50', '17:40', '18:30', '19:20']);
-      expect(times).toEqual(slotTimes(seven.tour.startsAt, 7));
+      expect(times).toEqual(['14:00', '15:10', '16:00', '16:05', '16:10', '16:15', '16:20']);
+      expect(times).toEqual(slotTimes(seven.tour.startsAt, 7, seven.tour.endsAt));
     });
 
     it('이미 같은 순서면 reorder는 그대로, 첫 지점을 위로 · 마지막 지점을 아래로 옮기려는 id 목록은 던진다', () => {
@@ -167,7 +167,7 @@ describe('buildSpots add · replace (2B′-R14, Review Focus 4)', () => {
       { stopType: 'CAMPUS', campusBuildingId: 3, startTime: '14:00' },
       { stopType: 'STORE', storeId: 201, startTime: '15:10', comment: 'a' },
       { stopType: 'STORE', storeId: 202, startTime: '16:00', comment: 'b' },
-      { stopType: 'STORE', storeId: 205, startTime: '16:50' },
+      { stopType: 'STORE', storeId: 205, startTime: '16:15' },
     ]);
     expect(spots[3]).not.toHaveProperty('comment');
   });
@@ -177,13 +177,13 @@ describe('buildSpots add · replace (2B′-R14, Review Focus 4)', () => {
       kind: 'add',
       place: { type: 'CAMPUS', campusBuildingId: 4 },
     });
-    expect(spots[3]).toEqual({ stopType: 'CAMPUS', campusBuildingId: 4, startTime: '16:50' });
+    expect(spots[3]).toEqual({ stopType: 'CAMPUS', campusBuildingId: 4, startTime: '16:15' });
     expect(spots[3]).not.toHaveProperty('storeId');
   });
 
   it('add: 섞인 배열에서도 order 순서의 맨 끝에 붙는다', () => {
     const spots = buildSpots(COURSE, { kind: 'add', place: { type: 'STORE', storeId: 205 } });
-    expect(spots.map((s) => s.startTime)).toEqual(['14:00', '15:10', '16:00', '16:50']);
+    expect(spots.map((s) => s.startTime)).toEqual(['14:00', '15:10', '16:00', '16:15']);
     expect(spots[0]).toMatchObject({ stopType: 'CAMPUS', campusBuildingId: 3 });
     expect(spots[3]).toMatchObject({ stopType: 'STORE', storeId: 205 });
   });

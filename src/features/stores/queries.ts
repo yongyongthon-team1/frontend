@@ -83,6 +83,8 @@ export function useLinkStore(): UseMutationResult<MyStore, ApiError, StoreRegist
     },
     onSuccess: (store) => {
       queryClient.setQueryData(qk.myStore, store);
+      // 연결 전에 받아 둔 리포트("연결된 가게가 없어요")가 남지 않게 한다.
+      void queryClient.invalidateQueries({ queryKey: qk.storeReport });
     },
     onError: (error) => {
       if (error.code === 'STORE_ALREADY_LINKED') {

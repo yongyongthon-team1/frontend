@@ -15,7 +15,7 @@ import { verificationHandlers } from './handlers/verification';
 import { wishHandlers } from './handlers/wishes';
 
 // 도메인별 MSW 핸들러(`VITE_MOCK_DOMAINS`로 도메인 단위 목업을 켠다). 도메인 구분은 진척 대시보드의 API 연동표와 같다.
-// stores(내 가게 조회만)는 P1 화면의 API라 MVP 2B′에서 채운다(verification은 Task 9, admin은 Task 12가 채웠다).
+// 2B′로 모든 도메인이 채워졌다(`NOT_MOCKED` 비어 있음).
 
 export const handlersByDomain: Record<MockDomain, HttpHandler[]> = {
   auth: authHandlers,

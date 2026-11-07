@@ -150,7 +150,7 @@ export function generateCourseDraft(db: DB, tourId: number): CourseDraft {
     });
   }
 
-  const times = slotTimes(tour.startsAt, stops.length);
+  const times = slotTimes(tour.startsAt, stops.length, tour.endsAt);
   return {
     stops: stops.map((s, i) => ({ ...s, stopOrder: i + 1, visitTime: times[i] })),
     interests: [...CAMPUS_INTERESTS, ...intents],

@@ -124,17 +124,39 @@ export const SLOT_OFFSETS_MIN = [0, 70, 120, 170, 220] as const;
 
 const EXTRA_SLOT_STEP_MIN = 50;
 
-/** 방문 시간은 위치 슬롯에 고정된다. 탐방 시작 시각에서 `count`개 지점의 `HH:mm`(Asia/Seoul)을 돌려준다. */
-export function slotTimes(startsAt: string, count: number): string[] {
+const OVERFLOW_ROUND_MIN = 5;
+
+/**
+ * 방문 시간은 위치 슬롯에 고정된다. 탐방 시작 시각에서 `count`개 지점의 `HH:mm`(Asia/Seoul)을 돌려준다.
+ * `endsAt`(탐방 종료)을 알면 탐방 시간(종료 − 시작)보다 작은 슬롯 간격만 그대로 쓰고, 넘치는 지점은 마지막으로 쓴 슬롯과
+ * 종료 사이를 고르게 나눠 5분 단위로 내린 시각에 둔다(데모 탐방 14:00–16:30의 4번째 지점은 16:15). `endsAt`이 없거나 시작보다
+ * 늦지 않으면 위치 슬롯 그대로이고, 다섯 곳 넘게는 50분씩 늘어난다.
+ */
+export function slotTimes(startsAt: string, count: number, endsAt?: string | null): string[] {
   const startMs = Date.parse(startsAt);
   const last = SLOT_OFFSETS_MIN[SLOT_OFFSETS_MIN.length - 1];
-  return Array.from({ length: count }, (_, i) => {
-    const offset =
-      i < SLOT_OFFSETS_MIN.length
-        ? SLOT_OFFSETS_MIN[i]
-        : last + (i - (SLOT_OFFSETS_MIN.length - 1)) * EXTRA_SLOT_STEP_MIN;
-    return formatTime(toSeoulIso(new Date(startMs + offset * 60_000)));
-  });
+  const positional = (i: number): number =>
+    i < SLOT_OFFSETS_MIN.length
+      ? SLOT_OFFSETS_MIN[i]
+      : last + (i - (SLOT_OFFSETS_MIN.length - 1)) * EXTRA_SLOT_STEP_MIN;
+  const windowMin = endsAt ? (Date.parse(endsAt) - startMs) / 60_000 : NaN;
+  const bounded = Number.isFinite(windowMin) && windowMin > 0;
+
+  let offsets: number[];
+  if (!bounded) {
+    offsets = Array.from({ length: count }, (_, i) => positional(i));
+  } else {
+    const fits = SLOT_OFFSETS_MIN.filter((offset) => offset < windowMin).length;
+    const kept = Math.min(count, fits);
+    const overflow = count - kept;
+    const from = SLOT_OFFSETS_MIN[Math.max(kept, 1) - 1];
+    offsets = Array.from({ length: count }, (_, i) => {
+      if (i < kept) return SLOT_OFFSETS_MIN[i];
+      const share = ((windowMin - from) * (i - kept + 1)) / (overflow + 1);
+      return Math.floor((from + share) / OVERFLOW_ROUND_MIN) * OVERFLOW_ROUND_MIN;
+    });
+  }
+  return offsets.map((offset) => formatTime(toSeoulIso(new Date(startMs + offset * 60_000))));
 }
 
 /** 식사로 묶는 상점 업종. */

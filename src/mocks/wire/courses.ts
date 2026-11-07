@@ -75,7 +75,7 @@ export function toWireCourse(db: DB, tourId: number): WireCourse {
   const rows = db.courseStops
     .filter((s) => s.tourId === tourId)
     .sort((a, b) => a.stopOrder - b.stopOrder);
-  const slots = slotTimes(tour.startsAt, rows.length);
+  const slots = slotTimes(tour.startsAt, rows.length, tour.endsAt);
   const applicationIds = new Set(
     db.applications.filter((a) => a.tourId === tourId).map((a) => a.id),
   );
