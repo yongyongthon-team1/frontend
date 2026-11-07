@@ -83,6 +83,12 @@ export function useCreateDraft(tourId: number): UseMutationResult<Course, ApiErr
       void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });
       void queryClient.invalidateQueries({ queryKey: qk.guideTours });
     },
+    // 탐방을 함께 읽다 먼저 실패해도 AI 생성은 서버에서 이어져 코스가 생겼을 수 있다 — 낡은 '코스 없음'을 두지 않고 다시 받는다.
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.guideCourse(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.guideTours });
+    },
   });
 }
 

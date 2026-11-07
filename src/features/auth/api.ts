@@ -5,23 +5,24 @@ import type {
   GuideProfileInput,
   LoginResponse,
   Me,
+  Role,
   SignupInput,
   StudentProfileInput,
 } from './model';
 import { fromWireMe, type WireLogin, type WireMe, type WireSignupResult } from './wire';
 
 /**
- * 로그인(U-02) 합성: `POST /auth/login` → `GET /users/me`(→ 사장님이면 `GET /users/me/store`). 로그인 응답의 `user`가
- * 작아서 내 정보를 한 번 더 읽는다. 지금 세션 토큰은 붙이지 않고, 실패 401(자격 증명 오류)이 지금 세션을 만료 처리하지 않는다 —
+ * 로그인(U-02) 합성: `POST /auth/login` → `GET /users/me`(+ 사장님이면 `GET /users/me/store`를 함께). 로그인 응답의 `user`가
+ * 작아서 내 정보를 한 번 더 읽고, 역할은 로그인 응답에 있어서 사장님의 두 호출은 나란히 간다(errata G6). 지금 세션 토큰은 붙이지 않고, 실패 401(자격 증명 오류)이 지금 세션을 만료 처리하지 않는다 —
  * 로그인한 채 다른 계정으로 바꿔 로그인하다 실패해도(시연 역할 전환) 지금 세션이 남는다.
  */
 export async function login(input: { email: string; password: string }): Promise<LoginResponse> {
-  const { accessToken } = await request<WireLogin>('/auth/login', {
+  const { accessToken, user } = await request<WireLogin>('/auth/login', {
     method: 'POST',
     body: input,
     auth: false,
   });
-  return { token: accessToken, me: await fetchMe(accessToken) };
+  return { token: accessToken, me: await fetchMe(accessToken, user.role) };
 }
 
 export async function logout(): Promise<void> {
@@ -30,15 +31,21 @@ export async function logout(): Promise<void> {
 
 /**
  * 내 정보(U-03). `token`을 주면 세션 토큰 대신 그 토큰으로 부르고 401이어도 세션 만료 처리를 하지 않는다(로그인 직후 합성용).
- * 사장님이면 그다음 `GET /users/me/store`로 내 가게 id를 얻는다(역할은 이 응답에서 알므로 두 호출은 이어서 간다).
+ * 사장님이면 `GET /users/me/store`로 내 가게 id를 얻는다. 역할을 미리 알면(`role`, 로그인 응답) 두 호출을 함께 보내고,
+ * 모르면 이 응답의 역할을 본 뒤에 이어서 부른다.
  * `queryFn`에 직접 넣지 않는다 — TanStack이 컨텍스트 객체를 첫 인자로 넘긴다(`() => fetchMe()`).
  */
-export async function fetchMe(token?: string): Promise<Me> {
-  const wire = await request<WireMe>(
+export async function fetchMe(token?: string, role?: Role): Promise<Me> {
+  const meRequest = request<WireMe>(
     '/users/me',
     token === undefined ? {} : { headers: { Authorization: `Bearer ${token}` }, auth: false },
   );
-  const store = wire.role === 'OWNER' ? await getMyStore(token) : null;
+  if (role === 'OWNER') {
+    const [wire, store] = await Promise.all([meRequest, getMyStore(token)]);
+    return fromWireMe(wire, store?.id ?? null);
+  }
+  const wire = await meRequest;
+  const store = role === undefined && wire.role === 'OWNER' ? await getMyStore(token) : null;
   return fromWireMe(wire, store?.id ?? null);
 }
 

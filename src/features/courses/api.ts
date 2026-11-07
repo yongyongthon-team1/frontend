@@ -47,9 +47,17 @@ export async function getGuideCourse(
   return wire === null ? null : fromWireCourse(wire, tour);
 }
 
-/** 가이드 탐방의 코스 상태만(초안 여부, 2C-R27). 코스가 없으면 null — `getGuideCourse`와 같은 규칙이다. */
+/**
+ * 가이드 탐방의 코스 상태만(초안 여부, 2C-R27). 코스가 없으면 null — `getGuideCourse`와 같은 규칙이다.
+ * 이 호출은 탐방 목록 · 신청자 보드에 곁들이는 장식이라, 어떤 오류든 null(코스 없음)로 접어 첫 화면을 살린다.
+ * 코스가 꼭 필요한 화면은 `getGuideCourse`를 써서 진짜 오류를 낸다.
+ */
 export async function getGuideCourseStatus(tourId: number): Promise<CourseStatus | null> {
-  return (await guideCourseWire(tourId))?.status ?? null;
+  try {
+    return (await guideCourseWire(tourId))?.status ?? null;
+  } catch {
+    return null;
+  }
 }
 
 /** AI 코스 초안(C-01, AI라 시간 제한이 길다). 이미 초안이 있으면 새 초안으로 바뀐다. AI 실패는 502 AI_FAILED. */

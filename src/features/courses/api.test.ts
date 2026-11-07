@@ -80,6 +80,14 @@ describe('코스 API (MSW 목업)', () => {
     expect(await getGuideCourseStatus(1)).toBeNull();
   });
 
+  it('getGuideCourseStatus: 곁가지 호출이라 500 같은 어떤 오류도 null(코스 없음)이고, getGuideCourse는 그 오류를 그대로 낸다', async () => {
+    const campuses = await listCampuses();
+    loginAs(DEMO_EMAILS.guide);
+    server.use(http.get('/api/tours/:tourId/course', () => wireFail('E500')));
+    expect(await getGuideCourseStatus(1)).toBeNull();
+    await expect(getGuideCourse(1, campuses)).rejects.toMatchObject({ status: 500 });
+  });
+
   it('getCourse: 확정 전이면 COURSE_NOT_READY(409)', async () => {
     loginAs(DEMO_EMAILS.student);
     await expect(getCourse(1, await listCampuses())).rejects.toMatchObject({

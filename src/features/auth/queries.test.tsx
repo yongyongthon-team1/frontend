@@ -8,7 +8,8 @@ import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
 import { configureHttp } from '@/shared/lib/http';
 import { loginAs } from '@/test/loginAs';
-import { wireFail } from '@/test/wire';
+import { MY_STORE } from '@/test/fixtures/backend/stores';
+import { wireFail, wireOk } from '@/test/wire';
 import { fetchMe } from './api';
 import {
   refetchMe,
@@ -47,6 +48,44 @@ describe('useLogin', () => {
     expect(queryClient.getQueryData(qk.me)).toEqual({ email: 'before@demo.kr' });
     expect(queryClient.getQueryData(qk.myApplications)).toEqual(['이전 사용자']);
     expect(clear).not.toHaveBeenCalled();
+  });
+});
+
+describe('사장님 로그인 합성의 병렬성 (errata G6)', () => {
+  it('로그인 응답의 역할을 쓰므로 GET /users/me와 GET /users/me/store가 서로 끝나기 전에 함께 시작한다', async () => {
+    const events: string[] = [];
+    const slow = async (name: string) => {
+      events.push(`${name}:start`);
+      await new Promise((resolve) => setTimeout(resolve, 30));
+      events.push(`${name}:end`);
+    };
+    server.use(
+      http.get('/api/users/me', async () => {
+        await slow('me');
+        return wireOk({
+          id: 7,
+          email: 'owner1@demo.kr',
+          name: '사장님',
+          role: 'OWNER',
+          verification_status: 'APPROVED',
+          reject_reason: null,
+          school_name: null,
+          grade: null,
+          interest_major: null,
+          guardian_consent_status: null,
+          guide_profile: null,
+        });
+      }),
+      http.get('/api/users/me/store', async () => {
+        await slow('store');
+        return wireOk(MY_STORE.data);
+      }),
+    );
+    const { result } = renderHook(() => useLogin(), { wrapper });
+    await act(() => result.current.mutateAsync({ email: 'owner1@demo.kr', password: 'demo1234' }));
+    expect(events.slice(0, 2).sort()).toEqual(['me:start', 'store:start']);
+    expect(events.slice(2).sort()).toEqual(['me:end', 'store:end']);
+    expect(queryClient.getQueryData(qk.me)).toMatchObject({ role: 'OWNER', storeId: 201 });
   });
 });
 

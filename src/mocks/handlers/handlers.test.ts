@@ -632,6 +632,21 @@ describe('wishes (T-07 · T-08)', () => {
     expect((await rawFetch('/users/me/tour-wishes', { method: 'GET' })).status).toBe(401);
   });
 
+  it('토큰 없이는 희망 사항 조회 · 수정 · 가이드용 목록이 모두 401(E401)', async () => {
+    const id = wishId('haeun@demo.kr');
+    const before = structuredClone(getDb().tourWishes.find((w) => w.id === id)!);
+    for (const [path, init] of [
+      ['/users/me/tour-wishes', { method: 'GET' }],
+      [`/users/me/tour-wishes/${id}`, { method: 'PATCH', body: { wish: '가' } }],
+      ['/tour-wishes', { method: 'GET' }],
+    ] as const) {
+      const raw = await rawFetch<{ code: string }>(path, init);
+      expect(raw.status, path).toBe(401);
+      expect(raw.body.code, path).toBe('E401');
+    }
+    expect(getDb().tourWishes.find((w) => w.id === id)).toEqual(before);
+  });
+
   it('PATCH 와이어: 200 S200, 명세 예시 모양(+ 확장 campus_id · created_at)이고 보낸 칸만 바뀐다', async () => {
     const { token } = await login('haeun@demo.kr');
     const id = wishId('haeun@demo.kr');
@@ -738,6 +753,22 @@ describe('wishes (T-07 · T-08)', () => {
     expect(queries[0].get('major')).toBe('산업');
     expect(queries[1].has('major')).toBe(false);
     expect(queries[2].has('campus_id')).toBe(false);
+  });
+
+  it('GET /tour-wishes: campus_id가 숫자(양의 정수)가 아니면 오류 없이 생략한 것처럼 내 학교로 본다', async () => {
+    const { token } = await login('guide@demo.kr');
+    const majorsFor = async (query: string) => {
+      const raw = await rawFetch<{ data: Items }>(`/tour-wishes${query}`, { method: 'GET', token });
+      expect(raw.status, query).toBe(200);
+      return raw.body.data.items.map((w) => w.major);
+    };
+    const mine = await majorsFor('');
+    expect(mine).toEqual(['시각디자인', '산업디자인']);
+    for (const bad of ['abc', '0', '-1', '1.5', '']) {
+      expect(await majorsFor(`?campus_id=${bad}`), bad).toEqual(mine);
+    }
+    // 올바른 숫자는 그 학교로 걸러진다(위 결과가 '필터 없음'이 아니라 '내 학교'라는 대조).
+    expect(await majorsFor('?campus_id=5')).toEqual(['통번역']);
   });
 
   it('GET /tour-wishes 오류: 고교생 403(E403), 인증 전 · 심사 중 가이드 403(E403_VERIFICATION_REQUIRED)', async () => {
@@ -2048,7 +2079,7 @@ describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
     expect(res.body).toEqual({ interestMajor: 'a', spots: [{ storeId: 2 }] });
   });
 
-  it('fieldError: 400 VALIDATION에 코드 표 문구와 fieldErrors 본문', async () => {
+  it('fieldError: 400 VALIDATION 오류 봉투(errors[])에 코드 표 문구와 칸 오류가 실린다', async () => {
     server.use(
       http.post(
         '/api/_probe',

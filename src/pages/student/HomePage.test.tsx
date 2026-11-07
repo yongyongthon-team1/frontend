@@ -7,6 +7,7 @@ import { useLastQuery } from '@/features/tours/lastQuery';
 import { getDb } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
+import { errorMessage } from '@/shared/lib/errors';
 import { toWireCampus } from '@/mocks/wire/campuses';
 import { renderApp } from '@/test/renderApp';
 import { wireFail, wireOk } from '@/test/wire';
@@ -276,6 +277,18 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
       await screen.findByText('문제가 생겼어요. 잠시 후 다시 시도해 주세요.'),
     ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
+  });
+
+  it('칸 오류가 없는 서버 오류는 errorMessage(code) 토스트로 알린다', async () => {
+    act(() => useDemoStore.setState({ enabled: true }));
+    server.use(http.post('/api/tour-wishes', () => wireFail('E403')));
+    const { user, router } = await renderApp('/', { as: 'student' });
+    await campusesLoaded();
+    await waitFor(() => expect(field('학교')).toHaveValue('2'));
+    await user.click(submitButton());
+    expect(await screen.findByText(errorMessage('FORBIDDEN'))).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/');
+    expect(submitButton()).toBeEnabled();
   });
 
   it('주소의 검색으로 칸을 채운다(조건 바꾸기로 돌아온 경우) — 시연 미리 채움보다 앞선다', async () => {

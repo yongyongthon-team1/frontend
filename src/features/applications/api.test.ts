@@ -129,6 +129,19 @@ describe('신청 API (MSW 목업)', () => {
     );
   });
 
+  it('코스 상태 곁가지가 500이어도 가이드 탐방 목록과 신청자 보드는 코스 없음(null)으로 살아난다', async () => {
+    resetDb({ today: new Date(), checkpoint: 'APPROVED' });
+    loginAs(DEMO_EMAILS.guide);
+    server.use(http.get('/api/tours/:tourId/course', () => wireFail('E500')));
+    const tours = await getGuideTours(await listCampuses());
+    expect(tours.length).toBeGreaterThan(0);
+    expect(tours.find((t) => t.id === 1)).toMatchObject({ id: 1, courseStatus: null });
+    const board = await getApplicantsBoard(1, listCampuses());
+    expect(board.course).toBeNull();
+    expect(board.applicants.length).toBeGreaterThan(0);
+    expect(board.tour.id).toBe(1);
+  });
+
   it('가이드 탐방 목록: 확정 코스는 코스를 다시 부르지 않고, 확정이 아닌 탐방만 코스 상태를 부른다', async () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
     loginAs(DEMO_EMAILS.guide);

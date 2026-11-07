@@ -38,6 +38,15 @@ describe('내 가게 API (MSW 목업)', () => {
     expect(await getMyStore()).toBeNull();
   });
 
+  it('봉투 없는 404(아직 없는 경로 등)도 null, 5xx는 그대로 던진다', async () => {
+    server.use(http.get('/api/users/me/store', () => new Response('Not Found', { status: 404 })));
+    expect(await getMyStore()).toBeNull();
+    server.use(http.get('/api/users/me/store', () => new Response('Bad Gateway', { status: 502 })));
+    await expect(getMyStore()).rejects.toMatchObject({ status: 502 });
+    server.use(http.get('/api/users/me/store', () => wireFail('E500')));
+    await expect(getMyStore()).rejects.toMatchObject({ status: 500 });
+  });
+
   it('다른 오류(403)는 그대로 던진다', async () => {
     loginAs(DEMO_EMAILS.student);
     await expect(getMyStore()).rejects.toMatchObject({

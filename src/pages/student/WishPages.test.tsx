@@ -6,6 +6,7 @@ import { useLastQuery } from '@/features/tours/lastQuery';
 import { getDb } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
+import { errorMessage } from '@/shared/lib/errors';
 import { wireFail } from '@/test/wire';
 
 // T-07 내 희망 사항(목록 · 수정). 원문은 남긴 그대로(앞뒤 공백만 빠진 채 줄바꿈 포함)이고 이름은 어디에도 없다(Review Focus 5).
@@ -216,6 +217,17 @@ describe('내 희망 사항 고치기 (T-07)', () => {
     fireEvent.change(field('탐방 희망 사항'), { target: { value: '다른 글' } });
     await user.click(saveButton());
     expect(await screen.findByText('서버가 거절한 희망 사항이에요.')).toBeInTheDocument();
+    await waitFor(() => expect(saveButton()).toBeEnabled());
+  });
+
+  it('칸 오류가 없는 서버 오류는 errorMessage(code) 토스트로 알리고 이동하지 않으며 다시 저장할 수 있다', async () => {
+    server.use(http.patch('/api/users/me/tour-wishes/:wishId', () => wireFail('E403')));
+    const { user, router } = await renderApp(`/me/wishes/${HAEUN_WISH}/edit`, { as: HAEUN });
+    await editReady();
+    fireEvent.change(field('탐방 희망 사항'), { target: { value: '다른 글' } });
+    await user.click(saveButton());
+    expect(await screen.findByText(errorMessage('FORBIDDEN'))).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(`/me/wishes/${HAEUN_WISH}/edit`);
     await waitFor(() => expect(saveButton()).toBeEnabled());
   });
 

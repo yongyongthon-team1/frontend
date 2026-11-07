@@ -45,11 +45,11 @@
 
 **(다) 기능 명세로 답이 나온 9절 질문 → 묻지 않는다**
 
-- 10번: 제휴 0곳 확정 → C-01 구성 규칙상 초안에는 늘 제휴가 있다. 가이드가 편집으로 모두 뺐을 때만 `E422_PARTNER_REQUIRED`다(G08이 미리 막는다).
-- 24번: 신청 취소는 "탐방 날짜 전까지"(A-03)이므로 당일에는 안 된다.
-- 26번: 확정 뒤 승인한 신청자에게도 쿠폰을 발급한다(A-02). 신청 취소 · 탐방 취소 때 쿠폰은 만료한다(A-03 · T-05). "거절된 신청도 CANCELED"인지만 남는다.
-- 41번 일부: 리뷰는 그 상점 쿠폰을 사용한 사람만, 상점당 1건이다(R-01). 최소 길이 · 요약 반영 시점만 남는다.
-- 2번: 기능 명세는 학교 · 날짜를 선택으로 본다. 그래서 이 질문은 (가) T-01 불일치의 일부로 묶는다.
+- 옛 10번: 제휴 0곳 확정 → C-01 구성 규칙상 초안에는 늘 제휴가 있다. 가이드가 편집으로 모두 뺐을 때만 `E422_PARTNER_REQUIRED`다(G08이 미리 막는다).
+- 옛 24번: 신청 취소는 "탐방 날짜 전까지"(A-03)이므로 당일에는 안 된다.
+- 옛 26번: 확정 뒤 승인한 신청자에게도 쿠폰을 발급한다(A-02). 신청 취소 · 탐방 취소 때 쿠폰은 만료한다(A-03 · T-05). "거절된 신청도 CANCELED"인지만 남는다.
+- 옛 41번 일부: 리뷰는 그 상점 쿠폰을 사용한 사람만, 상점당 1건이다(R-01). 최소 길이 · 요약 반영 시점만 남는다.
+- 옛 2번: 기능 명세는 학교 · 날짜를 선택으로 본다. 그래서 이 질문은 (가) T-01 불일치의 일부로 묶는다.
 
 **결론.** 적용 방식 권장 (c)는 그대로다. T-01은 불일치가 아니라 **팀 합의(11/4 카톡)를 백엔드가 먼저 반영한 것**이고, 기능 명세 T-01 본문과 프론트의 홈 · 추천 화면이 아직 옛 방식(AI 추천 + 이유)이다. 프론트는 홈을 학교 · 학과 · 희망 사항 입력 → 저장 → 조건에 맞는 탐방 목록(입력한 희망 원문 표시)으로 바꾸고, 고교생 "내 희망 사항"과 대학생 "고교생 희망 사항" 화면을 더해야 한다. 시연에서 AI는 C-01 코스 초안(과 R-03 리뷰 요약)이 맡는다. 같은 합의에서 보호자 동의는 시연 때 생략하거나 '동의 완료' 기본값으로 둔다(프론트 반영 약속).
 
@@ -61,7 +61,7 @@
 |---|---|---|---|
 | 경로 접두사 · base URL | 모든 경로 앞에 `config.baseUrl`(기본 `/api`)을 붙인다 `shared/lib/http.ts:48`, `:93`, `shared/config/env.ts:58`. MSW도 같은 접두사를 쓴다 `mocks/handlers/util.ts:12`. 개발 프록시는 `/api`를 떼지 않고 넘긴다 `vite.config.ts:31-35`. 배포 프록시는 아직 없다 `vercel.json:1`(SPA rewrite만) | 접두사 없는 경로(`/auth/login`, `/users/me` …). 호스트 · 포트 · 컨텍스트 경로는 명세에 없음 | 프론트 base `/api`와 MSW 접두사는 그대로 둔다. 프록시가 `/api`를 뗀다(Vite `rewrite`, `vercel.json`에 `/api/(.*)` → `{백엔드}/$1`을 SPA 규칙보다 앞에). 경로 문자열은 백엔드 그대로 쓴다 |
 | 인증 헤더 · 토큰 | `Authorization: Bearer <token>` `http.ts:95-96`. 로그인 응답 `token` `features/auth/model.ts:35-38`. 로그인 요청은 토큰 없이 `features/auth/api.ts:15` | 같은 Bearer(BE 공통규칙 › 헤더). 로그인 응답은 `data.access_token` [U-02]. 만료 시간과 갱신은 명세에 없음 | 헤더는 그대로. 어댑터가 `access_token`을 `token`으로 옮긴다. 401 처리(`http.ts:113`)도 그대로 |
-| 토큰 없이 부르는 API | 추천 · 탐방 목록 · 상세는 로그인 없이 된다 `mocks/handlers/tours.ts:11-12`. 신청 버튼에 `LOGIN` 상태가 있다 `features/tours/model.ts:103-111` | 토큰 없이 되는 것은 가입 · 로그인 · 보호자 안내 · 동의 · 캠퍼스뿐이다(BE 공통규칙 › 헤더). `GET /tours` · `GET /tours/{tourId}` · 희망 사항은 토큰이 필요하다 | 비로그인 둘러보기를 지키려면 백엔드에 공개를 요청한다(9절). 안 되면 홈 · 추천 · 상세를 로그인 뒤로 옮긴다. 시연은 로그인한 채로 하므로 영향이 없다 |
+| 토큰 없이 부르는 API | 추천 · 탐방 목록 · 상세는 로그인 없이 된다 `mocks/handlers/tours.ts:11-12`. 신청 버튼에 `LOGIN` 상태가 있다 `features/tours/model.ts:103-111` | 토큰 없이 되는 것은 가입 · 로그인 · 보호자 안내 · 동의 · 캠퍼스뿐이다(BE 공통규칙 › 헤더). `GET /tours` · `GET /tours/{tourId}` · 희망 사항은 토큰이 필요하다 | 2C는 홈 · 결과 · 상세를 모두 로그인 뒤에 두므로 공개를 요청하지 않는다(9절, 옛 19번은 답이 난 것). 비로그인 둘러보기를 되살리려면 그때 백엔드에 공개를 요청한다. 시연은 로그인한 채로 하므로 영향이 없다 |
 | 응답 봉투 | 본문이 곧 DTO다 `http.ts:116-119` | 모든 응답이 `{code,message,data,errors,timestamp}`(BE 공통규칙 › 응답 형식) | `send()`가 2xx면 `data`를 돌려준다. 전환 기간에는 본문에 `timestamp`와 `data` 키가 있을 때만 벗긴다(아직 안 바꾼 목업 도메인과 함께 돌게) |
 | 성공 · 오류 코드 체계 | 상태 코드로 가르지 않는다. 오류 본문의 `code`가 곧 `ErrorCode`다 `http.ts:68-79`, `shared/lib/errors.ts:2-50`. 화면은 `error.code`로 가른다(예 `features/coupons/model.ts:90-104`) | 성공 `S200`·`S201`, 실패 `E{상태}` 또는 `E{상태}_{사유}`(BE 공통규칙 › 응답 형식). 한 코드가 여러 뜻으로 쓰인다(`E409_ALREADY_REVIEWED`는 심사와 리뷰 둘 다). 공통 실패 표에 없는 409 · 410 · 422 · 502를 쓴다(BE 읽기 메모) | `ApiError.code`는 계속 `ErrorCode`로 두고 `backendCode` 칸을 더한다. 기본 표에 호출별 덮어쓰기를 얹는다(`request(path, { errorMap })`). 새 `ErrorCode`는 `COURSE_PARTNER_REQUIRED` · `COUPON_DAILY_LIMIT` · `AI_FAILED`. 대응표는 4-37 |
 | 검증 오류 모양 | `fieldErrors: { camel필드: 문구 }` `http.ts:74-76`. 목업도 같다 `mocks/handlers/util.ts:62-69` | `errors: [{ field, reason }]`. `field`는 snake 요청 필드다. `reason`은 문구일 때도([U-05] 재학 인증), 기계값일 때도([U-07] `MISMATCH`) 있다 | 클라이언트가 배열을 객체로 바꾸고 `field`를 camel로 바꾼다. 호출별 이름 표로 폼 칸 이름에 맞춘다(`date`→`startsAt`, `school_name`→`highSchoolName`, `intro`→`introduction`, `discount_text`→`discount`). `reason`이 대문자 기계값이면 문구로 쓰지 않고 코드로 바꾼다 |
@@ -757,6 +757,7 @@
 - 목업과 실서버가 같은 와이어를 쓰므로 HTTP 수준에서는 섞어도 된다. 워커는 고르지 않은 요청을 그대로 네트워크로 보낸다(`mocks/browser.ts:16`).
 - 그러나 **데이터는 섞이지 않는다.** 목업 토큰은 실서버에서 무효이고 탐방 · 신청 id도 다르다. 그래서 의미 있는 조합은 두 가지뿐이다. ① `all`(전부 목업) ② 실서버 + **확장 엔드포인트만 목업**(`/health`, 인사이트). 실서버와 함께 `/demo/reset`을 목업하면 목업 DB만 지워지므로 쓰면 안 된다.
 - 도메인 → 경로 묶음은 백엔드 경로로 다시 짠다. 예를 들어 `/users/me/*`가 auth · applications · coupons · stores에 흩어진다. 제안: auth(`/auth/*`, `GET`·`PATCH /users/me`, `/users/me/guide-profile`) · verification(`/verifications/enrollment`, `/guardian-consents*`) · admin(`/admin/*`) · campuses(`/campuses*`) · tours(`GET /tours`, `GET /tours/{id}`, `/tour-wishes`, `/users/me/tour-wishes*`) · applications(`POST /tours`, `/tours/{id}/cancel`·`complete`·`applications`, `/applications/*`, `/users/me/tours`) · courses(`/tours/{id}/course*`) · coupons(`/users/me/coupons`, `/coupons/*`) · stores(`/stores/search`, `/stores/nearby`, `/users/me/store*`, `/verifications/business`) · reviews(`/stores/{id}/reviews`) · demo(`/demo/reset`, `/health`, 인사이트).
+- 지금 코드에서 인사이트 확장(`GET /campuses/:campusId/insight`)은 `demo`가 아니라 `campuses` 목업 도메인에 등록돼 있다(위 제안과 다르다). 부분 목업 조합은 시연 모드가 아니다.
 - `quickLogin`의 비밀번호 선택(`demo/quickLogin.ts:31-38`)은 "auth가 목업인가"를 보므로 그대로 맞다.
 
 ### 7-5. `mode=real`은 어디에 사는가
@@ -886,7 +887,7 @@
 36. 가게 직접 등록 좌표는 프론트가 지오코딩해 보내면 되나요? `latitude`/`longitude`가 다른 API의 `lat`/`lng`와 이름이 다른 것은 의도인가요? (옛 38번)
 37. 제휴에 할인 조건(`condition`, 50자, null 허용) 칸을 더할 수 있나요? (옛 39번)
 38. 주변 상점의 반경 · 개수 · 정렬은 무엇이고, `is_partner`는 탐방 날짜에 유효한 제휴 기준인가요? 거리(`distance_m`)와 신청자 요청 관련도를 줄 수 있나요? (옛 40번)
-39. 리뷰 내용의 최소 길이는 얼마인가요? AI 요약은 리뷰 저장 후 얼마 만에 반영되나요? 쿠폰의 `reviewed`는 쿠폰 단위인가요, 상점 단위인가요? (옛 41번)
+39. 리뷰 내용의 최소 길이는 얼마인가요? AI 요약은 리뷰 저장 후 얼마 만에 반영되나요? (옛 41번)
 40. 운영자 시드 계정 이메일은 무엇인가요(프론트 시연은 `admin@demo.kr`)? (옛 42번)
 41. `PATCH /users/me` · `PATCH /users/me/store` 응답은 GET과 같은 전체 모양인가요? 예시는 일부 칸만 있습니다. (옛 43번)
 42. 공통 실패 표에 없는 409 · 410 · 422 · 502와 사유 없는 `E409`가 개별 페이지에 있습니다. 전체 코드 목록을 확정해 주실 수 있나요? (옛 46번)

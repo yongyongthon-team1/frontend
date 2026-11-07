@@ -11,7 +11,7 @@ import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
 import { COURSE_CONFIRM_OK, COURSE_SPOTS_OK } from '@/test/fixtures/backend/courses';
 import { TOUR_31, TOUR_DETAIL } from '@/test/fixtures/backend/tours';
 import { wireFail, wireOk } from '@/test/wire';
-import { useConfirmCourse, useGuideCourse, useReorderStops } from './queries';
+import { useConfirmCourse, useCreateDraft, useGuideCourse, useReorderStops } from './queries';
 import { fromWireCourse, type WireCourse } from './wire';
 
 // 명세 C-02 예시(탐방 31, 13:00 시작): 지점 1 = 상점 201(한줄평), 지점 2 = 캠퍼스 건물 3(한줄평).
@@ -152,6 +152,36 @@ describe('코스 훅', () => {
     });
     await waitFor(() => expect(courseGets).toBe(3));
     await waitFor(() => expect(result.current.course.fetchStatus).toBe('idle'));
+  });
+
+  it('useCreateDraft: 초안 요청이 실패하면 뮤테이션은 오류여도 가이드 코스 · 신청자 · 탐방 목록을 다시 받는다', async () => {
+    let courseGets = 0;
+    server.use(
+      http.get('/api/campuses', () => wireOk(CAMPUSES_LIST.data)),
+      http.get('/api/tours/:tourId', () => wireOk(TOUR_DETAIL.data)),
+      http.get('/api/tours/:tourId/course', () => {
+        courseGets += 1;
+        return wireOk(COURSE_SPOTS_OK.data);
+      }),
+      http.post('/api/tours/:tourId/course', () => wireFail('E500')),
+    );
+    const { wrapper, queryClient } = setup();
+    queryClient.setQueryData(qk.applicants(31), 'cached');
+    queryClient.setQueryData(qk.guideTours, 'cached');
+    const { result } = renderHook(
+      () => ({ course: useGuideCourse(31), draft: useCreateDraft(31) }),
+      { wrapper },
+    );
+    await waitFor(() => expect(result.current.course.data).toBeTruthy());
+    expect(courseGets).toBe(1);
+    await act(async () => {
+      await expect(result.current.draft.mutateAsync()).rejects.toMatchObject({ status: 500 });
+    });
+    await waitFor(() => expect(courseGets).toBe(2));
+    const invalidated = (key: readonly unknown[]) =>
+      queryClient.getQueryState(key)?.isInvalidated ?? false;
+    expect(invalidated(qk.applicants(31))).toBe(true);
+    expect(invalidated(qk.guideTours)).toBe(true);
   });
 
   it('useReorderStops: PUT은 됐는데 탐방 다시 읽기가 실패해도 가이드 코스를 다시 받는다', async () => {

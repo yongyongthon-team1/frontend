@@ -5,6 +5,7 @@ import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
 import { formatMonthDay, formatTimeRange } from '@/shared/lib/date';
+import { errorMessage } from '@/shared/lib/errors';
 import { renderApp } from '@/test/renderApp';
 import { wireFail } from '@/test/wire';
 
@@ -228,6 +229,13 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     );
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
     expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+  });
+
+  it('코스를 읽다 오류가 나면(재시도 없는 403) 코스 화면은 곁가지처럼 접지 않고 오류를 보여 준다', async () => {
+    server.use(http.get('/api/tours/:tourId/course', () => wireFail('E403')));
+    await renderApp('/guide/tours/1/course/edit', { as: 'guide', checkpoint: 'APPROVED' });
+    expect(await screen.findByRole('alert')).toHaveTextContent(errorMessage('FORBIDDEN'));
+    expect(screen.queryByRole('heading', { name: G03_TITLE })).not.toBeInTheDocument();
   });
 
   it('AI가 코스를 못 만들면(502 AI_FAILED) 그 안내를 보여 주고, 다시 시도하면 다시 만든다', async () => {
