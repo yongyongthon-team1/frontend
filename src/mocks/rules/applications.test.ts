@@ -200,6 +200,22 @@ describe('applyToTour', () => {
       'VALIDATION',
     );
   });
+
+  it('wish는 앞뒤 공백을 뺀 100자까지(2C-R11) — 넘으면 wish 칸 오류', () => {
+    const studentId = id('student@demo.kr');
+    const before = structuredClone(db);
+    expect(() => applyToTour(db, studentId, 1, `  ${'가'.repeat(101)}  `, now)).toThrow(
+      expect.objectContaining({
+        status: 400,
+        code: 'VALIDATION',
+        fieldErrors: { wish: '100자 이내로 적어 주세요.' },
+      }),
+    );
+    expect(db).toEqual(before);
+    expect(applyToTour(db, studentId, 1, `  ${'가'.repeat(100)}  `, now).motivation).toBe(
+      '가'.repeat(100),
+    );
+  });
 });
 
 describe('approveApplication', () => {

@@ -1,8 +1,11 @@
-import { screen, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { act, screen, waitFor } from '@testing-library/react';
+import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
+import { useDemoStore } from '@/demo/demoStore';
 import { server } from '@/mocks/node';
+import { DEMO_MOTIVATION } from '@/shared/config/demoAccounts';
 import { renderApp } from '@/test/renderApp';
+import { wireFail } from '@/test/wire';
 
 describe('탐방 신청서 (hs-a04)', () => {
   it('신청서 구성: 제목 · 탐방 카드 · 입력 · 안내 · 버튼', async () => {
@@ -38,19 +41,33 @@ describe('탐방 신청서 (hs-a04)', () => {
     expect(await screen.findByText('하고 싶은 것을 5자 이상 적어 주세요.')).toBeInTheDocument();
   });
 
-  it('300자 초과는 막는다', async () => {
-    const { user } = await renderApp('/tours/1/apply', { as: 'student' });
+  it('100자 초과는 막는다(백엔드 wish 100자 — 2C-R12 ④)', async () => {
+    const { user, router } = await renderApp('/tours/1/apply', { as: 'student' });
     const box = await screen.findByLabelText('탐방에서 하고 싶은 것');
     await user.click(box);
-    await user.paste('가'.repeat(301));
+    await user.paste('가'.repeat(101));
     await user.click(screen.getByRole('button', { name: '신청 완료하기' }));
-    expect(await screen.findByText('300자 이내로 적어 주세요.')).toBeInTheDocument();
+    expect(await screen.findByText('100자 이내로 적어 주세요.')).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/tours/1/apply');
+  });
+
+  it('시연 도구가 켜졌으면 미리 채운 신청서(100자 안)로 그대로 신청된다', async () => {
+    act(() => useDemoStore.setState({ enabled: true }));
+    try {
+      expect(DEMO_MOTIVATION.length).toBeLessThanOrEqual(100);
+      const { user } = await renderApp('/tours/1/apply', { as: 'student' });
+      expect(await screen.findByLabelText('탐방에서 하고 싶은 것')).toHaveValue(DEMO_MOTIVATION);
+      await user.click(screen.getByRole('button', { name: '신청 완료하기' }));
+      expect(await screen.findByText('신청이 접수됐어요!')).toBeInTheDocument();
+    } finally {
+      act(() => useDemoStore.setState({ enabled: false }));
+    }
   });
 
   it('앞뒤 공백을 자른 내용으로 한 번만 보내고 완료 화면으로 바꿔 이동한다', async () => {
     const bodies: unknown[] = [];
     server.use(
-      http.post('/api/tours/:id/applications', async ({ request }) => {
+      http.post('/api/tours/:tourId/applications', async ({ request }) => {
         bodies.push(await request.clone().json());
         await new Promise((r) => setTimeout(r, 30));
         return undefined; // 기본 핸들러로 넘긴다
@@ -61,7 +78,7 @@ describe('탐방 신청서 (hs-a04)', () => {
     const submit = screen.getByRole('button', { name: '신청 완료하기' });
     await user.dblClick(submit);
     expect(await screen.findByText('신청이 접수됐어요!')).toBeInTheDocument();
-    expect(bodies).toEqual([{ motivation: '밥집이 궁금해요' }]);
+    expect(bodies).toEqual([{ wish: '밥집이 궁금해요' }]); // 백엔드 A-01 본문
     expect(router.state.location.pathname).toBe('/tours/1/apply/done');
     await router.navigate(-1);
     // replace로 이동했으므로 신청서로 돌아가지 않는다.
@@ -73,9 +90,7 @@ describe('탐방 신청서 (hs-a04)', () => {
     await screen.findByLabelText('탐방에서 하고 싶은 것');
     let tourGets = 0;
     server.use(
-      http.post('/api/tours/:id/applications', () =>
-        HttpResponse.json({ code: 'TOUR_CLOSED', message: 'x' }, { status: 409 }),
-      ),
+      http.post('/api/tours/:tourId/applications', () => wireFail('E409_TOUR_FULL')),
       http.get('/api/tours/1', () => {
         tourGets += 1;
         return undefined; // 기본 핸들러로 넘긴다
@@ -83,9 +98,12 @@ describe('탐방 신청서 (hs-a04)', () => {
     );
     await user.type(screen.getByLabelText('탐방에서 하고 싶은 것'), '밥집이 궁금해요');
     await user.click(screen.getByRole('button', { name: '신청 완료하기' }));
+    // 탐방 1은 모집 중이라 E409_TOUR_FULL은 정원 마감(TOUR_CLOSED) 문구다.
     expect(await screen.findByText('정원이 마감됐어요.')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/tours/1/apply');
-    await waitFor(() => expect(tourGets).toBe(1));
+    // 탐방 상세 GET 두 번: 어댑터가 E409_TOUR_FULL을 세분하려고 한 번 다시 읽고(2C-R15), 화면의 실패 처리가 탐방 정보를
+    // 다시 불러온다(무효화).
+    await waitFor(() => expect(tourGets).toBe(2));
   });
 
   it('인증 전 학생: 버튼이 잠기고 사유 · 인증 링크가 보인다', async () => {

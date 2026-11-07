@@ -5,6 +5,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
+import { loadCampuses } from '@/features/campuses/queries';
 import { qk } from '@/shared/api/queryKeys';
 import type { ApiError } from '@/shared/lib/http';
 import {
@@ -12,12 +13,14 @@ import {
   getGuideTours,
   getMyApplication,
   getMyApplications,
+  patchDecision,
   postApplication,
-  postApprove,
   postCancelApplication,
-  postReject,
 } from './api';
 import type { ApplicantsBoard, GuideTourSummary, MyApplication } from './model';
+
+// 훅은 캠퍼스 목록을 기다리지 않고 `loadCampuses`의 약속째 넘긴다 — 캠퍼스 요청과 첫 요청이 동시에 나간다(errata G13).
+// api 함수는 마지막 인자로 캠퍼스를 받으므로 `queryFn` · `mutationFn`에 바로 넣지 않고 감싼다(errata G8).
 
 /**
  * 탐방 신청. 성공하면 탐방 상세(내 신청 · 남은 자리)와 내 신청 목록을 다시 불러온다 — 추천은 건드리지 않는다.
@@ -26,7 +29,8 @@ import type { ApplicantsBoard, GuideTourSummary, MyApplication } from './model';
 export function useApplyToTour(tourId: number): UseMutationResult<MyApplication, ApiError, string> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: (motivation: string) => postApplication(tourId, motivation),
+    mutationFn: (motivation: string) =>
+      postApplication(tourId, motivation, loadCampuses(queryClient)),
     onSuccess: () => {
       void queryClient.invalidateQueries({ queryKey: qk.tour(tourId) });
       void queryClient.invalidateQueries({ queryKey: qk.myApplications });
@@ -38,11 +42,19 @@ export function useApplyToTour(tourId: number): UseMutationResult<MyApplication,
 }
 
 export function useMyApplications(): UseQueryResult<MyApplication[]> {
-  return useQuery({ queryKey: qk.myApplications, queryFn: getMyApplications });
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: qk.myApplications,
+    queryFn: () => getMyApplications(loadCampuses(queryClient)),
+  });
 }
 
 export function useMyApplication(id: number): UseQueryResult<MyApplication> {
-  return useQuery({ queryKey: qk.myApplication(id), queryFn: () => getMyApplication(id) });
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: qk.myApplication(id),
+    queryFn: () => getMyApplication(id, loadCampuses(queryClient)),
+  });
 }
 
 /**
@@ -54,7 +66,7 @@ export function useCancelMyApplication(
 ): UseMutationResult<MyApplication, ApiError, void> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => postCancelApplication(id),
+    mutationFn: () => postCancelApplication(id, loadCampuses(queryClient)),
     onSuccess: (app) => {
       void queryClient.invalidateQueries({ queryKey: qk.myApplications });
       void queryClient.invalidateQueries({ queryKey: qk.tour(app.tour.id) });
@@ -71,24 +83,31 @@ export function useCancelMyApplication(
 export function useGuideTours(
   opts: { freshOnMount?: boolean } = {},
 ): UseQueryResult<GuideTourSummary[]> {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: qk.guideTours,
-    queryFn: getGuideTours,
+    queryFn: () => getGuideTours(loadCampuses(queryClient)),
     refetchOnMount: opts.freshOnMount ? 'always' : true,
   });
 }
 
 export function useApplicantsBoard(tourId: number): UseQueryResult<ApplicantsBoard> {
-  return useQuery({ queryKey: qk.applicants(tourId), queryFn: () => getApplicantsBoard(tourId) });
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: qk.applicants(tourId),
+    queryFn: () => getApplicantsBoard(tourId, loadCampuses(queryClient)),
+  });
 }
 
+/** 승인 · 거절(`PATCH /applications/{applicationId}/decision`). 변수는 신청 id, 결과는 바뀐 뒤의 신청자 보드다. */
 function useBoardMutation(
   tourId: number,
-  mutationFn: (applicationId: number) => Promise<ApplicantsBoard>,
-) {
+  decision: 'APPROVED' | 'REJECTED',
+): UseMutationResult<ApplicantsBoard, ApiError, number> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn,
+    mutationFn: (applicationId: number) =>
+      patchDecision(tourId, applicationId, decision, loadCampuses(queryClient)),
     // 서버가 돌려준 보드를 바로 그리고, 목록 · 탐방 상세(남은 자리) · 가이드 코스(확정 뒤 승인이면 쿠폰 발급 수)는
     // 다시 불러온다.
     onSuccess: (board) => {
@@ -106,9 +125,9 @@ function useBoardMutation(
 }
 
 export function useApprove(tourId: number): UseMutationResult<ApplicantsBoard, ApiError, number> {
-  return useBoardMutation(tourId, postApprove);
+  return useBoardMutation(tourId, 'APPROVED');
 }
 
 export function useReject(tourId: number): UseMutationResult<ApplicantsBoard, ApiError, number> {
-  return useBoardMutation(tourId, postReject);
+  return useBoardMutation(tourId, 'REJECTED');
 }

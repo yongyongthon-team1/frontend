@@ -1,10 +1,11 @@
 import { screen, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
 import { mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
 import { applyToTour as applyToTourRule } from '@/mocks/rules/applications';
 import { findApplicationId, renderApp } from '@/test/renderApp';
+import { wireFail } from '@/test/wire';
 
 const STUDENT = 'student@demo.kr';
 
@@ -91,22 +92,30 @@ describe('신청 취소 확인 (H11)', () => {
 
   it('취소가 실패하면 토스트를 보이고 신청을 다시 불러온다(상세로 돌아가 사유 확인)', async () => {
     const { user, router, id } = await openCancelPage();
-    let detailGets = 0;
+    // 신청 상세는 내 탐방 행(GET /users/me/tours) + 그 탐방 상세(GET /tours/6)의 합성이다 — 둘 다 센다.
+    let rowGets = 0;
+    let tourGets = 0;
     server.use(
-      http.post('/api/me/applications/:id/cancel', () =>
-        HttpResponse.json({ code: 'CANCEL_AFTER_TOUR_DATE', message: 'x' }, { status: 409 }),
+      http.post('/api/applications/:applicationId/cancel', () =>
+        wireFail('E409_INVALID_APPLICATION_STATUS'),
       ),
-      http.get('/api/me/applications/:id', () => {
-        detailGets += 1;
+      http.get('/api/users/me/tours', () => {
+        rowGets += 1;
         return undefined; // 기본 핸들러로 넘긴다
+      }),
+      http.get('/api/tours/6', () => {
+        tourGets += 1;
+        return undefined;
       }),
     );
     // 기본 핸들러 서버 값은 아직 cancellable=true라 이 화면에 머문다.
     await screen.findByRole('button', { name: '신청 취소 확정' });
-    expect(detailGets).toBe(1);
+    expect([rowGets, tourGets]).toEqual([1, 1]);
     await user.click(screen.getByRole('button', { name: '신청 취소 확정' }));
+    // 신청이 아직 대기라 E409_INVALID_APPLICATION_STATUS는 탐방 날짜 사유로 세분된다(2C-R15).
     expect(await screen.findByText('탐방 날짜가 되어 취소할 수 없어요.')).toBeInTheDocument();
-    await waitFor(() => expect(detailGets).toBe(2));
+    // 상세를 다시 불러온다: 행은 세분용 재조회 1번 + 다시 불러오기 1번, 탐방 상세는 다시 불러오기 1번.
+    await waitFor(() => expect([rowGets, tourGets]).toEqual([3, 2]));
     expect(router.state.location.pathname).toBe(`/my-tours/${id}/cancel`);
     // 실패 뒤에도 버튼이 다시 눌린다(처리 중에 갇히지 않는다).
     expect(screen.getByRole('button', { name: '신청 취소 확정' })).toBeEnabled();

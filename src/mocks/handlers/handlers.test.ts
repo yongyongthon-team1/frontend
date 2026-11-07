@@ -1,10 +1,14 @@
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import type {
-  ApplicantsBoard,
-  GuideTourSummary,
-  MyApplication,
-} from '@/features/applications/model';
+import {
+  getApplicantsBoard,
+  getGuideTours,
+  getMyApplication,
+  getMyApplications,
+  patchDecision,
+  postApplication,
+  postCancelApplication,
+} from '@/features/applications/api';
 import {
   fetchMe,
   login as apiLogin,
@@ -30,6 +34,7 @@ import type { RecommendationResult, TourFilter } from '@/features/tours/model';
 import { getMockFile, putMockFile } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { configureHttp, request, upload } from '@/shared/lib/http';
+import { createDraft } from '@/mocks/rules/courses';
 import { fieldError, MockApiError } from '@/mocks/rules/errors';
 import { server } from '@/mocks/node';
 import { testImage } from '@/test/files';
@@ -44,6 +49,14 @@ import {
   SIGNUP_DUPLICATE,
   SIGNUP_OK,
 } from '@/test/fixtures/backend/auth';
+import {
+  APPLICANTS_LIST,
+  APPLY_OK,
+  CANCEL_OK,
+  DECISION_OK,
+  MY_TOURS_HIGH_SCHOOL,
+  MY_TOURS_UNIVERSITY,
+} from '@/test/fixtures/backend/applications';
 import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
 import {
   COURSE_CONFIRM_OK,
@@ -383,12 +396,10 @@ describe('tours', () => {
       method: 'POST',
       body: { q: '산업디자인 공부' },
     });
-    const app = await request<MyApplication>(`/tours/${rec.items[0].tour.id}/applications`, {
-      method: 'POST',
-      body: { motivation: '밥집이 궁금해요' },
-    });
+    const campuses = listCampuses();
+    const app = await postApplication(rec.items[0].tour.id, '밥집이 궁금해요', campuses);
     expect(app.status).toBe('PENDING');
-    expect((await request<MyApplication[]>('/me/applications'))[0].id).toBe(app.id);
+    expect((await getMyApplications(campuses))[0].id).toBe(app.id);
   });
 
   it('빈 추천 문장은 400 VALIDATION', async () => {
@@ -478,15 +489,25 @@ describe('tours', () => {
 });
 
 describe('applications', () => {
-  it('신청은 201과 MyApplication', async () => {
+  // 백엔드 와이어 + 합성 어댑터(`features/applications/api`)를 목업 끝까지 부른다(2C-R25 ③). 캠퍼스는 약속째 넘긴다.
+  const campuses = () => listCampuses();
+  type Envelope = { code: string; data: Record<string, unknown> };
+  type Items = { items: Record<string, unknown>[] };
+
+  it('신청 와이어: 201 S201, 명세 A-01 응답과 같은 모양이고 그 신청을 합성하면 PENDING', async () => {
     const { token } = await login('student@demo.kr');
-    const res = await rawFetch('/tours/1/applications', {
+    const res = await rawFetch<Envelope>('/tours/1/applications', {
       method: 'POST',
       token,
-      body: { motivation: '밥집이 궁금해요' },
+      body: { wish: '밥집이 궁금해요' },
     });
     expect(res.status).toBe(201);
-    expect(res.body).toMatchObject({
+    expect(res.body.code).toBe('S201');
+    expectWireShape(res.body.data, APPLY_OK.data);
+    expect(res.body.data).toMatchObject({ tour_id: 1, status: 'PENDING' });
+    const applicationId = res.body.data.application_id as number;
+    expect(await getMyApplication(applicationId, campuses())).toMatchObject({
+      id: applicationId,
       status: 'PENDING',
       motivation: '밥집이 궁금해요',
       tour: { id: 1, title: DEMO_TOUR_TITLE },
@@ -497,85 +518,146 @@ describe('applications', () => {
     });
   });
 
-  it('신청 규칙 오류를 상태 코드와 코드로 준다', async () => {
-    const apply = (tourId: number, motivation = '수업이 궁금해요') =>
-      request(`/tours/${tourId}/applications`, { method: 'POST', body: { motivation } });
+  it('postApplication: 본문은 { wish }이고 201 뒤 내 신청(앞뒤 공백은 서버가 지운다)', async () => {
+    await login('student@demo.kr');
+    const bodies: unknown[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST')
+        void request
+          .clone()
+          .json()
+          .then((b) => bodies.push(b));
+    });
+    const app = await postApplication(3, '  밥집이 궁금해요 ', campuses());
+    server.events.removeAllListeners('request:start');
+    expect(bodies).toEqual([{ wish: '  밥집이 궁금해요 ' }]);
+    expect(app).toMatchObject({
+      status: 'PENDING',
+      motivation: '밥집이 궁금해요',
+      tour: { id: 3 },
+    });
+  });
+
+  it('신청 오류 세분(2C-R15): 인증 · 보호자 동의 · 마감 · 모집 종료 · 중복 · 빈 값 · wish 101자 · 역할', async () => {
+    const apply = (tourId: number, wish = '수업이 궁금해요') =>
+      postApplication(tourId, wish, campuses());
     await expect(apply(1)).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
     await login('newbie@demo.kr');
-    await expect(apply(1)).rejects.toMatchObject({ status: 403, code: 'NOT_VERIFIED' });
+    await expect(apply(1)).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_VERIFIED',
+      backendCode: 'E403_VERIFICATION_REQUIRED',
+    });
+    await login('expired@demo.kr'); // 인증 APPROVED · 보호자 동의 만료
+    await expect(apply(1)).rejects.toMatchObject({
+      status: 403,
+      code: 'GUARDIAN_NOT_AGREED',
+      backendCode: 'E403_VERIFICATION_REQUIRED',
+    });
     await login('seojun@demo.kr');
-    await expect(apply(1)).rejects.toMatchObject({ status: 409, code: 'DUPLICATE_APPLICATION' });
+    await expect(apply(1)).rejects.toMatchObject({
+      status: 409,
+      code: 'DUPLICATE_APPLICATION',
+      backendCode: 'E409_ALREADY_APPLIED',
+    });
     await login('student@demo.kr');
-    await expect(apply(2)).rejects.toMatchObject({ status: 409, code: 'TOUR_CLOSED' });
-    await expect(apply(7)).rejects.toMatchObject({ status: 409, code: 'TOUR_NOT_RECRUITING' });
+    await expect(apply(2)).rejects.toMatchObject({
+      status: 409,
+      code: 'TOUR_CLOSED',
+      backendCode: 'E409_TOUR_FULL',
+    });
+    await expect(apply(7)).rejects.toMatchObject({
+      status: 409,
+      code: 'TOUR_NOT_RECRUITING',
+      backendCode: 'E409_TOUR_FULL',
+    });
     await expect(apply(1, ' ')).rejects.toMatchObject({ status: 400, code: 'VALIDATION' });
+    await expect(apply(1, '가'.repeat(101))).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      backendCode: 'E400',
+      fieldErrors: { wish: '100자 이내로 적어 주세요.' },
+    });
+    expect(await apply(1, '가'.repeat(100))).toMatchObject({ status: 'PENDING' }); // 100자는 된다(2C-R11)
     await login('guide@demo.kr');
     await expect(apply(1)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
   });
 
-  it('내 탐방 목록은 최근 신청부터', async () => {
+  it('내 탐방 목록은 최근 신청부터, 탐방 제목 · 쿠폰 수(확장 coupon_count)', async () => {
     await login('seojun@demo.kr');
-    const list = await request<MyApplication[]>('/me/applications');
+    const list = await getMyApplications(campuses());
     expect(list.map((a) => a.tour.id)).toEqual([1, 2, 7]);
+    expect(list[0]).toMatchObject({
+      tour: { title: DEMO_TOUR_TITLE },
+      status: 'APPROVED',
+      motivation: '학생들이 자주 가는 밥집이 궁금해요',
+      couponCount: 0,
+    });
+    const past = applicationOf('seojun@demo.kr', 7);
+    const pastCoupons = getDb().coupons.filter((c) => c.applicationId === past.id).length;
+    expect(pastCoupons).toBeGreaterThan(0);
+    expect(list[2]).toMatchObject({ id: past.id, couponCount: pastCoupons });
   });
 
-  it('내 신청 상세: 승인이면 오픈채팅, 남의 신청은 404', async () => {
+  it('내 신청 상세: 승인이면 오픈채팅, 남의 신청은 404 NOT_FOUND', async () => {
     await login('seojun@demo.kr');
-    expect(
-      await request<MyApplication>(`/me/applications/${applicationOf('seojun@demo.kr', 1).id}`),
-    ).toMatchObject({
-      status: 'APPROVED',
-      openChatUrl: DEMO_OPEN_CHAT,
-      courseStatus: null,
-      couponCount: 0,
-      cancellable: false,
-    });
+    expect(await getMyApplication(applicationOf('seojun@demo.kr', 1).id, campuses())).toMatchObject(
+      {
+        status: 'APPROVED',
+        openChatUrl: DEMO_OPEN_CHAT,
+        courseStatus: null,
+        couponCount: 0,
+        cancellable: false,
+      },
+    );
     await expect(
-      request(`/me/applications/${applicationOf('yujin@demo.kr', 1).id}`),
+      getMyApplication(applicationOf('yujin@demo.kr', 1).id, campuses()),
     ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
   });
 
-  it('미래 탐방 신청은 취소되고, 취소 후 다시 신청할 수 있다', async () => {
+  it('미래 탐방(6) 신청은 취소되고(CANCELED), 취소 후 다시 신청할 수 있다', async () => {
     await login('student@demo.kr');
-    const motivation = { motivation: '수업이 궁금해요' };
-    const app = await request<MyApplication>('/tours/6/applications', {
-      method: 'POST',
-      body: motivation,
-    });
+    const app = await postApplication(6, '수업이 궁금해요', campuses());
     expect(app.cancellable).toBe(true);
-    expect(
-      await request<MyApplication>(`/me/applications/${app.id}/cancel`, { method: 'POST' }),
-    ).toMatchObject({ id: app.id, status: 'CANCELED', cancellable: false });
-    expect((await getTour(6, await listCampuses())).myApplication).toBeNull();
-    await expect(
-      request(`/me/applications/${app.id}/cancel`, { method: 'POST' }),
-    ).rejects.toMatchObject({ status: 409, code: 'ALREADY_PROCESSED' });
-
-    const again = await request<MyApplication>('/tours/6/applications', {
-      method: 'POST',
-      body: motivation,
+    expect(await postCancelApplication(app.id, campuses())).toMatchObject({
+      id: app.id,
+      status: 'CANCELED',
+      cancellable: false,
     });
-    expect((await getTour(6, await listCampuses())).myApplication).toEqual({
+    expect((await getTour(6, campuses())).myApplication).toBeNull();
+    await expect(postCancelApplication(app.id, campuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+    });
+
+    const again = await postApplication(6, '수업이 궁금해요', campuses());
+    expect((await getTour(6, campuses())).myApplication).toEqual({
       id: again.id,
       status: 'PENDING',
     });
+    expect((await getMyApplications(campuses())).map((a) => [a.id, a.status])).toEqual([
+      [again.id, 'PENDING'],
+      [app.id, 'CANCELED'],
+    ]);
     await login('guide@demo.kr');
-    const board = await request<ApplicantsBoard>('/guide/tours/6/applicants');
+    const board = await getApplicantsBoard(6, campuses());
     expect(board.applicants.map((a) => a.id)).toEqual([again.id]); // 취소한 신청은 빠진다
   });
 
-  it('탐방 당일 취소는 409 CANCEL_AFTER_TOUR_DATE', async () => {
+  it('탐방 당일 취소는 CANCEL_AFTER_TOUR_DATE(백엔드 E409_INVALID_APPLICATION_STATUS를 신청을 다시 읽어 세분)', async () => {
     await login('seojun@demo.kr');
     await expect(
-      request(`/me/applications/${applicationOf('seojun@demo.kr', 1).id}/cancel`, {
-        method: 'POST',
-      }),
-    ).rejects.toMatchObject({ status: 409, code: 'CANCEL_AFTER_TOUR_DATE' });
+      postCancelApplication(applicationOf('seojun@demo.kr', 1).id, campuses()),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'CANCEL_AFTER_TOUR_DATE',
+      backendCode: 'E409_INVALID_APPLICATION_STATUS',
+    });
   });
 
-  it('가이드 탐방 목록: 시작 시각 순, 신청 집계와 코스 상태', async () => {
+  it('가이드 탐방 목록: 시작 시각 순, 신청 집계(승인 + 대기)와 코스 상태(확정 전이면 코스 조회로 합성)', async () => {
     await login('guide@demo.kr');
-    const list = await request<GuideTourSummary[]>('/guide/tours');
+    const list = await getGuideTours(campuses());
     expect(list.map((t) => t.id)).toEqual([7, 1, 6]);
     expect(list[1]).toMatchObject({
       id: 1,
@@ -583,16 +665,24 @@ describe('applications', () => {
       counts: { total: 3, pending: 1, approved: 2 },
       courseStatus: null,
     });
+    mutate((db) => createDraft(db, userId('guide@demo.kr'), 1, new Date()));
+    expect((await getGuideTours(campuses())).find((t) => t.id === 1)?.courseStatus).toBe('DRAFT');
   });
 
-  it('학생은 가이드 API 403', async () => {
+  it('학생은 가이드 API FORBIDDEN', async () => {
     await login('student@demo.kr');
-    await expect(request('/guide/tours')).rejects.toMatchObject({ status: 403 });
+    await expect(getApplicantsBoard(1, campuses())).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
+    await expect(
+      patchDecision(1, applicationOf('yujin@demo.kr', 1).id, 'APPROVED', campuses()),
+    ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
   });
 
   it('신청자 보드: 신청 순서 · 학년 · 인증, 남의 탐방은 403', async () => {
     await login('guide@demo.kr');
-    const board = await request<ApplicantsBoard>('/guide/tours/1/applicants');
+    const board = await getApplicantsBoard(1, campuses());
     expect(board.tour).toMatchObject({ id: 1, title: DEMO_TOUR_TITLE });
     expect(board.counts).toEqual({ pending: 1, approved: 2, remaining: 3 });
     expect(board.course).toBeNull();
@@ -608,42 +698,159 @@ describe('applications', () => {
       expect.objectContaining({ userName: '이하은', grade: 3, status: 'APPROVED' }),
       expect.objectContaining({ userName: '최유진', grade: 2, status: 'PENDING' }),
     ]);
-    await expect(request('/guide/tours/2/applicants')).rejects.toMatchObject({
+    await expect(getApplicantsBoard(2, campuses())).rejects.toMatchObject({
       status: 403,
       code: 'FORBIDDEN',
     });
   });
 
-  it('가이드 승인 → 보드 갱신', async () => {
+  it('가이드 승인(PATCH decision APPROVED) → 보드 갱신, 다시 처리하면 ALREADY_PROCESSED', async () => {
     await login('guide@demo.kr');
     const yujin = applicationOf('yujin@demo.kr', 1).id;
-    const board = await request<ApplicantsBoard>(`/guide/applications/${yujin}/approve`, {
-      method: 'POST',
-    });
+    const board = await patchDecision(1, yujin, 'APPROVED', campuses());
     expect(board.counts).toEqual({ pending: 0, approved: 3, remaining: 2 });
     expect(board.applicants.find((a) => a.id === yujin)?.status).toBe('APPROVED');
-    await expect(
-      request(`/guide/applications/${yujin}/approve`, { method: 'POST' }),
-    ).rejects.toMatchObject({ status: 409, code: 'ALREADY_PROCESSED' });
+    await expect(patchDecision(1, yujin, 'APPROVED', campuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+      backendCode: 'E409_ALREADY_PROCESSED',
+    });
   });
 
-  it('거절하면 보드에 남고, 그 학생은 다시 신청할 수 없다', async () => {
+  it('정원이 찬 탐방의 승인은 CAPACITY_EXCEEDED(승인 · 거절의 E409_TOUR_FULL)', async () => {
+    await login('guide@demo.kr');
+    mutate((db) => {
+      db.tours.find((t) => t.id === 1)!.capacity = 2; // 승인 2명 = 정원
+    });
+    await expect(
+      patchDecision(1, applicationOf('yujin@demo.kr', 1).id, 'APPROVED', campuses()),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'CAPACITY_EXCEEDED',
+      backendCode: 'E409_TOUR_FULL',
+    });
+  });
+
+  it('거절하면 보드에 남고, 그 학생은 다시 신청할 수 없다(REAPPLY_AFTER_REJECT — 목업 확장 코드)', async () => {
     await login('guide@demo.kr');
     const yujin = applicationOf('yujin@demo.kr', 1).id;
-    const board = await request<ApplicantsBoard>(`/guide/applications/${yujin}/reject`, {
-      method: 'POST',
-    });
+    const board = await patchDecision(1, yujin, 'REJECTED', campuses());
     expect(board.counts).toEqual({ pending: 0, approved: 2, remaining: 3 });
     expect(board.applicants.find((a) => a.id === yujin)?.status).toBe('REJECTED');
 
     await login('yujin@demo.kr');
-    expect((await getTour(1, await listCampuses())).myApplication).toEqual({
+    expect((await getTour(1, campuses())).myApplication).toEqual({
       id: yujin,
       status: 'REJECTED',
     });
-    await expect(
-      request('/tours/1/applications', { method: 'POST', body: { motivation: '다시 할게요' } }),
-    ).rejects.toMatchObject({ status: 409, code: 'REAPPLY_AFTER_REJECT' });
+    await expect(postApplication(1, '다시 할게요', campuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'REAPPLY_AFTER_REJECT',
+      backendCode: 'E409_REAPPLY_AFTER_REJECT',
+    });
+  });
+
+  it('decision이 승인 · 거절이 아니면 E400과 decision 칸 오류', async () => {
+    const { token } = await login('guide@demo.kr');
+    const res = await rawFetch<Envelope & { errors: unknown }>(
+      `/applications/${applicationOf('yujin@demo.kr', 1).id}/decision`,
+      { method: 'PATCH', token, body: { decision: 'MAYBE' } },
+    );
+    expect(res.status).toBe(400);
+    expect(res.body).toMatchObject({
+      code: 'E400',
+      errors: [{ field: 'decision', reason: '승인 또는 거절을 골라 주세요.' }],
+    });
+    expect(applicationOf('yujin@demo.kr', 1).status).toBe('PENDING');
+  });
+
+  it('와이어: 내 탐방(고교생 · 대학생) · 신청자 목록 · 승인 · 취소가 명세 T-04 · A-02~04 예시와 같은 모양', async () => {
+    const seojun = await login('seojun@demo.kr');
+    const mine = await rawFetch<Envelope>('/users/me/tours', {
+      method: 'GET',
+      token: seojun.token,
+    });
+    expect([mine.status, mine.body.code]).toEqual([200, 'S200']);
+    expectWireShape(mine.body.data, MY_TOURS_HIGH_SCHOOL.data, [
+      'wish',
+      'created_at',
+      'coupon_count',
+    ]);
+    // 확장(2C-R8)이 실제로 나간다.
+    expect((mine.body.data as Items).items[0]).toMatchObject({
+      tour_id: 1,
+      application_status: 'APPROVED',
+      course_confirmed: false,
+      wish: '학생들이 자주 가는 밥집이 궁금해요',
+      created_at: expect.stringMatching(/\+09:00$/),
+      coupon_count: 0,
+    });
+
+    const guide = await login('guide@demo.kr');
+    const tours = await rawFetch<Envelope>('/users/me/tours', {
+      method: 'GET',
+      token: guide.token,
+    });
+    expect([tours.status, tours.body.code]).toEqual([200, 'S200']);
+    expectWireShape(tours.body.data, MY_TOURS_UNIVERSITY.data);
+    expect((tours.body.data as Items).items.map((t) => t.tour_id)).toEqual([7, 1, 6]);
+
+    const list = await rawFetch<Envelope>('/tours/1/applications', {
+      method: 'GET',
+      token: guide.token,
+    });
+    expect([list.status, list.body.code]).toEqual([200, 'S200']);
+    expectWireShape(list.body.data, APPLICANTS_LIST.data);
+    const pendingOnly = await rawFetch<Envelope>('/tours/1/applications?status=PENDING', {
+      method: 'GET',
+      token: guide.token,
+    });
+    expect((pendingOnly.body.data as Items).items.map((a) => a.name)).toEqual(['최유진']);
+
+    const yujin = applicationOf('yujin@demo.kr', 1).id;
+    const decided = await rawFetch<Envelope>(`/applications/${yujin}/decision`, {
+      method: 'PATCH',
+      token: guide.token,
+      body: { decision: 'APPROVED' },
+    });
+    expect([decided.status, decided.body.code]).toEqual([200, 'S200']);
+    expectWireShape(decided.body.data, DECISION_OK.data);
+    expect(decided.body.data).toEqual({
+      application_id: yujin,
+      status: 'APPROVED',
+      tour_status: 'RECRUITING',
+    });
+
+    const student = await login('student@demo.kr');
+    const applied = await rawFetch<Envelope>('/tours/6/applications', {
+      method: 'POST',
+      token: student.token,
+      body: { wish: '수업이 궁금해요' },
+    });
+    const id = applied.body.data.application_id as number;
+    const canceled = await rawFetch<Envelope>(`/applications/${id}/cancel`, {
+      method: 'POST',
+      token: student.token,
+    });
+    expect([canceled.status, canceled.body.code]).toEqual([200, 'S200']);
+    expectWireShape(canceled.body.data, CANCEL_OK.data);
+    expect(canceled.body.data).toEqual({ application_id: id, status: 'CANCELED' });
+
+    const owner = await login('owner1@demo.kr');
+    const ownerTours = await rawFetch<Envelope>('/users/me/tours', {
+      method: 'GET',
+      token: owner.token,
+    });
+    expect([ownerTours.status, ownerTours.body.code]).toEqual([403, 'E403']);
+  });
+
+  it('내 탐방 ?status=는 탐방 상태로 거른다', async () => {
+    const { token } = await login('seojun@demo.kr');
+    const res = await rawFetch<Envelope>('/users/me/tours?status=COMPLETED', {
+      method: 'GET',
+      token,
+    });
+    expect((res.body.data as Items).items.map((t) => t.tour_id)).toEqual([7]);
   });
 });
 
@@ -993,7 +1200,7 @@ describe('coupons', () => {
     expect(await request<Coupon[]>(`/me/coupons?applicationId=${app.id}`)).toEqual(list);
     expect(await request<Coupon[]>('/me/coupons?applicationId=999999')).toEqual([]);
     expect(await request<Coupon>(`/me/coupons/${list[1].id}`)).toEqual(list[1]);
-    expect((await request<MyApplication>(`/me/applications/${app.id}`)).couponCount).toBe(2);
+    expect((await getMyApplication(app.id, listCampuses())).couponCount).toBe(2);
   });
 
   it('지난 탐방 쿠폰은 사용 완료 · 리뷰 작성, 남의 쿠폰은 404', async () => {
@@ -1097,14 +1304,14 @@ describe('demo', () => {
 
   it('체크포인트 없이 초기화하면 처음 상태', async () => {
     await login('student@demo.kr');
-    await request('/tours/1/applications', { method: 'POST', body: { motivation: '궁금해요' } });
+    await postApplication(1, '궁금해요', listCampuses());
     await request('/demo/reset', { method: 'POST' });
-    expect(await request<MyApplication[]>('/me/applications')).toEqual([]);
+    expect(await getMyApplications(listCampuses())).toEqual([]);
   });
 
   it('모르는 체크포인트는 400 VALIDATION이고 DB는 그대로', async () => {
     await login('student@demo.kr');
-    await request('/tours/1/applications', { method: 'POST', body: { motivation: '궁금해요' } });
+    await postApplication(1, '궁금해요', listCampuses());
     await expect(
       request('/demo/reset', { method: 'POST', body: { checkpoint: 'DONE' } }),
     ).rejects.toMatchObject({ status: 400, code: 'VALIDATION', backendCode: 'E400' });
@@ -1114,7 +1321,7 @@ describe('demo', () => {
     });
     expect(raw.status).toBe(400);
     expect(raw.body.code).toBe('E400');
-    expect(await request<MyApplication[]>('/me/applications')).toHaveLength(1);
+    expect(await getMyApplications(listCampuses())).toHaveLength(1);
   });
 
   it('시연 초기화 응답은 성공 봉투 { ok: true }', async () => {

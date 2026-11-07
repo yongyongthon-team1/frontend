@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import type { TourSummary } from '@/features/tours/model';
 import {
+  computeCancellable,
   coursePathFor,
   guideCoursePath,
   groupMyApplications,
@@ -206,5 +207,29 @@ describe('STUDENT_APPLICATION_STATUS', () => {
       ['REJECTED', '신청 거절', 'danger'],
       ['CANCELED', '취소됨', 'neutral'],
     ]);
+  });
+});
+
+describe('computeCancellable (어댑터 전용 — 목업 isCancellable도 이 규칙을 부른다)', () => {
+  const tourStartsAt = '2026-11-15T14:00:00+09:00';
+
+  it('대기 · 승인 신청은 탐방 전날(서울 날짜)까지 취소할 수 있다', () => {
+    const dayBefore = new Date('2026-11-14T23:59:59+09:00');
+    expect(computeCancellable('PENDING', tourStartsAt, dayBefore)).toBe(true);
+    expect(computeCancellable('APPROVED', tourStartsAt, dayBefore)).toBe(true);
+  });
+
+  it('탐방 당일부터는 취소할 수 없다(시작 전이어도)', () => {
+    const tourDay = new Date('2026-11-15T00:00:00+09:00');
+    expect(computeCancellable('PENDING', tourStartsAt, tourDay)).toBe(false);
+    expect(
+      computeCancellable('APPROVED', tourStartsAt, new Date('2026-11-16T09:00:00+09:00')),
+    ).toBe(false);
+  });
+
+  it('거절 · 취소된 신청은 날짜와 상관없이 취소할 수 없다', () => {
+    const early = new Date('2026-11-01T12:00:00+09:00');
+    expect(computeCancellable('REJECTED', tourStartsAt, early)).toBe(false);
+    expect(computeCancellable('CANCELED', tourStartsAt, early)).toBe(false);
   });
 });

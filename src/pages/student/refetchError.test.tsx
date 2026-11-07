@@ -54,7 +54,7 @@ const ROWS: Array<
     'APPLIED',
     () => '/my-tours',
     '신청 접수 완료 · 가이드 승인 대기 중',
-    '/api/me/applications',
+    '/api/users/me/tours',
     () => qk.myApplications,
   ],
   [
@@ -62,7 +62,7 @@ const ROWS: Array<
     'CONFIRMED',
     () => `/my-tours/${appId()}`,
     '가이드 승인 상태',
-    '/api/me/applications/:id',
+    '/api/users/me/tours',
     () => qk.myApplication(appId()),
   ],
   [
@@ -70,7 +70,7 @@ const ROWS: Array<
     'CONFIRMED',
     () => `/my-tours/${appId()}/course`,
     '내 쿠폰 확인하기',
-    '/api/me/applications/:id',
+    '/api/users/me/tours',
     () => qk.myApplication(appId()),
   ],
   [

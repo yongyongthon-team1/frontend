@@ -1,5 +1,5 @@
 import { configure, screen, waitFor, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
 import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
@@ -345,7 +345,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
   it('초안을 만든 뒤 신청자 관리로 돌아가면 코스 버튼은 코스 이어서 편집, 탐방 목록도 다시 불러온다', async () => {
     let guideTourGets = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'GET' && new URL(request.url).pathname === '/api/guide/tours') {
+      if (request.method === 'GET' && new URL(request.url).pathname === '/api/users/me/tours') {
         guideTourGets++;
       }
     });
@@ -546,11 +546,7 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
   });
 
   it('신청자 보드를 못 불러와도 완료 카드는 그대로, 승인 수 줄만 짧은 오류와 다시 시도', async () => {
-    server.use(
-      http.get('/api/guide/tours/:id/applicants', () =>
-        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
-      ),
-    );
+    server.use(http.get('/api/tours/:tourId/applications', () => wireFail('E403')));
     const { user } = await renderApp('/guide/tours/1/course/confirm', {
       as: 'guide',
       checkpoint: 'CONFIRMED',
@@ -569,7 +565,7 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
 
   it('신청자 보드를 불러오는 동안에도 완료 카드 제목은 보인다', async () => {
     server.use(
-      http.get('/api/guide/tours/:id/applicants', async () => {
+      http.get('/api/tours/:tourId/applications', async () => {
         await new Promise((resolve) => setTimeout(resolve, 150));
         return undefined;
       }),

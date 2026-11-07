@@ -101,14 +101,11 @@
 | tours | #15 `GET /api/guide/tours/:id` | guide-s07 탐방 종료 · guide-a04 탐방 취소 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | tours | #16 `POST /api/guide/tours/:id/complete` | guide-s07 탐방 종료 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | tours | #17 `POST /api/guide/tours/:id/cancel` | guide-a04 탐방 취소 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `POST /api/tours/:id/applications` | hs-a04 | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `GET /api/me/applications` | hs-a05 | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `GET /api/me/applications/:id` | hs-s06, hs-s07 | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `POST /api/me/applications/:id/cancel` | hs-s07 | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `GET /api/guide/tours` | guide-a02 | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `GET /api/guide/tours/:id/applicants` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `POST /api/guide/applications/:id/approve` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `POST /api/guide/applications/:id/reject` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `GET /api/users/me/tours` (T-04, 백엔드 와이어 · 역할마다 모양이 다르다. 고교생 행은 `GET /tours/{tourId}`로 탐방 요약을, 확장 `coupon_count`가 없으면 `GET /users/me/coupons?tour_id`로 쿠폰 수를 합성하고, 신청 단건(상세 · 신청 · 취소 뒤)도 이 행에서 찾는다 — 단건 경로는 없다. 가이드 행은 확정이 아니면 `GET /tours/{tourId}/course`로 초안 여부) | hs-a05, hs-s06, hs-s07, G01, guide-a02 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/tours/:tourId/applications` (A-01, 본문 `{ wish }` 100자. `E403_VERIFICATION_REQUIRED`는 `GET /users/me`, `E409_TOUR_FULL`은 `GET /tours/{tourId}`를 다시 읽어 세분) | hs-a04 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/applications/:applicationId/cancel` (A-03, `E409_INVALID_APPLICATION_STATUS`는 신청을 다시 읽어 탐방 날짜 · 이미 처리로 세분) | hs-s07 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `GET /api/tours/:tourId/applications` (A-04, 신청자 보드 = 이 목록 + `GET /tours/{tourId}` + 코스 상태 합성, `인증` 칩은 늘 켬) | guide-s03, guide-s06 | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `PATCH /api/applications/:applicationId/decision` (A-02, 승인 · 거절 `{ decision }` 뒤 신청자 보드를 다시 읽는다. `E409_TOUR_FULL`은 정원 초과) | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | `GET /api/tours/:tourId/course` (C-04, 백엔드 와이어 · 학생과 가이드가 같이 쓴다. 가이드는 404 → 코스 없음, 학생은 확정 전 `E409_COURSE_NOT_READY`) | hs-s08, guide-s04 · s05 · s06, `/guide/tours/:tourId/course` | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | `POST /api/tours/:tourId/course` (C-01 AI 초안, 실패 `E502_AI_FAILED`) | guide-s04 · s05(다시 만들기) | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | `PUT /api/tours/:tourId/course/spots` (C-02 전체 스팟 교체 — 순서 · 한줄평 · 빼기를 `buildSpots`로 만든다) | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |

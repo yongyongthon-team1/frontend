@@ -1,9 +1,10 @@
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
+import { wireFail } from '@/test/wire';
 
 /** `renderApp`은 목업 DB를 새로 만들므로, DB를 고친 뒤에 목적지로 이동해 그 값으로 그린다. */
 async function renderPatched(
@@ -127,7 +128,7 @@ describe('가이드 홈 (G01 · G11)', () => {
   });
 
   it('불러오는 동안에도 h1이 있다(화면 낭독기용)', async () => {
-    server.use(http.get('/api/guide/tours', () => new Promise<never>(() => {})));
+    server.use(http.get('/api/users/me/tours', () => new Promise<never>(() => {})));
     await renderApp('/guide', { as: 'guide' });
     expect(await screen.findByRole('heading', { level: 1, name: '내 탐방' })).toHaveClass(
       'sr-only',
@@ -136,11 +137,7 @@ describe('가이드 홈 (G01 · G11)', () => {
   });
 
   it('오류일 때도 h1이 있다', async () => {
-    server.use(
-      http.get('/api/guide/tours', () =>
-        HttpResponse.json({ code: 'UNKNOWN', message: 'x' }, { status: 400 }),
-      ),
-    );
+    server.use(http.get('/api/users/me/tours', () => wireFail('E400')));
     await renderApp('/guide', { as: 'guide' });
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: '내 탐방' })).toBeInTheDocument();

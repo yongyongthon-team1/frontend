@@ -1,11 +1,12 @@
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { getDb, mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
-import { toGuideTourSummary } from '@/mocks/rules/views';
+import { toWireGuideTourRow } from '@/mocks/wire/applications';
 import { DEMO_EMAILS } from '@/shared/config/demoAccounts';
 import { renderApp } from '@/test/renderApp';
+import { wirePage } from '@/test/wire';
 
 const cardOf = async (title: string | RegExp, index = 0) =>
   (await screen.findAllByRole('heading', { name: title }))[index]!.closest('article')!;
@@ -93,11 +94,11 @@ describe('내가 개설한 탐방 (G06 · guide-a02)', () => {
       tour1.startsAt = new Date(Date.parse(tour6.startsAt) + 24 * 60 * 60 * 1000).toISOString();
     });
     server.use(
-      http.get('/api/guide/tours', () => {
+      http.get('/api/users/me/tours', () => {
         const db = getDb();
         const guide = db.users.find((u) => u.email === DEMO_EMAILS.guide)!;
         const tours = db.tours.filter((t) => t.guideId === guide.id).sort((a, b) => a.id - b.id);
-        return HttpResponse.json(tours.map((t) => toGuideTourSummary(db, t)));
+        return wirePage(tours.map((t) => toWireGuideTourRow(db, t)));
       }),
     );
 

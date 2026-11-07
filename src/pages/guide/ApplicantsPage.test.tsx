@@ -42,19 +42,15 @@ describe('신청자 관리 (guide-s03)', () => {
     expect(within(card).queryByRole('button')).not.toBeInTheDocument();
   });
 
-  it('재학 인증을 마친 신청자만 `인증` 칩이 이름 옆에 붙는다', async () => {
+  it('신청자는 모두 `인증` 칩이 이름 옆에 붙는다 — 신청은 재학 인증 APPROVED만 받는다(A-01, 2C-R27)', async () => {
     const { router } = await renderApp('/guide/tours/new', {
       as: 'guide',
       checkpoint: 'APPLIED',
     });
+    // 신청한 뒤 인증 상태가 바뀌어도 신청자 목록(A-04)에는 인증 칸이 없어 합성 값은 늘 인증이다.
     mutate((db) => {
-      const idOf = (name: string) => db.users.find((u) => u.name === name)!.id;
-      const status = (name: string, next: 'APPROVED' | 'PENDING') => {
-        const row = db.verifications.find((v) => v.id === idOf(name));
-        if (row) row.status = next;
-      };
-      status('김민지', 'APPROVED');
-      status('최유진', 'PENDING');
+      const yujinId = db.users.find((u) => u.name === '최유진')!.id;
+      db.verifications.find((v) => v.id === yujinId)!.status = 'PENDING';
     });
     await router.navigate('/guide/tours/1/applicants');
     await screen.findByRole('heading', waiting(2));
@@ -63,7 +59,7 @@ describe('신청자 관리 (guide-s03)', () => {
     // 이름 제목의 글자는 그대로다.
     expect(within(minji).getByRole('heading', { name: '김민지' })).toBeInTheDocument();
     const yujin = screen.getByRole('heading', { name: '최유진' }).closest('article')!;
-    expect(within(yujin).queryByText('인증')).not.toBeInTheDocument();
+    expect(within(yujin).getByText('인증')).toBeInTheDocument();
   });
 
   it('학년이 없으면 따옴표 줄에 `고N · ` 없이 동기만 나온다', async () => {
@@ -104,7 +100,7 @@ describe('신청자 관리 (guide-s03)', () => {
     setMockLatency({ base: 150, ai: 0 });
     let count = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.url.includes('/approve')) count++;
+      if (request.method === 'PATCH' && request.url.includes('/decision')) count++;
     });
     const { user } = await renderApp('/guide/tours/1/applicants', {
       as: 'guide',
@@ -115,6 +111,30 @@ describe('신청자 관리 (guide-s03)', () => {
     await user.dblClick(within(card).getByRole('button', { name: '승인하기' }));
     await waitFor(() => expect(screen.getByRole('heading', waiting(1))).toBeInTheDocument());
     expect(count).toBe(1);
+  });
+
+  it('거절 확인 버튼 연타도 요청 1번', async () => {
+    setMockLatency({ base: 150, ai: 0 });
+    const bodies: unknown[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'PATCH' && request.url.includes('/decision')) {
+        void request
+          .clone()
+          .json()
+          .then((b: unknown) => bodies.push(b));
+      }
+    });
+    const { user } = await renderApp('/guide/tours/1/applicants', {
+      as: 'guide',
+      checkpoint: 'APPLIED',
+    });
+    await screen.findByRole('heading', waiting(2));
+    const card = minjiCard();
+    await user.click(within(card).getByRole('button', { name: '거절하기' }));
+    const dialog = await screen.findByRole('alertdialog');
+    await user.dblClick(within(dialog).getByRole('button', { name: '거절' }));
+    await waitFor(() => expect(card).toHaveTextContent('거절됨'));
+    expect(bodies).toEqual([{ decision: 'REJECTED' }]);
   });
 
   it('거절은 확인창을 거쳐 거절됨으로 바뀐다', async () => {

@@ -1,10 +1,10 @@
-import type { ApplicationStatus } from '@/features/applications/model';
+import { computeCancellable, type ApplicationStatus } from '@/features/applications/model';
 import { mockNow } from '@/mocks/clock';
 import type { ApplicationRow, DB, TourRow } from '@/mocks/db/schema';
 import { nextId } from '@/mocks/db/ids';
 import { seoulDateKey, toSeoulIso } from '@/shared/lib/date';
 import { expireCouponsForApplication, issueCouponsForApplication } from './coupons';
-import { MockApiError } from './errors';
+import { fieldError, MockApiError } from './errors';
 
 // 신청 · 승인 · 거절 · 취소 규칙(A-01~03, T-05 자동 마감). 모두 `db`를 직접 고치고 행을 돌려준다
 // (저장은 핸들러의 `mutate`). 위에서부터 차례로 검사해 처음 걸린 오류를 던지고, 검사를 모두 마친 뒤에만
@@ -50,12 +50,18 @@ export function activeApplication(
   return db.applications.find((a) => a.tourId === tourId && a.userId === userId && isActive(a));
 }
 
-/** 탐방 신청. 취소 이력은 재신청을 막지 않고, 거절 이력은 막는다. 동기는 앞뒤 공백을 지워 저장한다. */
+/** 신청 `wish`의 최대 길이(백엔드 A-01, 2C-R11). */
+const WISH_MAX = 100;
+
+/**
+ * 탐방 신청(`wish` = 신청서에 적은 하고 싶은 것). 취소 이력은 재신청을 막지 않고, 거절 이력은 막는다. 앞뒤 공백을 지워 저장하고,
+ * 지운 뒤 비었으면 400, 100자를 넘으면 `wish` 칸 오류다.
+ */
 export function applyToTour(
   db: DB,
   userId: number,
   tourId: number,
-  motivation: string,
+  wish: string,
   now: Date,
 ): ApplicationRow {
   const tour = findTour(db, tourId);
@@ -83,8 +89,9 @@ export function applyToTour(
     throw new MockApiError(409, 'TOUR_CLOSED');
   }
   // HTTP 본문에서 바로 넘어오면 문자열이 아닐 수도 있다.
-  const text = typeof motivation === 'string' ? motivation.trim() : '';
+  const text = typeof wish === 'string' ? wish.trim() : '';
   if (text === '') throw new MockApiError(400, 'VALIDATION');
+  if (text.length > WISH_MAX) throw fieldError('wish', `${WISH_MAX}자 이내로 적어 주세요.`);
 
   const at = toSeoulIso(now);
   const app: ApplicationRow = {
@@ -170,9 +177,8 @@ export function cancelApplication(
   return app;
 }
 
-/** `MyApplication.cancellable`: 대기 · 승인 상태이고 지금(서울 날짜)이 탐방 날짜 전이면 직접 취소할 수 있다. */
+/** `MyApplication.cancellable`의 목업 판정 — 어댑터와 같은 규칙(`computeCancellable`) 하나를 쓴다(errata G9). */
 export function isCancellable(db: DB, app: ApplicationRow, now: Date): boolean {
-  if (!isActive(app)) return false;
   const tour = db.tours.find((t) => t.id === app.tourId);
-  return tour !== undefined && seoulDateKey(now) < seoulDateKey(tour.startsAt);
+  return tour !== undefined && computeCancellable(app.status, tour.startsAt, now);
 }

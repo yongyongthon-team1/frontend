@@ -1,5 +1,6 @@
 import type { CourseStatus } from '@/features/courses/model';
 import { TOUR_STATUS_LABEL, type TourSummary } from '@/features/tours/model';
+import { seoulDateKey } from '@/shared/lib/date';
 import type { Tone } from '@/shared/lib/types';
 
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
@@ -35,6 +36,21 @@ export interface ApplicantsBoard {
 export interface GuideTourSummary extends TourSummary {
   counts: { total: number; pending: number; approved: number };
   courseStatus: CourseStatus | null;
+}
+
+/**
+ * `MyApplication.cancellable`: 대기 · 승인 신청이고 지금(서울 날짜)이 탐방 날짜 전이면 직접 취소할 수 있다.
+ * 어댑터 · 목업 서버 전용(컴포넌트는 서버 값 `cancellable`을 그린다). 목업 `isCancellable`도 이 함수를 불러 규칙이 하나다.
+ */
+export function computeCancellable(
+  status: ApplicationStatus,
+  tourStartsAt: string,
+  now: Date,
+): boolean {
+  return (
+    (status === 'PENDING' || status === 'APPROVED') &&
+    seoulDateKey(now) < seoulDateKey(tourStartsAt)
+  );
 }
 
 /** 진행 예정 탐방: 모집 중 · 마감(끝나지 않은 탐방). */

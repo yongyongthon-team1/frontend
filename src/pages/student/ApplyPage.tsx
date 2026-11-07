@@ -21,11 +21,12 @@ import { Textarea } from '@/shared/ui/Textarea';
 import { TopBar } from '@/shared/ui/TopBar';
 
 const MIN_LENGTH = 5;
-const MAX_LENGTH = 300;
+/** 신청서 최대 길이 — 백엔드 A-01 `wish` 100자(2C-R12 ④). */
+const APPLY_WISH_MAX = 100;
 
 function validate(motivation: string): string | undefined {
   if (motivation.length < MIN_LENGTH) return `하고 싶은 것을 ${MIN_LENGTH}자 이상 적어 주세요.`;
-  if (motivation.length > MAX_LENGTH) return `${MAX_LENGTH}자 이내로 적어 주세요.`;
+  if (motivation.length > APPLY_WISH_MAX) return `${APPLY_WISH_MAX}자 이내로 적어 주세요.`;
   return undefined;
 }
 
