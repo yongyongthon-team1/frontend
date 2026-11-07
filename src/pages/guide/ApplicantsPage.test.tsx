@@ -254,7 +254,7 @@ describe('신청자 관리 (guide-s03)', () => {
   });
 
   describe('탐방 완료 · 탐방 취소 진입 링크 (T-05 · T-06)', () => {
-    it('모집 중 탐방의 하단 링크 줄에 `탐방 완료` · `탐방 취소`가 있다(승인 버튼 로케이터는 그대로)', async () => {
+    it('모집 중 탐방의 본문 링크 줄에 `탐방 완료` · `탐방 취소`가 있다(승인 버튼 로케이터는 그대로)', async () => {
       await renderApp('/guide/tours/1/applicants', { as: 'guide', checkpoint: 'APPLIED' });
       await screen.findByRole('heading', waiting(2));
       expect(screen.getByRole('link', { name: '탐방 완료' })).toHaveAttribute(
@@ -265,6 +265,20 @@ describe('신청자 관리 (guide-s03)', () => {
         'href',
         '/guide/tours/1/cancel',
       );
+      // 링크 줄은 하단 고정 바(`BottomAction`) 밖, 신청자 목록 바로 뒤 본문에 있다 — 고정 바 높이를 늘리지 않는다.
+      for (const name of ['탐방 완료', '탐방 취소']) {
+        const link = screen.getByRole('link', { name });
+        expect(link.closest('.sticky')).toBeNull();
+      }
+      const lastCard = screen.getAllByRole('article').at(-1)!;
+      expect(
+        lastCard.compareDocumentPosition(screen.getByRole('link', { name: '탐방 완료' })) &
+          Node.DOCUMENT_POSITION_FOLLOWING,
+      ).toBeTruthy();
+      const bar = screen
+        .getByRole('button', { name: '승인 완료 후 코스 만들기' })
+        .closest('.sticky')!;
+      expect(within(bar as HTMLElement).queryByRole('link')).not.toBeInTheDocument();
       // 골든 패스가 지나는 버튼은 이름 그대로 대기 신청마다 하나씩이다.
       expect(screen.getAllByRole('button', { name: '승인하기' })).toHaveLength(2);
       expect(screen.getByRole('button', { name: '승인 완료 후 코스 만들기' })).toBeInTheDocument();

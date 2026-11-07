@@ -140,15 +140,18 @@ export function TourCreatePage() {
   const navigate = useNavigate();
   const meQuery = useMe();
   const universityId = meQuery.data?.guideProfile?.universityId ?? null;
-  const universities = useUniversities();
+  const me = meQuery.data;
+  const block = me ? tourCreateBlock(me) : null;
+  // 캠퍼스 목록은 방학 안내에만 쓴다 — 학교를 모르거나(universityId null) 개설이 막힌 가이드는 부르지 않는다.
+  const needsCampuses = me !== undefined && block === null && universityId !== null;
+  const universities = useUniversities({ enabled: needsCampuses });
   const create = useCreateTour();
   const sending = useRef(false);
   const [values, setValues] = useState<Values>(EMPTY);
   const [errors, setErrors] = useState<Errors>({});
 
-  const me = meQuery.data;
   const campuses = universities.data;
-  const waitingCampuses = universityId !== null && campuses === undefined;
+  const waitingCampuses = needsCampuses && campuses === undefined;
 
   if (me === undefined || waitingCampuses) {
     const failed = meQuery.isError ? meQuery : universities.isError ? universities : null;
@@ -176,10 +179,12 @@ export function TourCreatePage() {
     );
   }
 
-  const school = universityId === null ? undefined : campuses?.find((u) => u.id === universityId);
+  const school =
+    needsCampuses && universityId !== null
+      ? campuses?.find((u) => u.id === universityId)
+      : undefined;
   const vacations = school?.vacations ?? null;
   const bounds = vacations ? tourDateBoundsNow(vacations) : null;
-  const block = tourCreateBlock(me);
   const noVacation = block === null && vacations !== null && bounds === null;
   const locked = block !== null || noVacation;
   const inVacation =

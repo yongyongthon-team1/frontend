@@ -3,6 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { completeActionState } from '@/features/applications/model';
 import { useCompleteTour, useGuideTour } from '@/features/applications/queries';
+import { TOUR_STATUS_LABEL } from '@/features/tours/model';
 import { formatDotDateWeekday, formatTimeRange } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
@@ -63,7 +64,12 @@ export function TourCompletePage() {
               />
 
               <section className="mt-5 rounded-xl bg-surface p-4">
-                <StatusChip tone="info">진행 중</StatusChip>
+                {/* 완료할 수 없는 탐방(날짜 전 · 완료 · 취소)에는 `진행 중`이 거짓이라 탐방 상태를 보인다. */}
+                {state.enabled ? (
+                  <StatusChip tone="info">진행 중</StatusChip>
+                ) : (
+                  <StatusChip tone="neutral">{TOUR_STATUS_LABEL[tour.status]}</StatusChip>
+                )}
                 <p className="mt-2 text-[17px] leading-snug font-bold text-ink">{tour.title}</p>
                 <p className="mt-1 text-[13px] text-muted">
                   {formatDotDateWeekday(tour.startsAt)} ·{' '}

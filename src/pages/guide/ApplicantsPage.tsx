@@ -122,6 +122,14 @@ export function ApplicantsPage() {
           )}
         </div>
 
+        {/* 고정 바 밖(본문)에 둔다 — 시연 화면에서 고정 바가 커져 보이는 창이 좁아지지 않게(고정 바는 늘 같은 높이). */}
+        {editable ? (
+          <div className="mt-2 flex justify-center gap-4">
+            <TextLink to={`/guide/tours/${tour.id}/complete`}>탐방 완료</TextLink>
+            <TextLink to={`/guide/tours/${tour.id}/cancel`}>탐방 취소</TextLink>
+          </div>
+        ) : null}
+
         <BottomAction>
           <p className="mb-3 text-center text-xs text-muted">
             승인하면 학생에게 오픈채팅 링크가 공개돼요.
@@ -139,12 +147,6 @@ export function ApplicantsPage() {
               {course.status === 'CONFIRMED' ? '확정 코스 보기' : '코스 이어서 편집'}
             </Button>
           )}
-          {editable ? (
-            <div className="mt-1 flex justify-center gap-4">
-              <TextLink to={`/guide/tours/${tour.id}/complete`}>탐방 완료</TextLink>
-              <TextLink to={`/guide/tours/${tour.id}/cancel`}>탐방 취소</TextLink>
-            </div>
-          ) : null}
         </BottomAction>
       </Page>
 
@@ -163,7 +165,7 @@ export function ApplicantsPage() {
   );
 }
 
-/** 하단 버튼 아래의 작은 텍스트 링크(터치 44). */
+/** 신청자 목록 뒤의 작은 텍스트 링크(터치 44). */
 function TextLink({ to, children }: { to: string; children: string }) {
   return (
     <Link

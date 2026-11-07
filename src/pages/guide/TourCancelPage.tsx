@@ -3,6 +3,7 @@ import { useLocation, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { cancelActionState } from '@/features/applications/model';
 import { useCancelTour, useGuideTour } from '@/features/applications/queries';
+import { TOUR_STATUS_LABEL } from '@/features/tours/model';
 import { formatDotDateWeekday } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
@@ -72,7 +73,12 @@ export function TourCancelPage() {
               </section>
 
               <section className="mt-3 rounded-xl bg-surface p-4">
-                <StatusChip tone="danger">취소 대상</StatusChip>
+                {/* 취소할 수 없는 탐방(완료 · 이미 취소)에는 `취소 대상`이 거짓이라 탐방 상태를 보인다. */}
+                {state.enabled ? (
+                  <StatusChip tone="danger">취소 대상</StatusChip>
+                ) : (
+                  <StatusChip tone="neutral">{TOUR_STATUS_LABEL[tour.status]}</StatusChip>
+                )}
                 <p className="mt-2 text-[17px] leading-snug font-bold text-ink">{tour.title}</p>
                 <p className="mt-1 text-[13px] text-muted">
                   {formatDotDateWeekday(tour.startsAt)} · 참가자 {tour.approvedCount}명

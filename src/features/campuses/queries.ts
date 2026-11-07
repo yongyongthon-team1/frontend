@@ -17,8 +17,9 @@ export function campusesQueryOptions() {
   });
 }
 
-export function useUniversities(): UseQueryResult<University[]> {
-  return useQuery(campusesQueryOptions());
+/** `enabled: false`면 부르지 않는다(목록이 필요 없는 화면 상태 — 예: 탐방을 열 수 없게 막힌 가이드). */
+export function useUniversities(opts: { enabled?: boolean } = {}): UseQueryResult<University[]> {
+  return useQuery({ ...campusesQueryOptions(), enabled: opts.enabled ?? true });
 }
 
 /** 어댑터가 캠퍼스 조인(2C-R9)에 쓰려고 목록을 한 번만 불러 캐시에서 나눠 쓴다. */

@@ -257,6 +257,7 @@ describe('G04 탐방 개설 (guide-s02)', () => {
       db.guideProfiles.find((g) => g.id === guideId)!.universityId = null;
     });
     await switchAccount(queryClient, 'guide'); // 내 정보를 새로 받는다
+    const campuses = countRequests('GET', '/campuses');
     await act(() => router.navigate('/guide/tours/new'));
     expect(await screen.findByText('재학 인증한 학교')).toBeVisible();
     expect(screen.queryByText('✓')).not.toBeInTheDocument();
@@ -268,6 +269,46 @@ describe('G04 탐방 개설 (guide-s02)', () => {
     // 클라이언트 검사 없이 요청이 나가고, 서버가 방학 밖 날짜를 날짜 칸 아래에 알린다.
     expect(await screen.findByText('방학 기간 안의 날짜만 선택할 수 있어요')).toBeVisible();
     expect(posts()).toBe(1);
+    expect(campuses()).toBe(0); // 학교를 모르면 캠퍼스 목록을 부르지 않는다
+  });
+
+  it('NOT_VERIFIED로 거절되면 토스트 + 내 정보를 다시 읽어 막힌 상태(칩 · 비활성 · 입력 잠금)가 된다', async () => {
+    const { user } = await renderApp('/guide/tours/new', { as: 'guide' });
+    await screen.findByRole('heading', { name: '어떤 하루를 보여줄까요?' });
+    await fillTourForm(user);
+    expect(screen.queryByText('재학 인증 승인 필요')).not.toBeInTheDocument();
+    // 화면이 열린 뒤 인증이 반려됐다(다른 기기).
+    mutate((db) => {
+      const id = db.users.find((u) => u.email === 'guide@demo.kr')!.id;
+      db.verifications.find((v) => v.id === id)!.status = 'REJECTED';
+    });
+    server.use(http.post('/api/tours', () => wireFail('E403_VERIFICATION_REQUIRED')));
+    await user.click(screen.getByRole('button', { name: '모집 시작하기' }));
+    expect(await screen.findByText('재학 인증 승인 필요')).toBeVisible();
+    expect(screen.getByText('재학 인증이 승인된 뒤에 할 수 있어요.')).toBeInTheDocument(); // 토스트
+    expect(screen.getByRole('button', { name: '모집 시작하기' })).toBeDisabled();
+    expect(field('정원')).toBeDisabled();
+    expect(screen.getByRole('link', { name: '역할 인증 단계로 이동' })).toHaveAttribute(
+      'href',
+      '/guide/verify',
+    );
+  });
+
+  it('막힌 가이드는 캠퍼스 목록을 부르지 않는다(대조: 막히지 않은 가이드는 1번 부른다)', async () => {
+    // 데이터를 부르지 않는 화면에서 시작해, 이 화면이 부르는 요청만 센다.
+    const blocked = await renderApp('/explore', { as: 'guide-new@demo.kr' });
+    const campuses = countRequests('GET', '/campuses');
+    await blocked.router.navigate('/guide/tours/new');
+    expect(await screen.findByText('재학 인증 승인 필요')).toBeVisible();
+    expect(campuses()).toBe(0);
+  });
+
+  it('막히지 않은 가이드는 캠퍼스 목록을 1번 부른다(막힌 가이드 테스트의 대조)', async () => {
+    const open = await renderApp('/explore', { as: 'guide' });
+    const campuses = countRequests('GET', '/campuses');
+    await open.router.navigate('/guide/tours/new');
+    expect(await screen.findByText('경희대학교 국제캠퍼스')).toBeVisible();
+    expect(campuses()).toBe(1);
   });
 });
 
@@ -351,6 +392,79 @@ describe('G09 탐방 완료 (guide-s07)', () => {
       '/guide/tours',
     );
     expect(screen.queryByRole('button', { name: '탐방 완료 처리' })).not.toBeInTheDocument();
+  });
+
+  it('막힌 상태에서는 `진행 중` 칩 대신 탐방 상태 칩이 보인다', async () => {
+    await renderApp('/guide/tours/7/complete', { as: 'guide' });
+    await screen.findByRole('button', { name: '탐방 완료 처리' });
+    expect(screen.queryByText('진행 중')).not.toBeInTheDocument();
+    expect(screen.getByText('완료')).toBeVisible();
+  });
+
+  it('날짜 전 탐방(6)의 칩은 `모집 중`이다(`진행 중`이 아니다)', async () => {
+    await renderApp('/guide/tours/6/complete', { as: 'guide' });
+    await screen.findByRole('button', { name: '탐방 완료 처리' });
+    expect(screen.queryByText('진행 중')).not.toBeInTheDocument();
+    expect(screen.getByText('모집 중')).toBeVisible();
+  });
+
+  it.each([
+    ['COMPLETED', '이미 완료된 탐방이에요.', '이미 완료된 탐방이에요.'],
+    ['CANCELED', '이미 처리된 요청이에요.', '취소된 탐방은 완료할 수 없어요.'],
+  ] as const)(
+    '서버가 E409_INVALID_TOUR_STATUS로 거절하고 탐방이 %s이면 세분한 토스트 + 다시 읽은 뒤 비활성 + 사유',
+    async (status, toast, reason) => {
+      const { user, router } = await renderApp('/guide/tours/1/complete', {
+        as: 'guide',
+        checkpoint: 'CONFIRMED',
+      });
+      const done = await screen.findByRole('button', { name: '탐방 완료 처리' });
+      expect(done).toBeEnabled();
+      mutate((db) => {
+        db.tours.find((t) => t.id === 1)!.status = status;
+      });
+      server.use(
+        http.post('/api/tours/:tourId/complete', () => wireFail('E409_INVALID_TOUR_STATUS')),
+      );
+      await user.click(done);
+      // 토스트와 (같은 문장일 수 있는) 사유 줄이 함께 보인다.
+      expect((await screen.findAllByText(toast)).length).toBeGreaterThan(0);
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: '탐방 완료 처리' })).toBeDisabled(),
+      );
+      expect(screen.getAllByText(reason).length).toBeGreaterThan(0);
+      expect(screen.queryByText('진행 중')).not.toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/guide/tours/1/complete');
+    },
+  );
+
+  it('탐방 날짜 전이면(모집 중) 토스트 `탐방 날짜 이후에 완료할 수 있어요.` + 다시 읽은 뒤 비활성 + 날짜 사유', async () => {
+    const { user } = await renderApp('/guide/tours/1/complete', {
+      as: 'guide',
+      checkpoint: 'CONFIRMED',
+    });
+    const done = await screen.findByRole('button', { name: '탐방 완료 처리' });
+    expect(done).toBeEnabled();
+    // 화면이 열린 뒤 탐방 날짜가 뒤로 밀렸다(다른 기기에서 고침).
+    const later = getDb().tours.find((t) => t.id === 6)!.startsAt;
+    mutate((db) => {
+      db.tours.find((t) => t.id === 1)!.startsAt = later;
+    });
+    server.use(
+      http.post('/api/tours/:tourId/complete', () => wireFail('E409_INVALID_TOUR_STATUS')),
+    );
+    await user.click(done);
+    expect(await screen.findByText('탐방 날짜 이후에 완료할 수 있어요.')).toBeInTheDocument();
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '탐방 완료 처리' })).toBeDisabled(),
+    );
+    expect(
+      screen.getByText(`탐방 날짜(${formatShortDate(later)}) 이후에 완료할 수 있어요.`),
+    ).toBeVisible();
+    expect(screen.getByRole('link', { name: '신청자 관리로 이동' })).toHaveAttribute(
+      'href',
+      '/guide/tours/1/applicants',
+    );
   });
 });
 
@@ -447,6 +561,58 @@ describe('G10 탐방 취소 (guide-a04)', () => {
     expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
       'href',
       '/guide/tours',
+    );
+  });
+
+  it('막힌 상태에서는 `취소 대상` 칩 대신 탐방 상태 칩이 보인다', async () => {
+    await renderApp('/guide/tours/7/cancel', { as: 'guide' });
+    await screen.findByRole('button', { name: '탐방 취소 확정' });
+    expect(screen.queryByText('취소 대상')).not.toBeInTheDocument();
+    expect(screen.getByText('완료')).toBeVisible();
+  });
+
+  it.each([
+    ['COMPLETED', '이미 완료된 탐방이에요.', '완료된 탐방은 취소할 수 없습니다.'],
+    ['CANCELED', '이미 처리된 요청이에요.', '이미 취소된 탐방이에요.'],
+  ] as const)(
+    '서버가 E409_INVALID_TOUR_STATUS로 거절하고 탐방이 %s이면 세분한 토스트 + 다시 읽은 뒤 비활성 + 사유',
+    async (status, toast, reason) => {
+      const { user, router } = await renderApp('/guide/tours/1/cancel', {
+        as: 'guide',
+        checkpoint: 'CONFIRMED',
+      });
+      const confirm = await screen.findByRole('button', { name: '탐방 취소 확정' });
+      expect(confirm).toBeEnabled();
+      // 다른 기기에서 먼저 처리했다.
+      mutate((db) => {
+        db.tours.find((t) => t.id === 1)!.status = status;
+      });
+      server.use(
+        http.post('/api/tours/:tourId/cancel', () => wireFail('E409_INVALID_TOUR_STATUS')),
+      );
+      await user.click(confirm);
+      expect((await screen.findAllByText(toast)).length).toBeGreaterThan(0);
+      await waitFor(() =>
+        expect(screen.getByRole('button', { name: '탐방 취소 확정' })).toBeDisabled(),
+      );
+      expect(screen.getByText(reason)).toBeVisible();
+      expect(screen.queryByText('취소 대상')).not.toBeInTheDocument();
+      expect(router.state.location.pathname).toBe('/guide/tours/1/cancel');
+    },
+  );
+
+  it('모집 중인데 409가 오면 `이미 처리된 요청이에요.` 토스트이고 다시 읽어도 서버 기준으로 켜져 있다', async () => {
+    const { user } = await renderApp('/guide/tours/1/cancel', {
+      as: 'guide',
+      checkpoint: 'CONFIRMED',
+    });
+    const confirm = await screen.findByRole('button', { name: '탐방 취소 확정' });
+    server.use(http.post('/api/tours/:tourId/cancel', () => wireFail('E409_INVALID_TOUR_STATUS')));
+    await user.click(confirm);
+    expect(await screen.findByText('이미 처리된 요청이에요.')).toBeInTheDocument();
+    // 요청이 끝나면 잠금이 풀린다(버튼이 로딩에 갇히지 않는다).
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '탐방 취소 확정' })).toBeEnabled(),
     );
   });
 });
