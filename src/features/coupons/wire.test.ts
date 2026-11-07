@@ -44,6 +44,26 @@ describe('fromWireCoupon (명세 S-05 예시, 확장 없음)', () => {
     expect(fromWireCoupon({ ...row(), status: 'EXPIRED' }, ctx, EARLIER).state).toBe('EXPIRED');
   });
 
+  it('탐방 당일 0시 경계: 전날 23:59:59는 BEFORE_DAY, 당일 00:00:00은 USABLE(서울)', () => {
+    expect(fromWireCoupon(row(), ctx, new Date('2027-01-14T23:59:59+09:00')).state).toBe(
+      'BEFORE_DAY',
+    );
+    expect(fromWireCoupon(row(), ctx, new Date('2027-01-15T00:00:00+09:00')).state).toBe('USABLE');
+    const at = (iso: string) => fromWireLookup(lookup(), '용인 분식', new Date(iso)).state;
+    expect(at('2027-01-14T23:59:59+09:00')).toBe('BEFORE_DAY');
+    expect(at('2027-01-15T00:00:00+09:00')).toBe('USABLE');
+  });
+
+  it('usedAt · reviewed가 빠진 응답도 null · false로 읽는다', () => {
+    const { usedAt: _u, reviewed: _r, ...rest } = row();
+    void _u;
+    void _r;
+    expect(fromWireCoupon(rest as WireCoupon, ctx, DAY_OF)).toMatchObject({
+      usedAt: null,
+      reviewWritten: false,
+    });
+  });
+
   it('확장(store.category)이 있으면 그 값, 리뷰를 썼으면 reviewWritten', () => {
     const wire = { ...row(), store: { ...row().store, category: '식당' }, reviewed: true };
     expect(fromWireCoupon(wire, ctx, DAY_OF)).toMatchObject({

@@ -1,10 +1,4 @@
-import {
-  computeCouponState,
-  type CouponLookup,
-  type CouponState,
-  type RedeemResult,
-} from '@/features/coupons/model';
-import { tourTitle } from '@/features/tours/model';
+import { computeCouponState, type CouponState } from '@/features/coupons/model';
 import type { CouponRow, DB, TourRow } from '@/mocks/db/schema';
 import { nextId } from '@/mocks/db/ids';
 import { endOfSeoulDay, seoulDateKey, toSeoulIso } from '@/shared/lib/date';
@@ -103,36 +97,17 @@ export function findOwnCoupon(db: DB, ownerId: number, code: string): CouponRow 
   return coupon;
 }
 
-function toLookup(db: DB, coupon: CouponRow, now: Date): CouponLookup {
-  const app = db.applications.find((a) => a.id === coupon.applicationId)!;
-  const tour = tourOf(db, coupon);
-  const university = db.universities.find((u) => u.id === tour.universityId)!;
-  const guideProfile = db.guideProfiles.find((g) => g.id === tour.guideId);
-  return {
-    code: coupon.code,
-    state: stateOf(db, coupon, now),
-    discount: coupon.discountSnapshot,
-    storeName: db.stores.find((s) => s.id === coupon.storeId)!.name,
-    tourTitle: tourTitle(university.name, university.campusName, guideProfile?.major ?? null),
-    tourStartsAt: tour.startsAt,
-    studentName: db.users.find((u) => u.id === app.userId)!.name,
-    usedAt: coupon.usedAt,
-  };
+/** 사용 처리 뒤의 방문 수. 응답 모양은 `toWireRedeem`이 만든다(쿠폰 조회 모양의 출처는 `toWireCouponLookup` 하나, 2C-R26). */
+interface VisitorCounts {
+  tourVisitorCount: number;
+  totalVisitorCount: number;
 }
-
-/** 사장님이 코드로 쿠폰을 조회한다. 쿠폰은 바꾸지 않는다. */
-export function lookupCoupon(db: DB, ownerId: number, code: string, now: Date): CouponLookup {
-  return toLookup(db, findOwnCoupon(db, ownerId, code), now);
-}
-
-/** 목업은 방문 수를 늘 계산해 준다(실서버는 주지 않아 도메인 타입은 null을 허용한다, 2C-R12 ⑤). */
-type MockRedeemResult = RedeemResult & { tourVisitorCount: number; totalVisitorCount: number };
 
 /**
  * 쿠폰 사용 처리. 사용 가능(USABLE)할 때만 USED와 사용 시각을 남긴다. 방문 수는 이 상점의 USED 쿠폰 수다 —
  * 이 쿠폰과 같은 탐방 것만(`tourVisitorCount`), 탐방과 상관없이 전부(`totalVisitorCount`).
  */
-export function redeemCoupon(db: DB, ownerId: number, code: string, now: Date): MockRedeemResult {
+export function redeemCoupon(db: DB, ownerId: number, code: string, now: Date): VisitorCounts {
   const coupon = findOwnCoupon(db, ownerId, code);
   const state = stateOf(db, coupon, now);
   if (state === 'USED') {
@@ -146,7 +121,6 @@ export function redeemCoupon(db: DB, ownerId: number, code: string, now: Date): 
   const tourId = tourOf(db, coupon).id;
   const used = db.coupons.filter((c) => c.storeId === coupon.storeId && c.status === 'USED');
   return {
-    coupon: toLookup(db, coupon, now),
     tourVisitorCount: used.filter((c) => tourOf(db, c).id === tourId).length,
     totalVisitorCount: used.length,
   };

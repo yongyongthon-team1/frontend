@@ -83,6 +83,8 @@ export async function getMyCoupons(
   applicationId: number | undefined,
   campuses: CampusesInput,
 ): Promise<Coupon[]> {
+  // 쿠폰이 없어 캠퍼스가 쓰이지 않아도 약속의 거부가 처리되지 않은 채 남지 않게 한다(G13). 쓰이면 `getTour`가 그대로 받는다.
+  void Promise.resolve(campuses).catch(() => undefined);
   const tourOf = summaryLoader(campuses);
   if (applicationId === undefined) {
     const [coupons, rows] = await Promise.all([listMyCouponRows(), listMyTourRows()]);

@@ -13,6 +13,18 @@ const issued = {
   expiresAt: '2026-11-15T23:59:59+09:00',
 };
 
+describe('computeCouponState 탐방 당일 0시 경계', () => {
+  const day = {
+    status: 'ISSUED' as const,
+    tourStartsAt: '2027-01-15T13:00:00+09:00',
+    expiresAt: '2027-01-15T23:59:59+09:00',
+  };
+  it.each([
+    ['2027-01-14T23:59:59+09:00', 'BEFORE_DAY'],
+    ['2027-01-15T00:00:00+09:00', 'USABLE'],
+  ])('%s → %s', (now, state) => expect(computeCouponState(day, new Date(now))).toBe(state));
+});
+
 describe('computeCouponState', () => {
   it.each([
     ['2026-11-14T12:00:00+09:00', 'BEFORE_DAY'],

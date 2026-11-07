@@ -310,6 +310,21 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     expect(screen.getByText(description, { selector: 'p' })).toBeInTheDocument();
   });
 
+  it('사용 처리는 됐는데 뒤따르는 다시 확인이 실패하면 조회를 다시 불러와 사용 완료 카드를 보인다(다시 눌러도 이미 사용됨이 되지 않는다)', async () => {
+    const { user } = await renderApp('/owner/coupons/redeem', {
+      as: 'owner',
+      checkpoint: 'CONFIRMED',
+    });
+    await user.type(await screen.findByLabelText(CODE_LABEL), demoCouponCode(1));
+    await screen.findByText('사용 가능');
+    // 이 한 번만 실패한다 — 사용 처리 POST 뒤의 다시 확인.
+    server.use(http.get('/api/coupons/:couponCode', () => wireFail('E500'), { once: true }));
+    await user.click(screen.getByRole('button', { name: '사용 처리하기' }));
+    expect(await screen.findByText('이미 사용된 쿠폰')).toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '사용 처리하기' })).not.toBeInTheDocument();
+    expect(screen.queryByText('쿠폰 사용이 완료됐어요.')).not.toBeInTheDocument();
+  });
+
   it('다른 쿠폰 확인하기는 입력과 결과를 모두 지운다', async () => {
     const { user } = await renderApp('/owner/coupons/redeem', {
       as: 'owner',

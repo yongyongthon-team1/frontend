@@ -342,6 +342,19 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
     }
   });
 
+  it('쿠폰이 없어 캠퍼스가 쓰이지 않아도 실패한 캠퍼스 약속은 처리되지 않은 거부가 되지 않는다(G13)', async () => {
+    loginAs(STUDENT);
+    server.use(
+      http.get('/api/users/me/coupons', () => wirePage([])),
+      http.get('/api/users/me/tours', () => wirePage([])),
+    );
+    const failing = Promise.reject(new Error('campuses down'));
+    expect(await getMyCoupons(undefined, failing)).toEqual([]);
+    const failingAgain = Promise.reject(new Error('campuses down'));
+    expect(await getMyCoupons(999, failingAgain)).toEqual([]);
+    await new Promise((resolve) => setTimeout(resolve, 10)); // 처리되지 않은 거부는 이 사이에 vitest가 잡는다
+  });
+
   it('확인이 실패하면 가게 조회 실패보다 확인 오류가 먼저 보인다', async () => {
     loginAs(DEMO_STORE_OWNERS[1]!);
     server.use(

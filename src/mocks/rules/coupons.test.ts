@@ -9,7 +9,6 @@ import {
   expireCouponsForApplication,
   generateCouponCode,
   issueCouponsForApplication,
-  lookupCoupon,
   redeemCoupon,
 } from './coupons';
 
@@ -233,62 +232,12 @@ describe('generateCouponCode', () => {
     expect(generateCouponCode(new Set(['100000']))).toBe('100001'));
 });
 
-describe('lookupCoupon', () => {
-  it('내 가게 쿠폰이면 학생 이름 · 탐방 제목 · 할인 · 상태를 준다', () => {
-    const { store1 } = issueToYujin();
-    expect(lookupCoupon(db, owner(1), store1, dayOf)).toEqual({
-      code: store1,
-      state: 'USABLE',
-      discount: '식사 금액 10% 할인',
-      storeName: '서천 밥상',
-      tourTitle: '경희대 국제캠퍼스 산업디자인학과 탐방',
-      tourStartsAt: '2026-11-15T14:00:00+09:00',
-      studentName: '최유진',
-      usedAt: null,
-    });
-  });
-
-  it('상태는 시각으로 정하고(전날 BEFORE_DAY · 다음 날 EXPIRED) 조회는 쿠폰을 바꾸지 않는다', () => {
-    const { store1 } = issueToYujin();
-    const before = structuredClone(db);
-    expect(lookupCoupon(db, owner(1), store1, now).state).toBe('BEFORE_DAY');
-    expect(lookupCoupon(db, owner(1), store1, nextDay).state).toBe('EXPIRED');
-    expect(db).toEqual(before);
-  });
-
-  it('없는 코드는 COUPON_NOT_FOUND', () => {
-    issueToYujin();
-    expectRejected(() => lookupCoupon(db, owner(1), '000000', dayOf), 404, 'COUPON_NOT_FOUND');
-  });
-
-  it('다른 가게 쿠폰은 COUPON_OTHER_STORE', () => {
-    const { store1 } = issueToYujin();
-    expectRejected(() => lookupCoupon(db, owner(2), store1, dayOf), 403, 'COUPON_OTHER_STORE');
-    // 가게가 없는 계정
-    expectRejected(
-      () => lookupCoupon(db, id('guide@demo.kr'), store1, dayOf),
-      403,
-      'COUPON_OTHER_STORE',
-    );
-  });
-});
-
 describe('redeemCoupon', () => {
   it('사용하면 이번 탐방 방문 수 1', () => {
     const { app, store1 } = issueToYujin();
     const result = redeemCoupon(db, owner(1), store1, dayOf);
     expect(result.tourVisitorCount).toBe(1);
     expect(result.totalVisitorCount).toBe(6); // 지난 탐방 7에서 쓴 5장 + 방금 1장
-    expect(result.coupon).toEqual({
-      code: store1,
-      state: 'USED',
-      discount: '식사 금액 10% 할인',
-      storeName: '서천 밥상',
-      tourTitle: '경희대 국제캠퍼스 산업디자인학과 탐방',
-      tourStartsAt: '2026-11-15T14:00:00+09:00',
-      studentName: '최유진',
-      usedAt: DAY_OF_ISO,
-    });
     expect(couponsOf(app.id).find((c) => c.code === store1)).toMatchObject({
       status: 'USED',
       usedAt: DAY_OF_ISO,

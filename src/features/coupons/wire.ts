@@ -65,8 +65,8 @@ export function fromWireCoupon(
     tourTitle: ctx.tour.title,
     tourStartsAt: ctx.tour.startsAt,
     expiresAt: w.validUntil,
-    usedAt: w.usedAt,
-    reviewWritten: w.reviewed,
+    usedAt: w.usedAt ?? null,
+    reviewWritten: w.reviewed ?? false,
   };
 }
 
