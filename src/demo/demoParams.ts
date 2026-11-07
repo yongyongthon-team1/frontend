@@ -11,7 +11,7 @@ import { errorMessage } from '@/shared/lib/errors';
 import { ApiError } from '@/shared/lib/http';
 import { useDemoStore } from './demoStore';
 import { quickLogin } from './quickLogin';
-import { RESET_MISSING_REASON, resetDemoData } from './resetDemo';
+import { RESET_FAILED, resetDemoData, resetFailureDescription } from './resetDemo';
 
 // 원클릭 시연 링크(설계 5.8): `?demo=1&mode=mock|real&reset=1&checkpoint=CONFIRMED&as=student&present=1&key=…`
 // 한 번으로 시연 도구 · API 모드 · 데이터 초기화 · 역할 · 발표 모드를 세팅한다. 모르는 값은 없는 것으로 본다.
@@ -86,13 +86,7 @@ export async function runDemoParams(
     try {
       await resetDemoData({ checkpoint: p.checkpoint ?? undefined }, deps);
     } catch (error) {
-      // 실서버에 초기화가 없으면(404) 패널과 같은 사유를 보인다(2C-R28).
-      toast.error('시연 데이터를 초기화하지 못했어요.', {
-        description:
-          error instanceof ApiError && error.status === 404
-            ? RESET_MISSING_REASON
-            : failureDescription(error),
-      });
+      toast.error(RESET_FAILED, { description: resetFailureDescription(error) });
     }
   }
   if (p.as === null) return null;

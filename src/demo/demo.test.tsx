@@ -9,6 +9,7 @@ import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
+import { errorMessage } from '@/shared/lib/errors';
 import { DEMO_EMAILS, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { findApplicationId, renderApp } from '@/test/renderApp';
 import { wireFail, wireOk } from '@/test/wire';
@@ -262,15 +263,38 @@ describe('시연 패널', () => {
     expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
   });
 
-  it('헬스가 404면 캠퍼스 조회로 연결을 확인한다', async () => {
+  it('헬스가 404면 캠퍼스 조회로 연결을 확인한다(두 탐침 모두 토큰 없이)', async () => {
+    const auth: Record<string, string | null> = {};
     server.use(
-      http.get('/api/health', () => wireFail('E404')),
-      http.get('/api/campuses', () => wireOk({ items: [] })),
+      http.get('/api/health', ({ request }) => {
+        auth.health = request.headers.get('Authorization');
+        return wireFail('E404');
+      }),
+      http.get('/api/campuses', ({ request }) => {
+        auth.campuses = request.headers.get('Authorization');
+        return wireOk({ items: [] });
+      }),
     );
     useDemoStore.setState({ enabled: true });
     await renderApp('/', { as: 'student' });
+    expect(useSession.getState().token).not.toBeNull(); // 세션 토큰이 있어도
     expect(await within(panel()).findByText('정상')).toBeInTheDocument();
+    expect(auth).toEqual({ health: null, campuses: null });
   });
+
+  it.each(['E401', 'E403'])(
+    '헬스가 %s이어도(모르는 경로에 주는 서버) 캠퍼스 조회로 확인하고 세션을 끊지 않는다',
+    async (code) => {
+      server.use(
+        http.get('/api/health', () => wireFail(code)),
+        http.get('/api/campuses', () => wireOk({ items: [] })),
+      );
+      useDemoStore.setState({ enabled: true });
+      await renderApp('/', { as: 'student' });
+      expect(await within(panel()).findByText('정상')).toBeInTheDocument();
+      expect(useSession.getState().token).not.toBeNull();
+    },
+  );
 
   it('헬스가 404이고 캠퍼스 조회도 실패하면 응답 없음', async () => {
     server.use(
@@ -337,9 +361,16 @@ describe('시연 패널', () => {
     expect(resetCalls).toBe(1);
   });
 
-  it('초기화 잠금은 패널을 접었다 펴도(다시 그려도) 세션 동안 유지된다', async () => {
+  it('초기화 잠금은 패널을 접었다 펴도 세션 동안 유지된다', async () => {
     useDemoStore.setState({ enabled: true, resetMissing: true });
-    await renderApp('/', { as: 'student' });
+    const { user } = await renderApp('/', { as: 'student' });
+    const toggle = screen.getByRole('button', { name: '시연 패널' });
+    await user.click(toggle); // 연다
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
+    await user.click(toggle); // 접는다
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    await user.click(toggle); // 다시 편다
+    expect(toggle).toHaveAttribute('aria-expanded', 'true');
     const button = screen.getByRole('button', { name: '시연 데이터 초기화' });
     expect(button).toBeDisabled();
     expect(button).toHaveAccessibleDescription('실서버에는 시연 초기화가 없어요.');
@@ -350,7 +381,13 @@ describe('시연 패널', () => {
     useDemoStore.setState({ enabled: true });
     const { user } = await renderApp('/', { as: 'student' });
     await user.click(screen.getByRole('button', { name: '시연 데이터 초기화' }));
-    await screen.findByText('시연 데이터를 초기화하지 못했어요.');
+    const title = await screen.findByText('시연 데이터를 초기화하지 못했어요.');
+    // 403은 `X-Demo-Key` 설정 오류일 수 있다 — 코드 표 문구를 보이고 잠그지 않는다.
+    expect(
+      within(title.closest('[data-sonner-toast]') as HTMLElement).getByText(
+        errorMessage('FORBIDDEN'),
+      ),
+    ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '시연 데이터 초기화' })).toBeEnabled();
     expect(useDemoStore.getState().resetMissing).toBe(false);
   });

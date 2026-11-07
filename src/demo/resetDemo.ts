@@ -1,11 +1,24 @@
 import type { QueryClient } from '@tanstack/react-query';
 import { useSession } from '@/features/auth/session';
 import type { SeedCheckpoint } from '@/shared/config/demoAccounts';
+import { errorMessage } from '@/shared/lib/errors';
 import { ApiError, request } from '@/shared/lib/http';
 import { useDemoStore } from './demoStore';
 
 /** 실서버에는 초기화 엔드포인트가 없을 때(404)의 사유(2C-R28). 토스트 설명과 잠긴 버튼의 사유로 쓴다. */
 export const RESET_MISSING_REASON = '실서버에는 시연 초기화가 없어요.';
+
+/** 초기화 실패 토스트 제목(패널 버튼과 `reset=1` 링크가 같이 쓴다). */
+export const RESET_FAILED = '시연 데이터를 초기화하지 못했어요.';
+
+/**
+ * 초기화 실패 토스트의 설명. 404면 실서버에 초기화가 없다는 사유, 그 밖의 `ApiError`는 코드 표 문구
+ * (403은 `X-Demo-Key` 설정 오류일 수 있어 잠그지 않고 옛 문구 그대로), 아니면 없음.
+ */
+export function resetFailureDescription(error: unknown): string | undefined {
+  if (!(error instanceof ApiError)) return undefined;
+  return error.status === 404 ? RESET_MISSING_REASON : errorMessage(error.code);
+}
 
 /**
  * 시연 데이터 초기화(결정 0007). 목업은 오늘 기준 시드(체크포인트를 주면 그 단계까지 진행한 시드)로 되돌리고,

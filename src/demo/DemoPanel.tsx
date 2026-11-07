@@ -23,7 +23,12 @@ import { useBootStatus } from './bootStatus';
 import { checkBackend } from './health';
 import { useDemoStore, validLastCoupon, type AiSpeed, type MapMode } from './demoStore';
 import { quickLogin, switchToCouponOwner } from './quickLogin';
-import { RESET_MISSING_REASON, resetDemoData } from './resetDemo';
+import {
+  RESET_FAILED,
+  RESET_MISSING_REASON,
+  resetDemoData,
+  resetFailureDescription,
+} from './resetDemo';
 
 const ROLE_LABEL: Record<DemoRole, string> = {
   student: '고교생',
@@ -46,8 +51,6 @@ const CHECKPOINT_OPTIONS = SEED_CHECKPOINTS.map((value) => ({
 
 const P1_ACCOUNT_OPTIONS = DEMO_P1_ACCOUNTS.map(({ email, label }) => ({ value: email, label }));
 
-const RESET_FAILED = '시연 데이터를 초기화하지 못했어요.';
-
 const errorCode = (error: unknown) => (error instanceof ApiError ? error.code : undefined);
 
 /** 역할 전환 실패: 지금 세션 · 화면은 그대로이고 이유만 알린다(판정 31). */
@@ -56,13 +59,7 @@ function switchFailed(error: unknown) {
 }
 
 function resetFailed(error: unknown) {
-  // 실서버에 초기화가 없으면(404 — `resetDemoData`가 버튼을 잠근다) 사유를 알린다(2C-R28).
-  if (error instanceof ApiError && error.status === 404) {
-    toast.error(RESET_FAILED, { description: RESET_MISSING_REASON });
-    return;
-  }
-  const code = errorCode(error);
-  toast.error(RESET_FAILED, { description: code ? errorMessage(code) : undefined });
+  toast.error(RESET_FAILED, { description: resetFailureDescription(error) });
 }
 
 type Action = DemoRole | 'coupon' | 'account' | 'reset';
