@@ -78,7 +78,7 @@
 - `hs-s08` 상점 시트의 `최근 리뷰`(펼치기, 설계 5.6 · R-02)는 계약에만 먼저 넣었다(`CourseStop.review.recent` 최신순 최대 3개, 판정 34). 프론트 타입 · 목업 · 화면은 MVP 2단계에서 만든다.
 - `owner-s03`의 O07에는 V2에 없는 `이번 탐방으로 온 학생 {n}명`을 시연의 상권 효과 장면용으로 남겼다(판정 2A-R13). `owner-s02`에서 제휴가 없으면 `제휴 혜택을 설정해 주세요` 문구만 보이고(링크는 2B의 `/owner/store/partnership`이 생기면), 가게 연결은 `/owner/store/connect`(자리)로 간다.
 - `owner-a03`은 쿠폰 오류 3종(이미 사용 · 만료/다른 가게 · 없는 코드)과 "아직 사용할 수 없는 쿠폰"까지다. 리포트 빈 상태는 `owner-s04`(P2)와 함께 만든다.
-- `guide-s05`는 순서 · 한줄평 · 삭제까지다(V2 G03의 지점 시트). 지점 추가 · 상점 교체는 2단계(`guide-a03`)에서 만든다.
+- `guide-s05`는 순서 · 한줄평 · 삭제까지다(V2 G03의 지점 시트). 지점 추가 · 상점 교체는 2단계(`guide-a03`)에서 만든다. 백엔드는 지점 단위 편집이 없어 전체 스팟 PUT(빌더)이다(`buildSpots`, 2C-R13). 백엔드가 지점 1곳 이상을 요구해 마지막 지점의 빼기는 사유 `지점은 1곳 이상 있어야 해요.`와 함께 잠긴다(2C-R12 ②).
 
 ## API 연동
 
@@ -109,13 +109,10 @@
 | applications | `GET /api/guide/tours/:id/applicants` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `POST /api/guide/applications/:id/approve` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `POST /api/guide/applications/:id/reject` | guide-s03 | ⬜ | ✅ | ⬜ | ⬜ |
-| courses | `GET /api/guide/tours/:id/course` | guide-s04 · s05 · s06, `/guide/tours/:tourId/course` | ⬜ | ✅ | ⬜ | ⬜ |
-| courses | `POST /api/guide/tours/:id/course/draft` | guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
-| courses | `PUT /api/guide/tours/:id/course/order` | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |
-| courses | `PATCH /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |
-| courses | `DELETE /api/guide/tours/:id/course/stops/:stopId` | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |
-| courses | `POST /api/guide/tours/:id/course/confirm` | guide-s05 → guide-s06 | ⬜ | ✅ | ⬜ | ⬜ |
-| courses | `GET /api/tours/:id/course` | hs-s08 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `GET /api/tours/:tourId/course` (C-04, 백엔드 와이어 · 학생과 가이드가 같이 쓴다. 가이드는 404 → 코스 없음, 학생은 확정 전 `E409_COURSE_NOT_READY`) | hs-s08, guide-s04 · s05 · s06, `/guide/tours/:tourId/course` | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `POST /api/tours/:tourId/course` (C-01 AI 초안, 실패 `E502_AI_FAILED`) | guide-s04 · s05(다시 만들기) | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `PUT /api/tours/:tourId/course/spots` (C-02 전체 스팟 교체 — 순서 · 한줄평 · 빼기를 `buildSpots`로 만든다) | guide-s05 | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `POST /api/tours/:tourId/course/confirm` (C-03 · S-04, 제휴 0곳이면 `E422_PARTNER_REQUIRED`) | guide-s05 → guide-s06 | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | #18 `GET /api/guide/tours/:id/course/store-candidates` | guide-a03 주변 상점 선택 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | courses | #19 `POST /api/guide/tours/:id/course/stops` | guide-a03 (지점 추가) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | courses | #20 `POST /api/guide/tours/:id/course/stops/:stopId/replace` | guide-a03 (지점 교체) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |

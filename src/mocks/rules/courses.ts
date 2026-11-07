@@ -1,15 +1,16 @@
-import { slotTimes } from '@/features/courses/model';
+import { COURSE_NOTE_MAX } from '@/features/courses/model';
+import type { SpotInput } from '@/features/courses/wire';
 import { generateCourseDraft } from '@/mocks/ai/course';
 import { mockNow } from '@/mocks/clock';
 import { nextId } from '@/mocks/db/ids';
 import type { CourseRow, CourseStopRow, DB, TourRow } from '@/mocks/db/schema';
-import { toSeoulIso } from '@/shared/lib/date';
+import { seoulDateKey, toSeoulIso } from '@/shared/lib/date';
 import { issueCouponsForApplication } from './coupons';
-import { MockApiError } from './errors';
+import { fieldError, MockApiError } from './errors';
 
 // 코스 규칙(C-01~04). 탐방마다 코스 행은 하나다(PK = tourId). 모두 `db`를 직접 고친다(저장은 핸들러의 `mutate`).
 // 위에서부터 차례로 검사해 처음 걸린 오류를 던지고, 검사를 모두 마친 뒤에만 행을 바꾼다 — 규칙에 걸리면 DB는 그대로다.
-// 방문 시간은 위치 슬롯에 고정이라 순서를 바꾸거나 지점을 빼면 `stopOrder`(1..n)와 `visitTime`을 다시 매긴다.
+// 코스 수정은 백엔드처럼 전체 스팟 교체(`replaceSpots`)뿐이다 — 순서 · 시각 · 한줄평은 보낸 배열 그대로다(2C-R13).
 
 /** 가이드 본인의 탐방(없으면 404, 남의 탐방이면 403). */
 function guideTour(db: DB, guideId: number, tourId: number): TourRow {
@@ -38,13 +39,17 @@ function stopsOf(db: DB, tourId: number): CourseStopRow[] {
     .sort((a, b) => a.stopOrder - b.stopOrder);
 }
 
-/** 주어진 순서대로 `stopOrder` 1..n과 위치 슬롯 시간을 다시 매긴다. */
-function renumber(tour: TourRow, ordered: CourseStopRow[]): void {
-  const times = slotTimes(tour.startsAt, ordered.length);
-  ordered.forEach((stop, i) => {
-    stop.stopOrder = i + 1;
-    stop.visitTime = times[i];
-  });
+/** 이 탐방의 지점을 모두 `rows`로 갈아 끼운다(배열 참조는 그대로 둔다). */
+function replaceStopRows(db: DB, tourId: number, rows: CourseStopRow[]): void {
+  const others = db.courseStops.filter((s) => s.tourId !== tourId);
+  db.courseStops.splice(0, db.courseStops.length, ...others, ...rows);
+}
+
+/** 탐방 날짜(서울 `yyyy-MM-dd`)에 유효한 상점 제휴(쿠폰 발급과 같은 기준). 지점 행의 `partnershipId`는 보지 않는다. */
+export function partnershipOn(db: DB, storeId: number, tourDay: string) {
+  return db.partnerships.find(
+    (p) => p.storeId === storeId && p.startDate <= tourDay && tourDay <= p.endDate,
+  );
 }
 
 const approvedOf = (db: DB, tourId: number) =>
@@ -70,10 +75,11 @@ export function createDraft(
 
   const draft = generateCourseDraft(db, tourId);
   const at = toSeoulIso(now);
-  // 배열 참조는 그대로 두고 이 탐방의 지점만 갈아 끼운다.
-  const others = db.courseStops.filter((s) => s.tourId !== tourId);
-  db.courseStops.splice(0, db.courseStops.length, ...others);
-  for (const stop of draft.stops) db.courseStops.push({ ...stop, id: nextId(db), tourId });
+  replaceStopRows(
+    db,
+    tourId,
+    draft.stops.map((stop) => ({ ...stop, id: nextId(db), tourId })),
+  );
 
   if (existing) {
     existing.interests = draft.interests;
@@ -92,56 +98,100 @@ export function createDraft(
   return course;
 }
 
-/** 지점 순서를 바꾼다. `stopIds`는 지금 지점 id들을 빠짐없이 한 번씩 담아야 한다(아니면 400). 시간은 칸에 고정. */
-export function reorderStops(db: DB, guideId: number, tourId: number, stopIds: number[]): void {
-  const { tour, course } = draftCourse(db, guideId, tourId);
-  const stops = stopsOf(db, tourId);
-  // HTTP 본문에서 바로 넘어오면 배열이 아니거나 숫자가 아닐 수도 있다.
-  const ordered = Array.isArray(stopIds) ? stopIds.map((id) => stops.find((s) => s.id === id)) : [];
-  if (
-    !Array.isArray(stopIds) ||
-    stopIds.length !== stops.length ||
-    new Set(stopIds).size !== stopIds.length ||
-    ordered.some((s) => s === undefined)
-  ) {
-    throw new MockApiError(400, 'VALIDATION');
-  }
-  renumber(tour, ordered as CourseStopRow[]);
-  course.updatedAt = toSeoulIso(mockNow());
+const isRecord = (value: unknown): value is Record<string, unknown> =>
+  typeof value === 'object' && value !== null && !Array.isArray(value);
+
+const HHMM = /^\d{2}:\d{2}$/;
+
+/** 검사를 마친 스팟 하나. */
+interface CheckedSpot {
+  stopType: CourseStopRow['stopType'];
+  storeId: number | null;
+  campusBuildingId: number | null;
+  startTime: string;
+  description: string | null;
 }
 
-/** 지점 한줄평(`description`)을 고친다. 앞뒤 공백을 지우고, 비우면 null(화면은 추천 이유를 대신 보여준다). */
-export function updateStopDescription(
+/** 스팟 하나를 검사한다(HTTP 본문에서 바로 오므로 모양부터 본다). */
+function checkSpot(db: DB, tour: TourRow, spot: unknown): CheckedSpot {
+  if (!isRecord(spot)) throw fieldError('spots');
+  const { stopType, storeId, campusBuildingId, startTime, comment } = spot;
+  let place: Pick<CheckedSpot, 'stopType' | 'storeId' | 'campusBuildingId'>;
+  if (stopType === 'STORE' && db.stores.some((s) => s.id === storeId)) {
+    place = { stopType, storeId: storeId as number, campusBuildingId: null };
+  } else if (
+    stopType === 'CAMPUS' &&
+    db.campusPlaces.some(
+      (p) => p.campusBuildingId === campusBuildingId && p.universityId === tour.universityId,
+    )
+  ) {
+    place = { stopType, storeId: null, campusBuildingId: campusBuildingId as number };
+  } else {
+    throw fieldError('spots', '고를 수 없는 장소예요.');
+  }
+  if (typeof startTime !== 'string' || !HHMM.test(startTime)) throw fieldError('spots');
+  let description: string | null = null;
+  if (comment !== undefined && comment !== null) {
+    const text = typeof comment === 'string' ? comment.trim() : null;
+    if (text === null || text.length > COURSE_NOTE_MAX) {
+      throw fieldError('spots', '한줄평은 100자 이내로 적어 주세요.');
+    }
+    description = text === '' ? null : text;
+  }
+  return { ...place, startTime, description };
+}
+
+/**
+ * 코스 수정(C-02): 보낸 `spots` 배열 전체가 새 코스가 된다(배열 순서가 곧 순서, 시각 · 한줄평도 보낸 그대로). 같은 상점
+ * (캠퍼스면 같은 건물)을 유지한 지점은 기존 행의 id · 추천 이유를 지키고(같은 장소가 둘이면 앞에서부터 하나씩), 새로 넣은
+ * 지점의 추천 이유는 null이다. 확정된 코스는 고칠 수 없다.
+ */
+export function replaceSpots(
   db: DB,
   guideId: number,
   tourId: number,
-  stopId: number,
-  description: string,
+  spots: SpotInput[],
+  now: Date,
 ): void {
-  const { course } = draftCourse(db, guideId, tourId);
-  const stop = db.courseStops.find((s) => s.id === stopId && s.tourId === tourId);
-  if (!stop) throw new MockApiError(404, 'NOT_FOUND');
-  if (typeof description !== 'string') throw new MockApiError(400, 'VALIDATION');
-
-  const text = description.trim();
-  stop.description = text === '' ? null : text;
-  course.updatedAt = toSeoulIso(mockNow());
-}
-
-/** 지점을 뺀다. 남은 지점의 순서 · 시간을 다시 매긴다(마지막 지점도 뺄 수 있고, 그러면 확정이 막힌다). */
-export function deleteStop(db: DB, guideId: number, tourId: number, stopId: number): void {
   const { tour, course } = draftCourse(db, guideId, tourId);
-  const index = db.courseStops.findIndex((s) => s.id === stopId && s.tourId === tourId);
-  if (index < 0) throw new MockApiError(404, 'NOT_FOUND');
+  if (!Array.isArray(spots) || spots.length === 0) {
+    throw fieldError('spots', '지점을 1곳 이상 넣어 주세요.');
+  }
+  const checked = spots.map((spot: unknown) => checkSpot(db, tour, spot));
 
-  db.courseStops.splice(index, 1);
-  renumber(tour, stopsOf(db, tourId));
-  course.updatedAt = toSeoulIso(mockNow());
+  const tourDay = seoulDateKey(tour.startsAt);
+  const unused = stopsOf(db, tourId);
+  const rows = checked.map((spot, i): CourseStopRow => {
+    const at = unused.findIndex(
+      (row) =>
+        row.stopType === spot.stopType &&
+        row.storeId === spot.storeId &&
+        row.campusBuildingId === spot.campusBuildingId,
+    );
+    const [kept] = at < 0 ? [] : unused.splice(at, 1);
+    return {
+      id: kept?.id ?? nextId(db),
+      tourId,
+      stopType: spot.stopType,
+      campusBuildingId: spot.campusBuildingId,
+      storeId: spot.storeId,
+      partnershipId:
+        kept?.partnershipId ??
+        (spot.storeId === null ? null : (partnershipOn(db, spot.storeId, tourDay)?.id ?? null)),
+      stopOrder: i + 1,
+      visitTime: spot.startTime,
+      description: spot.description,
+      recommendationReason: kept?.recommendationReason ?? null,
+    };
+  });
+  replaceStopRows(db, tourId, rows);
+  course.updatedAt = toSeoulIso(now);
 }
 
 /**
  * 코스를 확정하고 승인자(신청 id 순서)마다 쿠폰을 발급해 그 합계를 돌려준다. 쿠폰 발급 규칙은 확정 코스만 보므로
- * 먼저 CONFIRMED로 바꾼 뒤 발급한다(승인자 × 탐방 날짜에 유효한 제휴 지점, 제휴 지점이 없으면 0장).
+ * 먼저 CONFIRMED로 바꾼 뒤 발급한다(승인자 × 탐방 날짜에 유효한 제휴 지점). 탐방 날짜에 유효한 제휴 지점이 하나도
+ * 없으면 확정할 수 없다(백엔드 C-03, 2C-R11).
  */
 export function confirmCourse(
   db: DB,
@@ -149,8 +199,13 @@ export function confirmCourse(
   tourId: number,
   now: Date,
 ): { issuedCouponCount: number } {
-  const { course } = draftCourse(db, guideId, tourId);
-  if (stopsOf(db, tourId).length === 0) throw new MockApiError(409, 'COURSE_EMPTY');
+  const { tour, course } = draftCourse(db, guideId, tourId);
+  const stops = stopsOf(db, tourId);
+  if (stops.length === 0) throw new MockApiError(409, 'COURSE_EMPTY');
+  const tourDay = seoulDateKey(tour.startsAt);
+  if (!stops.some((s) => s.storeId !== null && partnershipOn(db, s.storeId, tourDay))) {
+    throw new MockApiError(422, 'COURSE_PARTNER_REQUIRED');
+  }
 
   const at = toSeoulIso(now);
   course.status = 'CONFIRMED';

@@ -15,11 +15,18 @@ import {
 } from '@/features/auth/api';
 import { getInsight, listCampuses } from '@/features/campuses/api';
 import type { Coupon, CouponLookup, RedeemResult } from '@/features/coupons/model';
-import type { Course } from '@/features/courses/model';
+import {
+  getCourse,
+  getGuideCourse,
+  postConfirmCourse,
+  postCourseDraft,
+  putCourseSpots,
+} from '@/features/courses/api';
+import { COURSE_CRITERIA } from '@/features/courses/model';
+import { buildSpots } from '@/features/courses/spots';
 import { getMyStore } from '@/features/stores/api';
 import { getTour, listTours } from '@/features/tours/api';
 import type { RecommendationResult, TourFilter } from '@/features/tours/model';
-import { COURSE_CRITERIA } from '@/mocks/ai/course';
 import { getMockFile, putMockFile } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { configureHttp, request, upload } from '@/shared/lib/http';
@@ -38,6 +45,12 @@ import {
   SIGNUP_OK,
 } from '@/test/fixtures/backend/auth';
 import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
+import {
+  COURSE_CONFIRM_OK,
+  COURSE_DRAFT,
+  COURSE_SPOTS_OK,
+  COURSE_VIEW,
+} from '@/test/fixtures/backend/courses';
 import { MY_STORE } from '@/test/fixtures/backend/stores';
 import { TOUR_DETAIL, TOURS_LIST } from '@/test/fixtures/backend/tours';
 import { expectWireShape, rawFetch, wireFail } from '@/test/wire';
@@ -635,30 +648,72 @@ describe('applications', () => {
 });
 
 describe('courses', () => {
-  it('미확정 코스 조회는 404 COURSE_NOT_READY', async () => {
+  /** 코스 스팟의 목업 확장(2C-R8). */
+  const SPOT_EXT = ['spot_id', 'discount_text', 'review_average', 'review_count', 'coupon_count'];
+
+  it('코스가 아직 없는 가이드는 getGuideCourse가 null(404 E404)', async () => {
+    const { token } = await login('guide@demo.kr');
+    expect(await getGuideCourse(1, await listCampuses())).toBeNull();
+    const res = await rawFetch<{ code: string }>('/tours/1/course', { method: 'GET', token });
+    expect(res.status).toBe(404);
+    expect(res.body.code).toBe('E404');
+  });
+
+  it('확정 전이면 승인된 학생에게 COURSE_NOT_READY(409 E409_COURSE_NOT_READY) — 초안이 있어도', async () => {
     await login('seojun@demo.kr');
-    await expect(request('/tours/1/course')).rejects.toMatchObject({
-      status: 404,
+    const campuses = await listCampuses();
+    await expect(getCourse(1, campuses)).rejects.toMatchObject({
+      status: 409,
+      code: 'COURSE_NOT_READY',
+      backendCode: 'E409_COURSE_NOT_READY',
+    });
+    await login('guide@demo.kr');
+    await postCourseDraft(1, campuses);
+    await login('seojun@demo.kr');
+    await expect(getCourse(1, campuses)).rejects.toMatchObject({
+      status: 409,
       code: 'COURSE_NOT_READY',
     });
   });
 
-  it('승인된 신청자 · 가이드가 아니면 학생 코스 조회는 403', async () => {
+  it('승인된 신청자 · 그 가이드가 아니면 FORBIDDEN(403 E403)', async () => {
+    const campuses = await listCampuses();
     await login('yujin@demo.kr'); // 대기 중
-    await expect(request('/tours/1/course')).rejects.toMatchObject({
+    await expect(getCourse(1, campuses)).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+      backendCode: 'E403',
+    });
+    await login('guide@demo.kr');
+    await expect(getGuideCourse(2, campuses)).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
+    await expect(postCourseDraft(2, campuses)).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
+    await login('seojun@demo.kr');
+    await expect(postCourseDraft(1, campuses)).rejects.toMatchObject({
       status: 403,
       code: 'FORBIDDEN',
     });
   });
 
-  it('AI 초안 → 순서 변경 → 한줄평 → 지점 삭제 → 확정', async () => {
-    await login('guide@demo.kr');
-    await expect(request('/guide/tours/1/course')).rejects.toMatchObject({
-      status: 404,
-      code: 'NOT_FOUND',
-    });
+  it('AI 초안(201 · 명세 C-01 모양) → 스팟 PUT으로 순서 · 한줄평 · 빼기 → 확정 → 학생 코스', async () => {
+    resetDb({ today: new Date(), checkpoint: 'APPROVED' }); // 탐방 1 승인: 박서준 · 이하은 · 김민지
+    const { token } = await login('guide@demo.kr');
+    const campuses = await listCampuses();
 
-    const draft = await request<Course>('/guide/tours/1/course/draft', { method: 'POST' });
+    const created = await rawFetch<{ code: string; data: Record<string, unknown> }>(
+      '/tours/1/course',
+      { method: 'POST', token },
+    );
+    expect(created.status).toBe(201);
+    expect(created.body.code).toBe('S201');
+    expectWireShape(created.body.data, COURSE_DRAFT.data, SPOT_EXT);
+
+    const draft = (await getGuideCourse(1, campuses))!;
     expect(draft).toMatchObject({
       tourId: 1,
       status: 'DRAFT',
@@ -671,9 +726,7 @@ describe('courses', () => {
         startsAt: expect.stringMatching(/T14:00:00\+09:00$/),
         endsAt: expect.stringMatching(/T16:30:00\+09:00$/),
       },
-      interests: ['전공 수업', '캠퍼스 시설', '식사', '카페'],
       criteria: COURSE_CRITERIA,
-      confirmedAt: null,
       issuedCouponCount: 0,
     });
     expect(draft.stops.map((s) => [s.order, s.visitTime, s.type, s.name])).toEqual([
@@ -681,85 +734,165 @@ describe('courses', () => {
       [2, '15:10', 'STORE', '서천 밥상'],
       [3, '16:00', 'STORE', '카페 모래시계'],
     ]);
-    expect(await request<Course>('/guide/tours/1/course')).toEqual(draft);
+    expect(draft.stops.map((s) => s.campusBuildingId)).toEqual([3, null, null]);
 
+    // 둘째를 첫째 앞으로: 시각은 위치 슬롯 그대로, 지점 id는 지킨다(같은 상점 · 건물).
     const [campus, meal, cafe] = draft.stops;
-    const reordered = await request<Course>('/guide/tours/1/course/order', {
-      method: 'PUT',
-      body: { stopIds: [campus.id, cafe.id, meal.id] },
-    });
+    const reordered = await putCourseSpots(
+      1,
+      buildSpots(draft, { kind: 'reorder', stopIds: [meal.id, campus.id, cafe.id] }),
+      campuses,
+    );
     expect(reordered.stops.map((s) => [s.id, s.order, s.visitTime])).toEqual([
-      [campus.id, 1, '14:00'],
-      [cafe.id, 2, '15:10'],
-      [meal.id, 3, '16:00'],
+      [meal.id, 1, '14:00'],
+      [campus.id, 2, '15:10'],
+      [cafe.id, 3, '16:00'],
+    ]);
+    expect(reordered.stops.map((s) => s.recommendationReason)).toEqual([
+      meal.recommendationReason,
+      campus.recommendationReason,
+      cafe.recommendationReason,
     ]);
 
-    const described = await request<Course>(`/guide/tours/1/course/stops/${cafe.id}`, {
-      method: 'PATCH',
-      body: { description: '  과제하기 좋은 카페  ' },
-    });
+    const described = await putCourseSpots(
+      1,
+      buildSpots(reordered, {
+        kind: 'note',
+        stopId: cafe.id,
+        description: '  과제하기 좋은 카페  ',
+      }),
+      campuses,
+    );
     expect(described.stops.find((s) => s.id === cafe.id)?.description).toBe('과제하기 좋은 카페');
 
-    const removed = await request<Course>(`/guide/tours/1/course/stops/${campus.id}`, {
-      method: 'DELETE',
-    });
+    const removed = await putCourseSpots(
+      1,
+      buildSpots(described, { kind: 'remove', stopId: campus.id }),
+      campuses,
+    );
     expect(removed.stops.map((s) => [s.id, s.order, s.visitTime])).toEqual([
-      [cafe.id, 1, '14:00'],
-      [meal.id, 2, '15:10'],
+      [meal.id, 1, '14:00'],
+      [cafe.id, 2, '15:10'],
     ]);
+    expect(removed.stops[1].description).toBe('과제하기 좋은 카페');
 
-    const confirmed = await request<Course>('/guide/tours/1/course/confirm', { method: 'POST' });
-    expect(confirmed).toMatchObject({
-      status: 'CONFIRMED',
-      confirmedAt: expect.any(String),
-      issuedCouponCount: 4, // 승인 2명 × 제휴 상점 2곳
-    });
+    const confirmed = await postConfirmCourse(1, campuses);
+    expect(confirmed).toMatchObject({ status: 'CONFIRMED', issuedCouponCount: 6 }); // 승인 3 × 제휴 2
     await expect(
-      request('/guide/tours/1/course/order', {
-        method: 'PUT',
-        body: { stopIds: [meal.id, cafe.id] },
-      }),
-    ).rejects.toMatchObject({ status: 409, code: 'COURSE_NOT_DRAFT' });
+      putCourseSpots(1, buildSpots(confirmed, { kind: 'remove', stopId: meal.id }), campuses),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'COURSE_NOT_DRAFT',
+      backendCode: 'E409_COURSE_CONFIRMED',
+    });
 
     await login('seojun@demo.kr');
-    expect(await request<Course>('/tours/1/course')).toEqual(confirmed);
+    expect(await getCourse(1, campuses)).toEqual(confirmed);
   });
 
-  it('코스 규칙 오류를 상태 코드와 코드로 준다', async () => {
+  it('와이어 모양: 스팟 PUT · 확정 · 조회가 명세 C-02 · C-03 · C-04 예시와 같고 확장이 실제로 나간다', async () => {
+    resetDb({ today: new Date(), checkpoint: 'APPROVED' });
+    const { token } = await login('guide@demo.kr');
+    await postCourseDraft(1, await listCampuses());
+
+    const put = await rawFetch<{ code: string; data: Record<string, unknown> }>(
+      '/tours/1/course/spots',
+      {
+        method: 'PUT',
+        token,
+        body: {
+          spots: [
+            { stop_type: 'STORE', store_id: 1, start_time: '14:00', comment: '든든한 밥집' },
+            { stop_type: 'CAMPUS', campus_building_id: 3, start_time: '15:10' },
+            { stop_type: 'STORE', store_id: 2, start_time: '16:00' },
+          ],
+        },
+      },
+    );
+    expect(put.status).toBe(200);
+    expect(put.body.code).toBe('S200');
+    expectWireShape(put.body.data, COURSE_SPOTS_OK.data, SPOT_EXT);
+    const [meal, campus] = put.body.data.spots as Record<string, unknown>[];
+    expect(meal).toMatchObject({
+      stop_type: 'STORE',
+      store_id: 1,
+      campus_building_id: null,
+      category: '한식',
+      comment: '든든한 밥집',
+      is_partner: true,
+      spot_id: expect.any(Number),
+      discount_text: '식사 금액 10% 할인',
+      review_average: 4.6,
+      review_count: 5,
+    });
+    expect(campus).toMatchObject({
+      stop_type: 'CAMPUS',
+      store_id: null,
+      campus_building_id: 3,
+      category: null,
+      address: null,
+      is_partner: false,
+      review_summary: null,
+    });
+    expect(campus).not.toHaveProperty('discount_text');
+
+    const confirm = await rawFetch<{ code: string; data: unknown }>('/tours/1/course/confirm', {
+      method: 'POST',
+      token,
+    });
+    expect(confirm.status).toBe(200);
+    expect(confirm.body.code).toBe('S200');
+    expectWireShape(confirm.body.data, COURSE_CONFIRM_OK.data);
+    expect(confirm.body.data).toEqual({ tour_id: 1, status: 'CONFIRMED', coupon_count: 6 });
+
+    const view = await rawFetch<{ code: string; data: Record<string, unknown> }>(
+      '/tours/1/course',
+      { method: 'GET', token },
+    );
+    expect(view.status).toBe(200);
+    expect(view.body.code).toBe('S200');
+    expectWireShape(view.body.data, COURSE_VIEW.data, SPOT_EXT);
+    expect(view.body.data.coupon_count).toBe(6);
+  });
+
+  it('스팟 PUT 규칙 오류: 빈 배열 · 한줄평 101자는 E400과 spots 칸 오류', async () => {
+    resetDb({ today: new Date(), checkpoint: 'APPROVED' });
     await login('guide@demo.kr');
-    await expect(request('/guide/tours/6/course/draft', { method: 'POST' })).rejects.toMatchObject({
+    const campuses = await listCampuses();
+    await postCourseDraft(1, campuses);
+    await expect(putCourseSpots(1, [], campuses)).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      backendCode: 'E400',
+      fieldErrors: { spots: '지점을 1곳 이상 넣어 주세요.' },
+    });
+    await expect(
+      putCourseSpots(
+        1,
+        [{ stopType: 'STORE', storeId: 1, startTime: '14:00', comment: '가'.repeat(101) }],
+        campuses,
+      ),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { spots: '한줄평은 100자 이내로 적어 주세요.' },
+    });
+  });
+
+  it('승인 0명인 탐방의 초안은 NO_APPROVED_APPLICANTS(E409_NO_APPROVED_APPLICANT)', async () => {
+    await login('guide@demo.kr');
+    await expect(postCourseDraft(6, await listCampuses())).rejects.toMatchObject({
       status: 409,
       code: 'NO_APPROVED_APPLICANTS',
-    });
-    await expect(request('/guide/tours/2/course/draft', { method: 'POST' })).rejects.toMatchObject({
-      status: 403,
-      code: 'FORBIDDEN',
-    });
-    await expect(request('/guide/tours/2/course')).rejects.toMatchObject({
-      status: 403,
-      code: 'FORBIDDEN',
-    });
-    await request('/guide/tours/1/course/draft', { method: 'POST' });
-    await expect(
-      request('/guide/tours/1/course/order', { method: 'PUT', body: { stopIds: [1] } }),
-    ).rejects.toMatchObject({ status: 400, code: 'VALIDATION' });
-
-    await login('seojun@demo.kr');
-    await expect(request('/guide/tours/1/course/draft', { method: 'POST' })).rejects.toMatchObject({
-      status: 403,
-      code: 'FORBIDDEN',
-    });
-    // 초안이어도 학생에게는 아직 준비 중이다
-    await expect(request('/tours/1/course')).rejects.toMatchObject({
-      status: 404,
-      code: 'COURSE_NOT_READY',
+      backendCode: 'E409_NO_APPROVED_APPLICANT',
     });
   });
 
   it('확정 코스 지점: 이름 · 분류 · 제휴 · 리뷰 요약 · 데이터 출처', async () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
     await login('student@demo.kr');
-    const course = await request<Course>('/tours/1/course');
+    const campuses = await listCampuses();
+    const course = await getCourse(1, campuses);
     expect(course).toMatchObject({ status: 'CONFIRMED', issuedCouponCount: 6 });
     expect(course.stops[0]).toEqual({
       id: expect.any(Number),
@@ -773,6 +906,7 @@ describe('courses', () => {
       description: null,
       recommendationReason: '산업디자인학과 전공 공간에서 실제 수업 이야기를 들어요.',
       storeId: null,
+      campusBuildingId: 3,
       partnership: null,
       review: null,
       dataSource: null,
@@ -789,6 +923,7 @@ describe('courses', () => {
       description: null,
       recommendationReason: expect.stringContaining('신청자 2명이'),
       storeId: 1,
+      campusBuildingId: null,
       partnership: { discount: '식사 금액 10% 할인' },
       review: {
         average: 4.6,
@@ -806,7 +941,7 @@ describe('courses', () => {
     });
 
     await login('guide@demo.kr');
-    expect(await request<Course>('/tours/1/course')).toEqual(course);
+    expect(await getGuideCourse(1, campuses)).toEqual(course);
   });
 
   it('리뷰 없는 상점 · 탐방 날짜에 제휴가 없는 상점', async () => {
@@ -819,7 +954,7 @@ describe('courses', () => {
       db.partnerships.find((p) => p.storeId === cafe.storeId)!.endDate = '2000-01-01';
     });
     await login('guide@demo.kr');
-    const [, meal, cafe] = (await request<Course>('/guide/tours/1/course')).stops;
+    const [, meal, cafe] = (await getGuideCourse(1, await listCampuses()))!.stops;
     expect(meal).toMatchObject({
       name: '죽전 돼지국밥',
       partnership: null,

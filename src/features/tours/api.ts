@@ -18,7 +18,7 @@ import {
  * 캠퍼스 조인(2C-R9)용 목록. 이미 받은 배열이나 아직 받는 중인 약속(`loadCampuses`)을 모두 받는다 —
  * 약속이면 탐방 요청과 캠퍼스 요청이 동시에 나간다(errata G13).
  */
-type CampusesInput = University[] | Promise<University[]>;
+export type CampusesInput = University[] | Promise<University[]>;
 
 /** 관심사 문장으로 모집 중 탐방을 추천받는다(AI라 시간 제한이 길다). */
 export function recommend(q: RecommendationQuery): Promise<RecommendationResult> {

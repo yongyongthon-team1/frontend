@@ -78,7 +78,7 @@ const ROWS: Array<
     'CONFIRMED',
     () => `/my-tours/${appId()}/course`,
     '내 쿠폰 확인하기',
-    '/api/tours/:id/course',
+    '/api/tours/:tourId/course',
     () => qk.course(1),
   ],
 ];

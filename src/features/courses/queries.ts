@@ -7,40 +7,58 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
+import { loadCampuses } from '@/features/campuses/queries';
 import { qk } from '@/shared/api/queryKeys';
-import type { ApiError } from '@/shared/lib/http';
+import { errorMessage } from '@/shared/lib/errors';
+import { ApiError } from '@/shared/lib/http';
 import {
-  deleteCourseStop,
   getCourse,
   getGuideCourse,
-  patchStop,
   postConfirmCourse,
   postCourseDraft,
-  putStopOrder,
+  putCourseSpots,
 } from './api';
 import type { Course } from './model';
+import { buildSpots, type SpotEdit } from './spots';
+
+// 훅은 캠퍼스 목록을 기다리지 않고 `loadCampuses`의 약속째 넘긴다 — 캠퍼스 요청과 코스 요청이 동시에 나간다(errata G13).
 
 /** 학생이 보는 확정 코스. `tourId`를 아직 모르면(신청을 불러오는 중) 부르지 않는다. */
 export function useCourse(tourId: number | undefined): UseQueryResult<Course> {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: qk.course(tourId ?? -1),
-    queryFn: tourId === undefined ? skipToken : () => getCourse(tourId),
+    queryFn: tourId === undefined ? skipToken : () => getCourse(tourId, loadCampuses(queryClient)),
   });
 }
 
 /** 가이드의 코스. data가 null이면 아직 코스가 없다. */
 export function useGuideCourse(tourId: number): UseQueryResult<Course | null> {
-  return useQuery({ queryKey: qk.guideCourse(tourId), queryFn: () => getGuideCourse(tourId) });
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: qk.guideCourse(tourId),
+    queryFn: () => getGuideCourse(tourId, loadCampuses(queryClient)),
+  });
 }
 
-/** 코스를 바꾸는 요청은 바뀐 뒤의 전체 코스를 돌려주므로, 다시 부르지 않고 그 응답을 가이드 코스 캐시에 넣는다. */
-function useCourseMutation<TVariables>(
+/**
+ * 지점 편집(순서 · 한줄평 · 빼기). 백엔드는 전체 스팟 PUT뿐이라(2C-R13) 캐시의 가이드 코스(없으면 다시 받아)에 편집을
+ * 적용한 전체 `spots`를 보낸다. 응답이 바뀐 뒤의 전체 코스라 다시 부르지 않고 그 응답을 가이드 코스 캐시에 넣는다.
+ */
+function useSpotEdit<TVariables>(
   tourId: number,
-  mutationFn: (variables: TVariables) => Promise<Course>,
+  toEdit: (variables: TVariables) => SpotEdit,
 ): UseMutationResult<Course, ApiError, TVariables> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn,
+    mutationFn: async (variables: TVariables) => {
+      const current =
+        queryClient.getQueryData<Course | null>(qk.guideCourse(tourId)) ??
+        (await getGuideCourse(tourId, loadCampuses(queryClient)));
+      if (current === null) throw new ApiError(404, 'NOT_FOUND', errorMessage('NOT_FOUND'));
+      const spots = buildSpots(current, toEdit(variables));
+      return putCourseSpots(tourId, spots, loadCampuses(queryClient));
+    },
     onSuccess: (course) => {
       queryClient.setQueryData(qk.guideCourse(tourId), course);
     },
@@ -55,7 +73,7 @@ export function useCreateDraft(tourId: number): UseMutationResult<Course, ApiErr
   const queryClient = useQueryClient();
   return useMutation({
     mutationKey: qk.courseDraft(tourId),
-    mutationFn: () => postCourseDraft(tourId),
+    mutationFn: () => postCourseDraft(tourId, loadCampuses(queryClient)),
     onSuccess: (course) => {
       queryClient.setQueryData(qk.guideCourse(tourId), course);
       void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });
@@ -71,27 +89,32 @@ export function useIsCreatingDraft(tourId: number): boolean {
 
 /** 변수는 바뀐 순서의 전체 지점 id. */
 export function useReorderStops(tourId: number): UseMutationResult<Course, ApiError, number[]> {
-  return useCourseMutation(tourId, (stopIds: number[]) => putStopOrder(tourId, stopIds));
+  return useSpotEdit(tourId, (stopIds: number[]) => ({ kind: 'reorder', stopIds }));
 }
 
-/** 지점 한줄평. */
+/** 지점 한줄평. 앞뒤 공백을 떼고, 비우면 한줄평이 없어진다. */
 export function useUpdateStop(
   tourId: number,
 ): UseMutationResult<Course, ApiError, { stopId: number; description: string }> {
-  return useCourseMutation(tourId, ({ stopId, description }) =>
-    patchStop(tourId, stopId, description),
+  return useSpotEdit(
+    tourId,
+    ({ stopId, description }: { stopId: number; description: string }) => ({
+      kind: 'note',
+      stopId,
+      description,
+    }),
   );
 }
 
 export function useDeleteStop(tourId: number): UseMutationResult<Course, ApiError, number> {
-  return useCourseMutation(tourId, (stopId: number) => deleteCourseStop(tourId, stopId));
+  return useSpotEdit(tourId, (stopId: number) => ({ kind: 'remove', stopId }));
 }
 
 /** 확정하면 쿠폰이 발급되고 코스 상태가 바뀌므로 신청자 보드와 가이드 탐방 목록도 다시 불러온다. */
 export function useConfirmCourse(tourId: number): UseMutationResult<Course, ApiError, void> {
   const queryClient = useQueryClient();
   return useMutation({
-    mutationFn: () => postConfirmCourse(tourId),
+    mutationFn: () => postConfirmCourse(tourId, loadCampuses(queryClient)),
     onSuccess: (course) => {
       queryClient.setQueryData(qk.guideCourse(tourId), course);
       void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });

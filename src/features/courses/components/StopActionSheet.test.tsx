@@ -16,6 +16,7 @@ const STOP: CourseStop = {
   description: null,
   recommendationReason: '신청자 2명이 궁금해했어요.',
   storeId: 1,
+  campusBuildingId: null,
   partnership: { discount: '10% 할인' },
   review: null,
   dataSource: null,
@@ -35,6 +36,7 @@ function renderSheet(props: Partial<StopActionSheetProps> = {}) {
       stop={STOP}
       isFirst={false}
       isLast={false}
+      canRemove
       busy={false}
       {...handlers}
       {...props}
@@ -60,6 +62,20 @@ describe('StopActionSheet (G03 ≡ 시트)', () => {
     expect(screen.getByRole('button', { name: '아래로 이동' })).toBeDisabled();
     expect(screen.getByRole('button', { name: '한줄평' })).toBeEnabled();
     expect(screen.getByRole('button', { name: '빼기' })).toBeEnabled();
+  });
+
+  it('지점이 1곳뿐이면(canRemove false) 빼기는 비활성이고 사유가 버튼 설명이다 (2C-R12 ②)', () => {
+    renderSheet({ canRemove: false });
+    const remove = screen.getByRole('button', { name: '빼기' });
+    expect(remove).toBeDisabled();
+    expect(remove).toHaveAccessibleDescription('지점은 1곳 이상 있어야 해요.');
+    expect(screen.getByRole('button', { name: '한줄평' })).toBeEnabled();
+  });
+
+  it('뺄 수 있으면 사유가 없다', () => {
+    renderSheet();
+    expect(screen.getByRole('button', { name: '빼기' })).not.toHaveAccessibleDescription();
+    expect(screen.queryByText('지점은 1곳 이상 있어야 해요.')).toBeNull();
   });
 
   it('처리 중이면 모두 비활성', () => {

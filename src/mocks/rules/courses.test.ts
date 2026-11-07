@@ -2,16 +2,15 @@ import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { setMockNow } from '@/mocks/clock';
 import type { DB } from '@/mocks/db/schema';
 import { createSeed, DEMO_TOUR_ID } from '@/mocks/db/seed';
+import type { SpotInput } from '@/features/courses/wire';
 import type { ErrorCode } from '@/shared/lib/errors';
 import { approveApplication, cancelApplication } from './applications';
 import {
   canViewCourse,
   confirmCourse,
   createDraft,
-  deleteStop,
   isCourseAudience,
-  reorderStops,
-  updateStopDescription,
+  replaceSpots,
 } from './courses';
 
 const today = new Date('2026-11-15T01:00:00Z'); // 시연일 KST 10:00, 탐방 1은 그날 14:00
@@ -37,10 +36,17 @@ const appOf = (email: string, tourId = DEMO_TOUR_ID) =>
 const couponsOf = (applicationId: number) =>
   db.coupons.filter((c) => c.applicationId === applicationId);
 
-/** 규칙이 이 상태 · 코드로 던지고, DB는 하나도 바뀌지 않았는지 확인한다. */
-function expectRejected(fn: () => unknown, status: number, code: ErrorCode) {
+/** 규칙이 이 상태 · 코드(+ 칸 오류)로 던지고, DB는 하나도 바뀌지 않았는지 확인한다. */
+function expectRejected(
+  fn: () => unknown,
+  status: number,
+  code: ErrorCode,
+  fieldErrors?: Record<string, string>,
+) {
   const before = structuredClone(db);
-  expect(fn).toThrow(expect.objectContaining({ status, code }));
+  expect(fn).toThrow(
+    expect.objectContaining(fieldErrors ? { status, code, fieldErrors } : { status, code }),
+  );
   expect(db).toEqual(before);
 }
 
@@ -80,8 +86,16 @@ describe('createDraft', () => {
 
   it('다시 만들면 기존 초안 지점을 지우고 새로 만든다(코스 행은 하나)', () => {
     const first = draft();
-    updateStopDescription(db, guideId(), DEMO_TOUR_ID, first[1], '한줄평');
-    deleteStop(db, guideId(), DEMO_TOUR_ID, first[2]);
+    replaceSpots(
+      db,
+      guideId(),
+      DEMO_TOUR_ID,
+      [
+        { stopType: 'CAMPUS', campusBuildingId: 3, startTime: '14:00' },
+        { stopType: 'STORE', storeId: 1, startTime: '15:10', comment: '한줄평' },
+      ],
+      now,
+    );
 
     const again = createDraft(db, guideId(), DEMO_TOUR_ID, later);
     expect(db.courses.filter((c) => c.tourId === DEMO_TOUR_ID)).toEqual([again]);
@@ -129,138 +143,154 @@ describe('createDraft', () => {
   });
 });
 
-describe('reorderStops', () => {
-  it('순서를 바꾸면 시간은 칸에 고정', () => {
-    const g = guideId();
-    createDraft(db, g, 1);
-    const ids = db.courseStops
-      .filter((s) => s.tourId === 1)
-      .sort((a, b) => a.stopOrder - b.stopOrder)
-      .map((s) => s.id);
-    reorderStops(db, g, 1, [ids[2], ids[0], ids[1]]);
-    const after = db.courseStops
-      .filter((s) => s.tourId === 1)
-      .sort((a, b) => a.stopOrder - b.stopOrder);
-    expect(after.map((s) => s.id)).toEqual([ids[2], ids[0], ids[1]]);
-    expect(after.map((s) => s.visitTime)).toEqual(['14:00', '15:10', '16:00']);
-    expect(after.map((s) => s.stopOrder)).toEqual([1, 2, 3]);
-  });
+describe('replaceSpots (C-02 전체 교체)', () => {
+  /** 탐방 1 초안의 지점 행 [캠퍼스(건물 3), 서천 밥상(상점 1), 카페 모래시계(상점 2)]. */
+  const draftRows = () => {
+    draft();
+    return stopsOf().map((s) => ({ ...s }));
+  };
 
-  it('바꾼 시각을 코스 수정 시각으로 남긴다', () => {
-    const ids = draft();
-    setMockNow(later);
-    reorderStops(db, guideId(), DEMO_TOUR_ID, [ids[1], ids[0], ids[2]]);
+  it('같은 상점 · 건물은 지점 id · 추천 이유를 지키고, 새 상점은 이유 null, 순서 · 시각 · 한줄평은 입력대로', () => {
+    const [campus, , cafe] = draftRows();
+    replaceSpots(
+      db,
+      guideId(),
+      DEMO_TOUR_ID,
+      [
+        { stopType: 'STORE', storeId: 2, startTime: '13:30', comment: '  과제하기 좋은 카페 ' },
+        { stopType: 'CAMPUS', campusBuildingId: 3, startTime: '15:00' },
+        { stopType: 'STORE', storeId: 5, startTime: '16:45', comment: '   ' },
+      ],
+      later,
+    );
+    const rows = stopsOf();
+    expect(rows.map((s) => [s.id, s.stopOrder, s.visitTime, s.stopType, s.storeId])).toEqual([
+      [cafe.id, 1, '13:30', 'STORE', 2],
+      [campus.id, 2, '15:00', 'CAMPUS', null],
+      [rows[2].id, 3, '16:45', 'STORE', 5],
+    ]);
+    expect(rows[2].id).not.toBe(cafe.id);
+    expect(rows.some((s) => s.storeId === 1)).toBe(false); // 서천 밥상은 빠졌다
+    expect(rows.map((s) => s.recommendationReason)).toEqual([
+      cafe.recommendationReason,
+      campus.recommendationReason,
+      null,
+    ]);
+    expect(rows.map((s) => s.description)).toEqual(['과제하기 좋은 카페', null, null]);
+    expect(rows[1].campusBuildingId).toBe(3);
     expect(courseOf()!.updatedAt).toBe(LATER_ISO);
   });
 
-  it('지점 id 목록이 지금 지점들과 다르면 VALIDATION', () => {
-    const [a, b, c] = draft();
-    const g = guideId();
-    for (const stopIds of [[a, b], [a, b, c, c], [a, b, b], [a, b, 999], [a, b, c, 999], []]) {
-      expectRejected(() => reorderStops(db, g, DEMO_TOUR_ID, stopIds), 400, 'VALIDATION');
-    }
-    expectRejected(
-      () => reorderStops(db, g, DEMO_TOUR_ID, 'x' as unknown as number[]),
-      400,
-      'VALIDATION',
+  it('같은 상점을 두 번 넣으면 기존 행은 첫 자리만 지키고 둘째는 새 지점', () => {
+    const [, meal] = draftRows();
+    replaceSpots(
+      db,
+      guideId(),
+      DEMO_TOUR_ID,
+      [
+        { stopType: 'STORE', storeId: 1, startTime: '14:00' },
+        { stopType: 'STORE', storeId: 1, startTime: '15:10' },
+      ],
+      now,
     );
+    const rows = stopsOf();
+    expect(rows[0]).toMatchObject({ id: meal.id, recommendationReason: meal.recommendationReason });
+    expect(rows[1]).toMatchObject({ storeId: 1, recommendationReason: null });
+    expect(rows[1].id).not.toBe(meal.id);
+  });
+
+  it('빈 배열이면 VALIDATION과 spots 칸 오류', () => {
+    draft();
+    expectRejected(() => replaceSpots(db, guideId(), DEMO_TOUR_ID, [], now), 400, 'VALIDATION', {
+      spots: '지점을 1곳 이상 넣어 주세요.',
+    });
     expectRejected(
-      () => reorderStops(db, g, DEMO_TOUR_ID, [String(a), b, c] as unknown as number[]),
+      () => replaceSpots(db, guideId(), DEMO_TOUR_ID, 'x' as unknown as SpotInput[], now),
       400,
       'VALIDATION',
+      { spots: '지점을 1곳 이상 넣어 주세요.' },
     );
   });
 
+  it('한줄평은 100자까지, 101자면 VALIDATION', () => {
+    draft();
+    const spot = (comment: unknown) =>
+      [{ stopType: 'STORE', storeId: 1, startTime: '14:00', comment }] as SpotInput[];
+    replaceSpots(db, guideId(), DEMO_TOUR_ID, spot('가'.repeat(100)), now);
+    expect(stopsOf()[0].description).toBe('가'.repeat(100));
+    for (const comment of ['가'.repeat(101), 3]) {
+      expectRejected(
+        () => replaceSpots(db, guideId(), DEMO_TOUR_ID, spot(comment), now),
+        400,
+        'VALIDATION',
+        { spots: '한줄평은 100자 이내로 적어 주세요.' },
+      );
+    }
+  });
+
+  it('없는 상점 · 다른 학교 건물 · 모르는 유형이면 고를 수 없는 장소', () => {
+    draft();
+    for (const bad of [
+      { stopType: 'STORE', storeId: 999, startTime: '14:00' },
+      { stopType: 'STORE', startTime: '14:00' },
+      { stopType: 'CAMPUS', campusBuildingId: 1, startTime: '14:00' }, // 1은 강남대 건물
+      { stopType: 'CAMPUS', storeId: 1, startTime: '14:00' },
+      { stopType: 'PARK', storeId: 1, startTime: '14:00' },
+    ]) {
+      expectRejected(
+        () => replaceSpots(db, guideId(), DEMO_TOUR_ID, [bad] as SpotInput[], now),
+        400,
+        'VALIDATION',
+        { spots: '고를 수 없는 장소예요.' },
+      );
+    }
+  });
+
+  it('시각이 HH:mm이 아니면 VALIDATION', () => {
+    draft();
+    for (const startTime of ['9:00', '14:00:00', '', undefined]) {
+      expectRejected(
+        () =>
+          replaceSpots(
+            db,
+            guideId(),
+            DEMO_TOUR_ID,
+            [{ stopType: 'STORE', storeId: 1, startTime }] as SpotInput[],
+            now,
+          ),
+        400,
+        'VALIDATION',
+        { spots: '입력값을 확인해 주세요.' },
+      );
+    }
+  });
+
   it('확정 뒤에는 COURSE_NOT_DRAFT', () => {
-    const [a, b, c] = draft();
+    draft();
     confirmCourse(db, guideId(), DEMO_TOUR_ID, now);
     expectRejected(
-      () => reorderStops(db, guideId(), DEMO_TOUR_ID, [c, b, a]),
+      () =>
+        replaceSpots(
+          db,
+          guideId(),
+          DEMO_TOUR_ID,
+          [{ stopType: 'STORE', storeId: 1, startTime: '14:00' }],
+          later,
+        ),
       409,
       'COURSE_NOT_DRAFT',
     );
   });
 
   it('코스가 없으면 NOT_FOUND, 남의 탐방이면 FORBIDDEN', () => {
-    expectRejected(() => reorderStops(db, guideId(), DEMO_TOUR_ID, []), 404, 'NOT_FOUND');
-    const ids = draft();
+    const spots: SpotInput[] = [{ stopType: 'STORE', storeId: 1, startTime: '14:00' }];
+    expectRejected(() => replaceSpots(db, guideId(), DEMO_TOUR_ID, spots, now), 404, 'NOT_FOUND');
+    draft();
     expectRejected(
-      () => reorderStops(db, id('guide-dku@demo.kr'), DEMO_TOUR_ID, ids),
+      () => replaceSpots(db, id('guide-dku@demo.kr'), DEMO_TOUR_ID, spots, now),
       403,
       'FORBIDDEN',
     );
-  });
-});
-
-describe('updateStopDescription', () => {
-  it('한줄평을 앞뒤 공백 없이 저장하고, 비우면 null', () => {
-    const ids = draft();
-    setMockNow(later);
-    updateStopDescription(db, guideId(), DEMO_TOUR_ID, ids[1], '  여기 된장찌개가 맛있어요 \n');
-    expect(stopsOf()[1].description).toBe('여기 된장찌개가 맛있어요');
-    expect(courseOf()!.updatedAt).toBe(LATER_ISO);
-    updateStopDescription(db, guideId(), DEMO_TOUR_ID, ids[1], '   ');
-    expect(stopsOf()[1].description).toBeNull();
-  });
-
-  it('문자열이 아니면 VALIDATION', () => {
-    const ids = draft();
-    expectRejected(
-      () =>
-        updateStopDescription(db, guideId(), DEMO_TOUR_ID, ids[0], undefined as unknown as string),
-      400,
-      'VALIDATION',
-    );
-  });
-
-  it('이 탐방의 지점이 아니면 NOT_FOUND', () => {
-    draft();
-    expectRejected(
-      () => updateStopDescription(db, guideId(), DEMO_TOUR_ID, 999, '한줄평'),
-      404,
-      'NOT_FOUND',
-    );
-  });
-
-  it('확정 뒤에는 COURSE_NOT_DRAFT, 남의 탐방이면 FORBIDDEN', () => {
-    const ids = draft();
-    expectRejected(
-      () => updateStopDescription(db, id('guide-dku@demo.kr'), DEMO_TOUR_ID, ids[0], '한줄평'),
-      403,
-      'FORBIDDEN',
-    );
-    confirmCourse(db, guideId(), DEMO_TOUR_ID, now);
-    expectRejected(
-      () => updateStopDescription(db, guideId(), DEMO_TOUR_ID, ids[0], '한줄평'),
-      409,
-      'COURSE_NOT_DRAFT',
-    );
-  });
-});
-
-describe('deleteStop', () => {
-  it('지점을 빼면 남은 지점의 순서 · 시간을 다시 맞춘다', () => {
-    const [a, b, c] = draft();
-    deleteStop(db, guideId(), DEMO_TOUR_ID, a);
-    expect(stopsOf().map((s) => [s.id, s.stopOrder, s.visitTime])).toEqual([
-      [b, 1, '14:00'],
-      [c, 2, '15:10'],
-    ]);
-    deleteStop(db, guideId(), DEMO_TOUR_ID, c);
-    deleteStop(db, guideId(), DEMO_TOUR_ID, b);
-    expect(stopsOf()).toEqual([]);
-    expect(courseOf()!.status).toBe('DRAFT');
-  });
-
-  it('이 탐방의 지점이 아니면 NOT_FOUND', () => {
-    draft();
-    expectRejected(() => deleteStop(db, guideId(), DEMO_TOUR_ID, 999), 404, 'NOT_FOUND');
-  });
-
-  it('확정 뒤에는 COURSE_NOT_DRAFT', () => {
-    const ids = draft();
-    confirmCourse(db, guideId(), DEMO_TOUR_ID, now);
-    expectRejected(() => deleteStop(db, guideId(), DEMO_TOUR_ID, ids[0]), 409, 'COURSE_NOT_DRAFT');
   });
 });
 
@@ -290,7 +320,7 @@ describe('confirmCourse', () => {
     expect(couponsOf(appOf('yujin@demo.kr').id).map((c) => c.storeId)).toEqual([1, 2]);
   });
 
-  it('관련 업종 상점이 모두 비제휴면 제휴 지점 없이 만들고, 확정 시 쿠폰 0장', () => {
+  it('관련 업종 상점이 모두 비제휴면 제휴 지점 없이 만들고, 확정은 422 COURSE_PARTNER_REQUIRED (2C-R11)', () => {
     db.partnerships = db.partnerships.filter((p) => ![1, 2, 3].includes(p.storeId));
     draft();
     expect(stopsOf().map((s) => [s.storeId, s.partnershipId])).toEqual([
@@ -298,18 +328,38 @@ describe('confirmCourse', () => {
       [1, null],
       [2, null],
     ]);
-    expect(confirmCourse(db, guideId(), DEMO_TOUR_ID, now)).toEqual({ issuedCouponCount: 0 });
-    expect(courseOf()!.status).toBe('CONFIRMED');
+    expectRejected(
+      () => confirmCourse(db, guideId(), DEMO_TOUR_ID, now),
+      422,
+      'COURSE_PARTNER_REQUIRED',
+    );
+    expect(courseOf()!.status).toBe('DRAFT');
   });
 
-  it('반경 안에 제휴가 하나도 없으면 확정 시 쿠폰 0장', () => {
+  it('반경 안에 제휴가 하나도 없으면 확정은 422 COURSE_PARTNER_REQUIRED', () => {
     db.partnerships = [];
     draft();
-    expect(confirmCourse(db, guideId(), DEMO_TOUR_ID, now)).toEqual({ issuedCouponCount: 0 });
+    expectRejected(
+      () => confirmCourse(db, guideId(), DEMO_TOUR_ID, now),
+      422,
+      'COURSE_PARTNER_REQUIRED',
+    );
   });
 
-  it('지점이 없으면 COURSE_EMPTY', () => {
-    for (const stopId of draft()) deleteStop(db, guideId(), DEMO_TOUR_ID, stopId);
+  it('제휴가 탐방 날짜에 유효하지 않으면 제휴 지점이 아니다(422)', () => {
+    draft();
+    for (const p of db.partnerships) p.endDate = '2000-01-01';
+    expectRejected(
+      () => confirmCourse(db, guideId(), DEMO_TOUR_ID, now),
+      422,
+      'COURSE_PARTNER_REQUIRED',
+    );
+  });
+
+  it('지점이 없으면 COURSE_EMPTY(제휴 검사보다 먼저)', () => {
+    draft();
+    // 백엔드 규칙(spots 1개 이상)으로는 빈 코스를 만들 수 없어 DB를 직접 비운다.
+    db.courseStops = db.courseStops.filter((s) => s.tourId !== DEMO_TOUR_ID);
     expectRejected(() => confirmCourse(db, guideId(), DEMO_TOUR_ID, now), 409, 'COURSE_EMPTY');
   });
 

@@ -1,11 +1,13 @@
 import { screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { SeedCheckpoint } from '@/mocks/db/seed';
 import { getDb, mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
 import { formatDotDateWeekday, formatMonthDay } from '@/shared/lib/date';
+import { COURSE_VIEW } from '@/test/fixtures/backend/courses';
 import { findApplicationId, renderApp } from '@/test/renderApp';
+import { wireFail, wireOk } from '@/test/wire';
 
 const STUDENT = 'student@demo.kr';
 const PENDING_STUDENT = 'yujin@demo.kr';
@@ -140,6 +142,7 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
       mutate((db) => {
         db.coupons = db.coupons.filter((c) => !(c.applicationId === id && c.storeId === 2));
         db.reviews = db.reviews.filter((r) => r.storeId !== 2);
+        db.reviewSummaries = db.reviewSummaries.filter((r) => r.storeId !== 2);
       }),
     );
     await user.click(await screen.findByRole('button', { name: /카페 모래시계/ }));
@@ -148,6 +151,19 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     expect(within(sheet).queryByText('✦ AI 리뷰 요약')).not.toBeInTheDocument();
     expect(within(sheet).getByText('제휴 혜택 · 음료 1,000원 할인')).toBeInTheDocument();
     expect(within(sheet).queryByRole('link', { name: '쿠폰 보기' })).not.toBeInTheDocument();
+  });
+
+  it('리뷰 수가 없어도 AI 리뷰 요약이 있으면 요약을 보이고, 별점 줄 · 리뷰 없음 문구는 없다 (2C-R12 ⑥)', async () => {
+    // 확장 없는 명세 C-04 예시: 상점 지점에 review_summary만 있고 리뷰 평균 · 개수가 없다.
+    server.use(http.get('/api/tours/:tourId/course', () => wireOk(COURSE_VIEW.data)));
+    const { user } = await openCourseMap('CONFIRMED');
+    await user.click(await screen.findByRole('button', { name: /용인 분식/ }));
+    const sheet = await screen.findByRole('dialog', { name: '용인 분식' });
+    expect(within(sheet).getByText('✦ AI 리뷰 요약')).toBeInTheDocument();
+    expect(within(sheet).getByText('양이 많고 가격이 착하다는 평이 많아요')).toBeInTheDocument();
+    expect(within(sheet).queryByText(/리뷰 0개/)).not.toBeInTheDocument();
+    expect(within(sheet).queryByText('아직 리뷰가 없어요.')).not.toBeInTheDocument();
+    expect(within(sheet).getByText('제휴 혜택 · 쿠폰 사용 가능')).toBeInTheDocument();
   });
 
   it('미확정이면 준비 중', async () => {
@@ -178,7 +194,7 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
   it('승인 대기 신청은 코스가 확정돼 있어도 코스를 부르지 않고 승인 안내를 보인다', async () => {
     let courseGets = 0;
     server.use(
-      http.get('/api/tours/:id/course', () => {
+      http.get('/api/tours/:tourId/course', () => {
         courseGets += 1;
         return undefined; // 기본 핸들러로 넘긴다
       }),
@@ -228,23 +244,13 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
   );
 
   it('그 밖의 403(FORBIDDEN)은 준비 중', async () => {
-    server.use(
-      http.get('/api/tours/:id/course', () =>
-        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
-      ),
-    );
+    server.use(http.get('/api/tours/:tourId/course', () => wireFail('E403')));
     await openCourseMap('CONFIRMED');
     expect(await screen.findByText('코스 확정을 기다려요')).toBeInTheDocument();
   });
 
   it('그 밖의 코스 오류는 다시 시도할 수 있다', async () => {
-    server.use(
-      http.get(
-        '/api/tours/:id/course',
-        () => HttpResponse.json({ code: 'NOT_FOUND', message: 'x' }, { status: 404 }),
-        { once: true },
-      ),
-    );
+    server.use(http.get('/api/tours/:tourId/course', () => wireFail('E404'), { once: true }));
     const { user } = await openCourseMap('CONFIRMED');
     expect(await screen.findByText('찾을 수 없어요.')).toBeInTheDocument();
     expect(screen.queryByText('코스 확정을 기다려요')).not.toBeInTheDocument();

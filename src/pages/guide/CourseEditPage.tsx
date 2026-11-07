@@ -5,6 +5,7 @@ import { toast } from 'sonner';
 import { InsightCard } from '@/features/campuses/components/InsightCard';
 import { StopActionSheet } from '@/features/courses/components/StopActionSheet';
 import {
+  COURSE_NOTE_MAX,
   courseKinds,
   partnerStopCount,
   stopDurations,
@@ -44,7 +45,8 @@ const PARTNER_CAPTION = '코스에 제휴 가게 1곳 이상 포함해 주세요
  * 코스 완성(V2 G03 · guide-s04 · s05 · 판정 2A-R10): AI 초안과 편집이 한 화면이다. 지점 카드의 `≡`가 지점 시트(위로 ·
  * 아래로 이동 · 한줄평 · 빼기)를 열고, `이 코스로 확정하기`는 확정 전 점검(G08)으로 간다. 1단계 `다시 만들기`는 소제목
  * 오른쪽 작은 버튼이다. 코스를 바꾸는 요청이 하나라도 진행 중이면(AI 초안 생성 · 다시 만들기 포함) 편집 · 확정 버튼을
- * 모두 잠가 요청이 겹치지 않게 한다. 방문 시간은 서버가 위치 슬롯으로 다시 매긴 값을 그대로 그린다.
+ * 모두 잠가 요청이 겹치지 않게 한다. 편집은 전체 스팟 PUT이고 방문 시간은 위치 슬롯이다(`buildSpots`, 2C-R13). 백엔드는
+ * 지점이 1곳 이상이어야 해서 마지막 지점의 빼기는 잠근다(2C-R12 ②).
  *
  * 무대 예산(2A-R4 · R10): 생성 직후 지점 카드 3장이 판정 뷰포트(본문 약 420px)에서 하단 탭 위에 다 보여야 해서
  * ① 히어로는 일러스트를 작게, 배지와 소요를 한 줄로(높이 110 미만) ② 소제목 · 간격을 줄이고 ③ 카드 설명은 한 줄
@@ -257,6 +259,7 @@ export function CourseEditPage() {
         stop={sheetStop}
         isFirst={sheetIndex === 0}
         isLast={sheetIndex === stops.length - 1}
+        canRemove={stops.length > 1}
         busy={busy}
         onMoveUp={() => move(sheetIndex, -1)}
         onMoveDown={() => move(sheetIndex, 1)}
@@ -274,7 +277,12 @@ export function CourseEditPage() {
         }}
         title={noteStop ? `${noteStop.name} 한줄평` : '한줄평'}
       >
-        <Textarea label="한줄평" value={note} onChange={(e) => setNote(e.target.value)} />
+        <Textarea
+          label="한줄평"
+          value={note}
+          maxLength={COURSE_NOTE_MAX}
+          onChange={(e) => setNote(e.target.value)}
+        />
         <Button className="mt-4" loading={updateStop.isPending} onClick={onSaveNote}>
           저장
         </Button>

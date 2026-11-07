@@ -15,6 +15,8 @@ export interface CourseStop {
   description: string | null;
   recommendationReason: string | null;
   storeId: number | null;
+  /** 캠퍼스 지점의 건물 id(2C-R12 ①). 스팟 PUT은 전체 교체라 캠퍼스 지점을 다시 보낼 때 쓴다. 상점 지점은 null. */
+  campusBuildingId: number | null;
   partnership: { discount: string } | null;
   review: { average: number | null; count: number; summary: string | null } | null;
   dataSource: string | null;
@@ -40,6 +42,19 @@ export interface Course {
   confirmedAt: string | null;
   issuedCouponCount: number;
 }
+
+/** 코스 초안 화면의 "추천 상점 기준" 문구(설계 5.6 — 와이어프레임의 옛 기준 문구 대신 쓴다). 백엔드가 주지 않아 프론트가 둔다. */
+export const COURSE_CRITERIA =
+  '신청자들이 적은 하고 싶은 것 → 관련 업종 상점 매칭(인허가 공공데이터) · 제휴 상점 1곳 이상 포함';
+
+/** 상점 지점의 데이터 출처 라벨(설계 5.6). */
+export const STORE_DATA_SOURCE = '공공데이터(인허가) 기반';
+
+/** 지점 한줄평 최대 길이(백엔드 C-02 `comment` 100자 이내, 2C-R12 ③). */
+export const COURSE_NOTE_MAX = 100;
+
+/** 제휴 지점인데 할인 문구가 없을 때(실서버 — 스팟에 `discount_text` 확장이 없다, 2C-R8). */
+export const PARTNER_DISCOUNT_FALLBACK = '쿠폰 사용 가능';
 
 /** 시작 시각으로부터 각 지점까지의 분 단위 간격. 5번째 뒤로는 50분씩 늘어난다. */
 export const SLOT_OFFSETS_MIN = [0, 70, 120, 170, 220] as const;

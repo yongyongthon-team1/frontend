@@ -27,6 +27,9 @@ export function StoreSheet({ stop, coupon, onOpenChange }: StoreSheetProps) {
 
 function StoreDetail({ stop, coupon }: { stop: CourseStop; coupon: Coupon | null }) {
   const { review, partnership } = stop;
+  // AI 요약은 리뷰 수가 없어도(실서버에는 리뷰 수가 없다) 보이고, 별점 줄은 리뷰가 있을 때만이다(2C-R12 ⑥).
+  const hasSummary = Boolean(review?.summary);
+  const hasReviews = review !== null && review.count > 0;
   return (
     <div className="flex flex-col gap-4">
       <p className="text-[13px] text-muted">{`${stop.visitTime} · ${stop.category}`}</p>
@@ -38,24 +41,26 @@ function StoreDetail({ stop, coupon }: { stop: CourseStop; coupon: Coupon | null
         </div>
       ) : null}
 
-      {review && review.count > 0 ? (
+      {review && (hasSummary || hasReviews) ? (
         <div className="rounded-lg bg-bg p-4">
-          {review.summary ? (
+          {hasSummary ? (
             <>
               <p className="text-sm font-bold text-brand">✦ AI 리뷰 요약</p>
               <p className="mt-1.5 text-sm text-ink">{review.summary}</p>
             </>
           ) : null}
-          <p className="mt-1.5 flex items-center gap-1 text-[13px] text-muted">
-            <span aria-hidden className="text-warning">
-              ★
-            </span>
-            <span>
-              {review.average === null
-                ? `리뷰 ${review.count}개`
-                : `별점 ${review.average.toFixed(1)} · 리뷰 ${review.count}개`}
-            </span>
-          </p>
+          {hasReviews ? (
+            <p className="mt-1.5 flex items-center gap-1 text-[13px] text-muted">
+              <span aria-hidden className="text-warning">
+                ★
+              </span>
+              <span>
+                {review.average === null
+                  ? `리뷰 ${review.count}개`
+                  : `별점 ${review.average.toFixed(1)} · 리뷰 ${review.count}개`}
+              </span>
+            </p>
+          ) : null}
         </div>
       ) : review ? (
         <p className="text-[13px] text-muted">아직 리뷰가 없어요.</p>

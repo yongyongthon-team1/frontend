@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it } from 'vitest';
+import { COURSE_CRITERIA } from '@/features/courses/model';
 import type { DB, StoreRow } from '@/mocks/db/schema';
 import { createSeed } from '@/mocks/db/seed';
-import { COURSE_CRITERIA, COURSE_RADIUS_M, generateCourseDraft } from './course';
+import { COURSE_RADIUS_M, generateCourseDraft } from './course';
 
 const today = new Date('2026-11-15T01:00:00Z'); // 시연일 KST 10:00, 탐방 1은 그날 14:00
 

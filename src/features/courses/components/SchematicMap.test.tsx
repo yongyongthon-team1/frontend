@@ -17,6 +17,7 @@ function stop(id: number, order: number, name: string, lat: number, lng: number)
     description: null,
     recommendationReason: null,
     storeId: id,
+    campusBuildingId: null,
     partnership: null,
     review: null,
     dataSource: null,

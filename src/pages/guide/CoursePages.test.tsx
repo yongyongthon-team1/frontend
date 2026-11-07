@@ -6,12 +6,17 @@ import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
 import { formatMonthDay, formatTimeRange } from '@/shared/lib/date';
 import { renderApp } from '@/test/renderApp';
+import { wireFail } from '@/test/wire';
 
 afterEach(() => {
   server.events.removeAllListeners('request:start');
   setMockLatency({ base: 0, ai: 0 }); // 테스트 setup의 값으로 되돌린다
   configure({ reactStrictMode: false });
 });
+
+/** AI 초안 생성 요청(`POST /tours/{tourId}/course`, C-01). 확정(`…/course/confirm`)과 스팟 PUT은 세지 않는다. */
+const isDraftPost = (request: Request) =>
+  request.method === 'POST' && /^\/api\/tours\/\d+\/course$/.test(new URL(request.url).pathname);
 
 const G03_TITLE = '코스를 완성해 볼까요?';
 const G08_TITLE = '코스를 확정할까요?';
@@ -165,7 +170,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     configure({ reactStrictMode: true });
     let drafts = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'POST' && request.url.endsWith('/course/draft')) drafts++;
+      if (isDraftPost(request)) drafts++;
     });
     const { user, router } = await renderApp('/guide/tours/1/course/draft', {
       as: 'guide',
@@ -194,7 +199,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     setMockLatency({ base: 0, ai: 400 });
     let drafts = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'POST' && request.url.endsWith('/course/draft')) drafts++;
+      if (isDraftPost(request)) drafts++;
     });
     const { user, router } = await renderApp('/guide/tours/1/applicants', {
       as: 'guide',
@@ -213,13 +218,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
   });
 
   it('초안 생성이 실패하면 오류를 보여 주고, 다시 시도하면 다시 만든다', async () => {
-    server.use(
-      http.post(
-        '/api/guide/tours/:id/course/draft',
-        () => HttpResponse.json({ code: 'UNKNOWN', message: '실패' }, { status: 500 }),
-        { once: true },
-      ),
-    );
+    server.use(http.post('/api/tours/:tourId/course', () => wireFail('E500'), { once: true }));
     const { user } = await renderApp('/guide/tours/1/course/draft?generate=1', {
       as: 'guide',
       checkpoint: 'APPROVED',
@@ -234,7 +233,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
   it('다시 만들기는 확인 창을 거쳐 초안을 새로 만들고 G03에 머문다', async () => {
     let drafts = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'POST' && request.url.endsWith('/course/draft')) drafts++;
+      if (isDraftPost(request)) drafts++;
     });
     const { user, router } = await openCourse();
     await user.click(screen.getByRole('button', { name: '다시 만들기' }));
@@ -287,9 +286,9 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     );
   });
 
-  it('지점을 모두 빼면 이 코스로 확정하기는 비활성 + 사유, 제휴 안내는 경고, 포커스는 이웃 지점 · 소제목으로', async () => {
-    const { user, router } = await openCourse();
-    for (let left = 3; left > 0; left--) {
+  it('마지막 한 곳은 뺄 수 없다 — 두 곳을 빼면 일정 · 1개 장소, 남은 지점의 빼기는 비활성 + 사유, 포커스는 이웃 지점 · 소제목으로', async () => {
+    const { user } = await openCourse();
+    for (let left = 3; left > 1; left--) {
       const name = within(stopList()).getAllByRole('heading')[0]!.textContent!;
       await waitFor(() =>
         expect(screen.getByRole('button', { name: `${name} 편집` })).toBeEnabled(),
@@ -317,16 +316,15 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
         ).toHaveFocus(),
       );
     }
-    const toConfirm = screen.getByRole('button', { name: '이 코스로 확정하기' });
-    expect(toConfirm).toBeDisabled();
-    expect(toConfirm).toHaveAccessibleDescription('지점이 하나 이상 있어야 확정할 수 있어요.');
-    expect(screen.getByRole('heading', { name: '일정 · 0개 장소' })).toBeInTheDocument();
-    // 다시 만들기는 같은 화면에서 누를 수 있다. 제휴 안내는 그대로 보이고, 확정 점검은 미충족이다.
-    expect(screen.getByRole('button', { name: '다시 만들기' })).toBeEnabled();
-    expect(screen.getByText('코스에 제휴 가게 1곳 이상 포함해 주세요.')).toBeInTheDocument();
-    await router.navigate('/guide/tours/1/course/confirm');
-    expect(await screen.findByText('미충족')).toBeInTheDocument();
-    expect(screen.getByText('0개 장소로 구성했어요.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '일정 · 1개 장소' })).toBeInTheDocument();
+    expect(stopRows()).toEqual(['14:00 카페 모래시계']);
+    expect(screen.getByRole('button', { name: '이 코스로 확정하기' })).toBeEnabled();
+    // 백엔드는 지점이 1곳 이상이어야 코스를 바꿀 수 있다(2C-R12 ②) — 마지막 지점의 빼기는 사유와 함께 잠긴다.
+    const sheet = await openStopSheet(user, '카페 모래시계');
+    const remove = within(sheet).getByRole('button', { name: '빼기' });
+    expect(remove).toBeDisabled();
+    expect(remove).toHaveAccessibleDescription('지점은 1곳 이상 있어야 해요.');
+    expect(within(sheet).getByRole('button', { name: '한줄평' })).toBeEnabled();
   });
 
   it('초안을 만든 뒤 신청자 관리로 돌아가면 코스 버튼은 코스 이어서 편집, 탐방 목록도 다시 불러온다', async () => {
@@ -376,7 +374,7 @@ describe('코스 주소 가드 (막다른 곳 없음)', () => {
   it('초안이 있으면 /course/draft는 편집 화면으로 replace하고 다시 만들지 않는다', async () => {
     let drafts = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'POST' && request.url.endsWith('/course/draft')) drafts++;
+      if (isDraftPost(request)) drafts++;
     });
     const { router } = await openCourse();
     for (const path of ['/guide/tours/1/course/draft', '/guide/tours/1/course/draft?generate=1']) {
