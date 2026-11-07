@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { handlersByDomain, selectHandlers } from './registry';
 
 // 등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS (2C-R24).
-// NOT_MOCKED는 2B′가 채운다(남은 12개). 등록 핸들러는 34(백엔드) + 3(확장) = 37개다.
+// NOT_MOCKED는 2B′가 채운다(남은 8개). 등록 핸들러는 38(백엔드) + 3(확장) = 41개다.
 // 경로는 `/api`를 뗀 꼴이다(비교할 때 `label(h).replace(' /api/', ' /')`).
 
 /** `docs/api/backend-spec.md`의 `### METHOD /path` 46개(명세 순서). */
@@ -58,12 +58,8 @@ const BACKEND_CONTRACT: string[] = [
 /** 목업 전용 확장 엔드포인트(2C-R8). */
 const EXTENSIONS: string[] = ['GET /health', 'POST /demo/reset', 'GET /campuses/:campusId/insight'];
 
-/** 아직 목업이 없는 백엔드 경로 12개. 2B′가 채운다(채울 때마다 자기 줄을 지운다). */
+/** 아직 목업이 없는 백엔드 경로 8개. 2B′가 채운다(채울 때마다 자기 줄을 지운다). */
 const NOT_MOCKED: string[] = [
-  'POST /verifications/enrollment',
-  'POST /guardian-consents',
-  'GET /guardian-consents/:consentToken',
-  'PATCH /guardian-consents/:consentToken',
   'POST /verifications/business',
   'GET /admin/verifications',
   'GET /admin/verifications/:verificationId',
@@ -103,17 +99,17 @@ describe('registry', () => {
     expect(EXTENSIONS.filter((e) => BACKEND_CONTRACT.includes(e))).toEqual([]);
   });
 
-  it('NOT_MOCKED는 남은 12개이고 겹치지 않는다', () => {
-    expect(NOT_MOCKED).toHaveLength(12);
-    expect(new Set(NOT_MOCKED).size).toBe(12);
+  it('NOT_MOCKED는 남은 8개이고 겹치지 않는다', () => {
+    expect(NOT_MOCKED).toHaveLength(8);
+    expect(new Set(NOT_MOCKED).size).toBe(8);
   });
 
-  it('등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS, 모두 37개', () => {
+  it('등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS, 모두 41개', () => {
     const expected = new Set([
       ...BACKEND_CONTRACT.filter((e) => !NOT_MOCKED.includes(e)),
       ...EXTENSIONS,
     ]);
-    expect(expected.size).toBe(37);
+    expect(expected.size).toBe(41);
     const registered = selectHandlers('all').map(label);
     expect(new Set(registered).size).toBe(registered.length);
     expect(sorted(registered)).toEqual(sorted(expected));

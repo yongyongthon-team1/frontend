@@ -13,6 +13,7 @@ import { TourCancelPage } from '@/pages/guide/TourCancelPage';
 import { TourCompletePage } from '@/pages/guide/TourCompletePage';
 import { TourCreatePage } from '@/pages/guide/TourCreatePage';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { ConsentPage } from '@/pages/public/ConsentPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
 import { MyStorePage } from '@/pages/owner/MyStorePage';
 import { StoreReportPage } from '@/pages/owner/StoreReportPage';
@@ -57,10 +58,7 @@ export const routes: RouteObject[] = [
         path: '/signup',
         element: <PlaceholderPage title="회원가입 · 역할 선택" wireframe="hs-a01" />,
       },
-      {
-        path: '/consent/:token',
-        element: <PlaceholderPage title="보호자 동의" wireframe="hs-a02" />,
-      },
+      { path: '/consent/:token', element: <ConsentPage /> },
       {
         element: <RequireAuth />,
         children: [

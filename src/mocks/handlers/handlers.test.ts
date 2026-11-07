@@ -35,12 +35,20 @@ import {
 import { COURSE_CRITERIA } from '@/features/courses/model';
 import { buildSpots } from '@/features/courses/spots';
 import { getStoreReviews, postReview } from '@/features/reviews/api';
+import {
+  getConsent,
+  getDemoConsentToken,
+  patchConsent,
+  postEnrollment,
+  postGuardianConsent,
+} from '@/features/verification/api';
 import { getMyStore, getStoreReport, getStoreReportView } from '@/features/stores/api';
 import { findWishTours, getTour, listTours } from '@/features/tours/api';
 import type { TourFilter } from '@/features/tours/model';
 import { listGuideWishes, listMyWishes, patchTourWish, postTourWish } from '@/features/wishes/api';
 import { getMockFile, putMockFile } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
+import { DEMO_CONSENT_TOKENS } from '@/shared/config/demoAccounts';
 import { configureHttp, request, upload } from '@/shared/lib/http';
 import { createDraft } from '@/mocks/rules/courses';
 import { fieldError, MockApiError } from '@/mocks/rules/errors';
@@ -88,6 +96,18 @@ import {
   STORE_REVIEWS,
 } from '@/test/fixtures/backend/reviews';
 import { MY_STORE, NEARBY_STORES, STORE_REPORT } from '@/test/fixtures/backend/stores';
+import {
+  CONSENT_DECIDE_EXPIRED,
+  CONSENT_DECIDED,
+  CONSENT_EXISTS,
+  CONSENT_EXPIRED,
+  CONSENT_PROCESSED,
+  CONSENT_REQUESTED,
+  CONSENT_VIEW,
+  ENROLLMENT_INVALID,
+  ENROLLMENT_OK,
+  ENROLLMENT_SUBMITTED,
+} from '@/test/fixtures/backend/verification';
 import {
   TOUR_CANCEL_INVALID,
   TOUR_CANCELED,
@@ -2976,6 +2996,379 @@ describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
       expect(formFile(fake, 'document')).toBe(foreign);
       expect(formFile(fake, 'other')).toBeNull();
       expect(formFile(form, 'document')).toBeNull();
+    });
+  });
+});
+
+describe('재학 인증 · 보호자 동의 (U-05 · U-06)', () => {
+  type Envelope = {
+    code: string;
+    data: Record<string, unknown> | null;
+    errors: { field: string; reason: string }[] | null;
+  };
+  const DOC_MESSAGE = 'jpg, png 형식의 5MB 이하 파일만 올릴 수 있어요';
+  const HS_SUBMIT = {
+    role: 'HIGH_SCHOOL',
+    schoolName: '수원영통고등학교',
+    grade: 1,
+    document: testImage(),
+  } as const;
+  const GUARDIAN = { guardianName: '최보호', guardianEmail: 'parent@example.com' };
+
+  afterEach(() => server.events.removeAllListeners('request:start'));
+
+  /** 이 테스트 동안 나간 `POST /api/verifications/enrollment`의 폼 칸 이름. */
+  function captureEnrollmentKeys(): string[][] {
+    const seen: string[][] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (
+        request.method === 'POST' &&
+        new URL(request.url).pathname === '/api/verifications/enrollment'
+      ) {
+        void request
+          .clone()
+          .formData()
+          .then((form) => seen.push([...form.keys()]));
+      }
+    });
+    return seen;
+  }
+
+  /** `/api/guardian-consents/…` 요청에 실린 `Authorization` 값(없으면 null). */
+  function captureConsentAuth(): (string | null)[] {
+    const seen: (string | null)[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (new URL(request.url).pathname.startsWith('/api/guardian-consents/')) {
+        seen.push(request.headers.get('Authorization'));
+      }
+    });
+    return seen;
+  }
+
+  /** 멀티파트 `POST /api/verifications/enrollment`를 직접 보낸다(`rawFetch`는 JSON 전용). */
+  async function postEnrollmentRaw(token: string, fields: Record<string, string | File>) {
+    const form = new FormData();
+    for (const [key, value] of Object.entries(fields)) form.set(key, value);
+    const res = await fetch(new URL('/api/verifications/enrollment', window.location.origin), {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${token}` },
+      body: form,
+    });
+    return { status: res.status, body: (await res.json()) as Envelope };
+  }
+
+  it('고교생 제출: 인증 상태가 PENDING이 되고 폼 칸은 school_name · document다', async () => {
+    const keys = captureEnrollmentKeys();
+    await login('newbie@demo.kr');
+    expect((await fetchMe()).verificationStatus).toBe('NONE');
+    await expect(postEnrollment(HS_SUBMIT)).resolves.toBeUndefined();
+    expect((await fetchMe()).verificationStatus).toBe('PENDING');
+    await vi.waitFor(() => expect(keys).toEqual([['school_name', 'document']]));
+    // 학교는 제출 때 프로필에 반영되고, 학년은 둘째 쓰기(PATCH /users/me)의 몫이다.
+    expect((await fetchMe()).studentProfile).toMatchObject({ highSchoolName: '수원영통고등학교' });
+  });
+
+  it('대학생 제출: 칸은 campus_id(문자열) · document, 가이드 프로필의 학교가 맞춰진다', async () => {
+    const keys = captureEnrollmentKeys();
+    await login('guide-new@demo.kr');
+    await postEnrollment({ role: 'UNIVERSITY', universityId: 2, document: testImage() });
+    expect((await fetchMe()).verificationStatus).toBe('PENDING');
+    await vi.waitFor(() => expect(keys).toEqual([['campus_id', 'document']]));
+    expect((await fetchMe()).guideProfile?.universityId).toBe(2);
+  });
+
+  it('형식 오류는 VALIDATION + fieldErrors.document(명세 문장), 그 뒤 제출 · 재제출은 ALREADY_PROCESSED', async () => {
+    await login('newbie@demo.kr');
+    await expect(
+      postEnrollment({ ...HS_SUBMIT, document: testImage('x.pdf', { type: 'application/pdf' }) }),
+    ).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { document: DOC_MESSAGE },
+    });
+    expect((await fetchMe()).verificationStatus).toBe('NONE');
+    await postEnrollment(HS_SUBMIT);
+    await expect(postEnrollment(HS_SUBMIT)).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+      backendCode: 'E409_ALREADY_SUBMITTED',
+    });
+  });
+
+  it('학교 이름 · 캠퍼스 칸 오류는 화면 칸 이름(schoolName · campusId)으로 돌아온다', async () => {
+    await login('newbie@demo.kr');
+    await expect(postEnrollment({ ...HS_SUBMIT, schoolName: '   ' })).rejects.toMatchObject({
+      code: 'VALIDATION',
+      fieldErrors: { schoolName: '학교 이름은 50자 이하로 입력해 주세요.' },
+    });
+    await login('guide-new@demo.kr');
+    await expect(
+      postEnrollment({ role: 'UNIVERSITY', universityId: 6, document: testImage() }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      fieldErrors: { campusId: '5개교 이외 학교 선택 시 제출할 수 없어요.' },
+    });
+  });
+
+  it('413(본문 없음)은 FILE_TOO_LARGE', async () => {
+    server.use(
+      http.post('/api/verifications/enrollment', () => new HttpResponse(null, { status: 413 })),
+    );
+    await login('newbie@demo.kr');
+    await expect(postEnrollment(HS_SUBMIT)).rejects.toMatchObject({
+      status: 413,
+      code: 'FILE_TOO_LARGE',
+    });
+  });
+
+  it('요청 → 시연 토큰 → 보호자 조회(Authorization 없음) → 동의 → 토큰 사라짐 → 다시 동의는 ALREADY_PROCESSED', async () => {
+    const auth = captureConsentAuth();
+    await login('newbie@demo.kr');
+    expect(await getDemoConsentToken()).toBeNull();
+    await postGuardianConsent(GUARDIAN);
+    expect((await fetchMe()).guardianStatus).toBe('PENDING');
+    const token = await getDemoConsentToken();
+    expect(token).toEqual(expect.any(String));
+
+    // 대기 중 다시 요청은 막힌다(명세 E409_CONSENT_EXISTS).
+    await expect(postGuardianConsent(GUARDIAN)).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+      backendCode: 'E409_CONSENT_EXISTS',
+    });
+
+    expect(await getConsent(token!)).toMatchObject({
+      studentName: '최하늘',
+      schoolName: '수원영통고등학교',
+      status: 'PENDING',
+    });
+    await expect(patchConsent(token!, 'AGREED')).resolves.toBe('AGREED');
+    expect((await fetchMe()).guardianStatus).toBe('AGREED');
+    expect(await getDemoConsentToken()).toBeNull();
+    await expect(patchConsent(token!, 'AGREED')).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+      backendCode: 'E409_ALREADY_PROCESSED',
+    });
+    // 처리된 링크의 조회는 200 + 그 상태.
+    expect((await getConsent(token!)).status).toBe('AGREED');
+    // 로그인한 채 불러도 보호자 조회 · 결정에는 토큰을 싣지 않는다.
+    expect(auth.length).toBeGreaterThan(0);
+    expect(auth.every((value) => value === null)).toBe(true);
+  });
+
+  it('거부하면 REJECTED, 다시 요청하면 새 링크가 열리고 예전 링크는 CONSENT_LINK_INVALID', async () => {
+    await login('waiting@demo.kr');
+    await expect(patchConsent(DEMO_CONSENT_TOKENS.valid, 'REJECTED')).resolves.toBe('REJECTED');
+    expect((await fetchMe()).guardianStatus).toBe('REJECTED');
+    await postGuardianConsent(GUARDIAN);
+    expect((await fetchMe()).guardianStatus).toBe('PENDING');
+    await expect(getConsent(DEMO_CONSENT_TOKENS.valid)).rejects.toMatchObject({
+      status: 404,
+      code: 'CONSENT_LINK_INVALID',
+    });
+    expect(await getDemoConsentToken()).not.toBe(DEMO_CONSENT_TOKENS.valid);
+  });
+
+  it('시드 링크: rejected 계정은 재요청되고 예전 토큰은 404, waiting 계정은 409', async () => {
+    await login('rejected@demo.kr');
+    await postGuardianConsent(GUARDIAN);
+    await expect(getConsent(DEMO_CONSENT_TOKENS.rejected)).rejects.toMatchObject({ status: 404 });
+    await login('waiting@demo.kr');
+    await expect(postGuardianConsent(GUARDIAN)).rejects.toMatchObject({
+      backendCode: 'E409_CONSENT_EXISTS',
+    });
+  });
+
+  it('만료 링크는 조회 · 결정 모두 410 CONSENT_LINK_EXPIRED, 모르는 토큰은 404 CONSENT_LINK_INVALID', async () => {
+    await expect(getConsent(DEMO_CONSENT_TOKENS.expired)).rejects.toMatchObject({
+      status: 410,
+      code: 'CONSENT_LINK_EXPIRED',
+    });
+    await expect(patchConsent(DEMO_CONSENT_TOKENS.expired, 'AGREED')).rejects.toMatchObject({
+      status: 410,
+      code: 'CONSENT_LINK_EXPIRED',
+    });
+    await expect(getConsent('bad')).rejects.toMatchObject({
+      status: 404,
+      code: 'CONSENT_LINK_INVALID',
+    });
+    await expect(patchConsent('bad', 'AGREED')).rejects.toMatchObject({
+      code: 'CONSENT_LINK_INVALID',
+    });
+  });
+
+  it('보호자 조회 · 결정의 401은 지금 세션을 만료 처리하지 않는다(auth: false)', async () => {
+    const onUnauthorized = vi.fn();
+    configureHttp({ getToken: () => 'some-token', onUnauthorized });
+    server.use(
+      http.get('/api/guardian-consents/:token', () => wireFail('E401')),
+      http.patch('/api/guardian-consents/:token', () => wireFail('E401')),
+    );
+    await expect(getConsent('t')).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+    await expect(patchConsent('t', 'AGREED')).rejects.toMatchObject({ status: 401 });
+    expect(onUnauthorized).not.toHaveBeenCalled();
+    configureHttp({ onUnauthorized: () => {} });
+  });
+
+  it('PATCH 본문은 { agree } 불리언이다', async () => {
+    const bodies: unknown[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (
+        request.method === 'PATCH' &&
+        new URL(request.url).pathname.startsWith('/api/guardian-consents/')
+      ) {
+        void request
+          .clone()
+          .json()
+          .then((body: unknown) => bodies.push(body));
+      }
+    });
+    await patchConsent(DEMO_CONSENT_TOKENS.valid, 'REJECTED');
+    await vi.waitFor(() => expect(bodies).toEqual([{ agree: false }]));
+  });
+
+  it('서버의 400 형식 오류 예시는 fieldErrors.document로 읽는다', async () => {
+    server.use(
+      http.post('/api/verifications/enrollment', () =>
+        HttpResponse.json(ENROLLMENT_INVALID, { status: 400 }),
+      ),
+    );
+    await login('newbie@demo.kr');
+    await expect(postEnrollment(HS_SUBMIT)).rejects.toMatchObject({
+      code: 'VALIDATION',
+      fieldErrors: { document: DOC_MESSAGE },
+    });
+  });
+
+  describe('와이어', () => {
+    it('POST /verifications/enrollment: 201 + 명세 예시와 같은 모양, 재제출은 명세 409 코드', async () => {
+      const { token } = await login('newbie@demo.kr');
+      const res = await postEnrollmentRaw(token, {
+        school_name: '용인고등학교',
+        document: testImage(),
+      });
+      expect([res.status, res.body.code]).toEqual([201, ENROLLMENT_OK.code]);
+      expectWireShape(res.body.data, ENROLLMENT_OK.data);
+      expect(res.body.data).toMatchObject({ status: 'PENDING' });
+
+      const again = await postEnrollmentRaw(token, {
+        school_name: '용인고등학교',
+        document: testImage(),
+      });
+      expect([again.status, again.body.code]).toEqual([409, ENROLLMENT_SUBMITTED.code]);
+    });
+
+    it('POST /verifications/enrollment: 형식 오류는 400 E400 + errors[document]', async () => {
+      const { token } = await login('newbie@demo.kr');
+      const res = await postEnrollmentRaw(token, {
+        school_name: '용인고등학교',
+        document: testImage('x.pdf', { type: 'application/pdf' }),
+      });
+      expect([res.status, res.body.code]).toEqual([400, ENROLLMENT_INVALID.code]);
+      expect(res.body.errors).toEqual(ENROLLMENT_INVALID.errors);
+    });
+
+    it('POST /verifications/enrollment: JSON 본문은 400', async () => {
+      const { token } = await login('newbie@demo.kr');
+      const res = await rawFetch<Envelope>('/verifications/enrollment', {
+        method: 'POST',
+        token,
+        body: { school_name: '용인고등학교' },
+      });
+      expect(res.status).toBe(400);
+    });
+
+    it('POST /guardian-consents: 201 + 명세 예시와 같은 모양, 다시 요청하면 명세 409 코드', async () => {
+      const { token } = await login('newbie@demo.kr');
+      const body = { guardian_name: '최보호', guardian_email: 'parent@example.com' };
+      const res = await rawFetch<Envelope>('/guardian-consents', { method: 'POST', token, body });
+      expect([res.status, res.body.code]).toEqual([201, CONSENT_REQUESTED.code]);
+      expectWireShape(res.body.data, CONSENT_REQUESTED.data);
+      expect(res.body.data).toMatchObject({ status: 'PENDING' });
+
+      const again = await rawFetch<Envelope>('/guardian-consents', { method: 'POST', token, body });
+      expect([again.status, again.body.code]).toEqual([409, CONSENT_EXISTS.code]);
+    });
+
+    it('GET /guardian-consents/:token: 토큰 없이 200 + 명세 예시와 같은 모양', async () => {
+      const res = await rawFetch<Envelope>(`/guardian-consents/${DEMO_CONSENT_TOKENS.valid}`, {
+        method: 'GET',
+      });
+      expect([res.status, res.body.code]).toEqual([200, CONSENT_VIEW.code]);
+      expectWireShape(res.body.data, CONSENT_VIEW.data);
+      expect(res.body.data).toMatchObject({ student_name: '강하린', status: 'PENDING' });
+    });
+
+    it('GET /guardian-consents/:token: 만료는 410 E410_EXPIRED, 모르는 토큰은 404 E404', async () => {
+      const expired = await rawFetch<Envelope>(
+        `/guardian-consents/${DEMO_CONSENT_TOKENS.expired}`,
+        {
+          method: 'GET',
+        },
+      );
+      expect([expired.status, expired.body.code]).toEqual([410, CONSENT_EXPIRED.code]);
+      const bad = await rawFetch<Envelope>('/guardian-consents/bad', { method: 'GET' });
+      expect([bad.status, bad.body.code]).toEqual([404, 'E404']);
+    });
+
+    it('PATCH /guardian-consents/:token: 200 + 명세 예시 모양, 다시 처리하면 409, 만료는 410', async () => {
+      const res = await rawFetch<Envelope>(`/guardian-consents/${DEMO_CONSENT_TOKENS.valid}`, {
+        method: 'PATCH',
+        body: { agree: true },
+      });
+      expect([res.status, res.body.code]).toEqual([200, CONSENT_DECIDED.code]);
+      expectWireShape(res.body.data, CONSENT_DECIDED.data);
+      expect(res.body.data).toEqual({ status: 'AGREED' });
+
+      const again = await rawFetch<Envelope>(`/guardian-consents/${DEMO_CONSENT_TOKENS.valid}`, {
+        method: 'PATCH',
+        body: { agree: true },
+      });
+      expect([again.status, again.body.code]).toEqual([409, CONSENT_PROCESSED.code]);
+
+      const expired = await rawFetch<Envelope>(
+        `/guardian-consents/${DEMO_CONSENT_TOKENS.expired}`,
+        {
+          method: 'PATCH',
+          body: { agree: true },
+        },
+      );
+      expect([expired.status, expired.body.code]).toEqual([410, CONSENT_DECIDE_EXPIRED.code]);
+    });
+
+    it('PATCH /guardian-consents/:token: agree가 불리언이 아니면 400 + errors[agree]', async () => {
+      const res = await rawFetch<Envelope>(`/guardian-consents/${DEMO_CONSENT_TOKENS.valid}`, {
+        method: 'PATCH',
+        body: { agree: 'yes' },
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.errors?.map((e) => e.field)).toEqual(['agree']);
+    });
+
+    it('GET /users/me: 동의 대기(기한 전)인 고교생에게만 확장 guardian_consent_token', async () => {
+      const waiting = await login('waiting@demo.kr');
+      const me = await rawFetch<Envelope>('/users/me', { method: 'GET', token: waiting.token });
+      expectWireShape(me.body.data, ME_HIGH_SCHOOL.data, ['guardian_consent_token']);
+      expect(me.body.data).toMatchObject({
+        guardian_consent_status: 'PENDING',
+        guardian_consent_token: DEMO_CONSENT_TOKENS.valid,
+      });
+      expect(await getDemoConsentToken()).toBe(DEMO_CONSENT_TOKENS.valid);
+
+      // 동의 완료 · 거부 · 기한 지남 · 요청 전 · 가이드에는 키가 없다.
+      for (const email of [
+        'student@demo.kr',
+        'rejected@demo.kr',
+        'expired@demo.kr',
+        'newbie@demo.kr',
+        'guide@demo.kr',
+      ]) {
+        const { token } = await login(email);
+        const other = await rawFetch<Envelope>('/users/me', { method: 'GET', token });
+        expect(other.body.data).not.toHaveProperty('guardian_consent_token');
+        expect(await getDemoConsentToken()).toBeNull();
+      }
     });
   });
 });

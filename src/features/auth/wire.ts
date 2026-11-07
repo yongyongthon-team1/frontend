@@ -8,7 +8,7 @@ export interface WireLogin {
   user: { id: number; name: string; role: Role; verificationStatus: VerificationStatus };
 }
 
-/** `GET /users/me`의 `data`. `campusId`는 목업 전용 확장이다(2C-R8). */
+/** `GET /users/me`의 `data`. `campusId` · `guardianConsentToken`은 목업 전용 확장이다(2C-R8 · 2B′-R10). */
 export interface WireMe {
   id: number;
   email: string;
@@ -22,6 +22,8 @@ export interface WireMe {
   guardianConsentStatus: GuardianStatus | null;
   guideProfile: { major: string | null; intro: string | null } | null;
   campusId?: number | null;
+  /** 목업 전용 확장(2B′-R10): 동의 대기(기한 전)인 고교생에게만. `Me`에는 넣지 않고 `getDemoConsentToken()`이 읽는다. */
+  guardianConsentToken?: string;
 }
 
 /** `POST /auth/signup`의 `data`(토큰 없음). */

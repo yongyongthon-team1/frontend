@@ -38,7 +38,7 @@
 | `hs-s09` | 상점 쿠폰 · 사용 · V2(H05 내 쿠폰 · 코드 3자리씩, H15 사용 완료는 같은 주소의 USED 모습) · 리뷰 진입 ✅ | `/my-tours/:applicationId/coupons` · `/coupons/:couponId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s10` | 방문 리뷰 작성 ✅(H12, R-01 — 별점 + 한 줄 평, 저장하면 상점 시트를 연 코스 지도로) | `/reviews/new` | P1 | ✅ | ✅ | ⬜ | V2 부품(H12 노드 `2:475`) | ⬜ |
 | `hs-a01` | 회원가입 · 역할 선택 | `/signup` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `hs-a02` | 보호자 동의 페이지 | `/consent/:token` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-a02` | 보호자 동의 페이지 ✅(U-06 공개 링크 — 동의하기 · 동의하지 않기, 만료 · 처리됨 · 잘못된 링크 카드) | `/consent/:token` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
 | `hs-a03` | 내 정보 · 인증 상태 | `/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `T-07` | 내 희망 사항 · 고치기(V2 부품, 시안 없음) | `/me/wishes` · `/me/wishes/:wishId/edit` | P1 | ✅ | ✅ | ⬜ | V2 부품(시안 없음) | ⬜ |
 | `T-08` | 고교생 희망 사항(가이드, V2 부품, 시안 없음) | `/guide/wishes` | P1 | ✅ | ✅ | ⬜ | V2 부품(시안 없음) | ⬜ |
@@ -128,17 +128,17 @@
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 (U-07) | ⬜ | ⬜ | ⬜ | ⬜ |
 | reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 ✅ 화면 연결 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
 | reviews | `GET /api/stores/:storeId/reviews` | hs-s08 · 가이드 확정 코스 상점 시트의 요약 · 별점 · 접힌 `최근 리뷰` ✅ 화면 연결 (R-02, `page=1&size=3` 한 쪽, 캠퍼스 지점은 부르지 않음. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
-| verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05) | ⬜ | ⬜ | ⬜ | ⬜ |
-| verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 (U-06) | ⬜ | ⬜ | ⬜ | ⬜ |
-| verification | `GET /api/guardian-consents/:consentToken` | hs-a02 보호자 동의 안내 (U-06) | ⬜ | ⬜ | ⬜ | ⬜ |
-| verification | `PATCH /api/guardian-consents/:consentToken` | hs-a02 동의 · 거부 (U-06) | ⬜ | ⬜ | ⬜ | ⬜ |
+| verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05, multipart `school_name`(고교생) · `campus_id`(대학생) + `document`, jpg · png 5MB. 고교생은 이어서 `PATCH /users/me`로 학년을 저장. 화면은 MVP 2B′ Task 10 · 11) | ⬜ | ✅ | ⬜ | ⬜ |
+| verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 (U-06, 거부 · 만료일 때만 다시 요청, 링크 7일. 화면은 MVP 2B′ Task 10) | ⬜ | ✅ | ⬜ | ⬜ |
+| verification | `GET /api/guardian-consents/:consentToken` | hs-a02 보호자 동의 안내 ✅ 화면 연결 (U-06, 로그인 없이 `auth: false`. 처리된 링크는 200 + 그 상태, 만료 `E410_EXPIRED` → `CONSENT_LINK_EXPIRED`, 없는 토큰 `E404` → `CONSENT_LINK_INVALID`) | ⬜ | ✅ | ⬜ | ⬜ |
+| verification | `PATCH /api/guardian-consents/:consentToken` | hs-a02 동의 · 거부 ✅ 화면 연결 (U-06, 본문 `{ agree }`, 로그인 없이 `auth: false`, 처리한 요청은 `E409_ALREADY_PROCESSED`) | ⬜ | ✅ | ⬜ | ⬜ |
 | admin | `GET /api/admin/verifications` | owner-s06 인증 심사 목록 (U-08 보완) | ⬜ | ⬜ | ⬜ | ⬜ |
 | admin | `GET /api/admin/verifications/:verificationId` | owner-a02 심사 상세 (U-08 보완) | ⬜ | ⬜ | ⬜ | ⬜ |
 | admin | `PATCH /api/admin/verifications/:verificationId` | owner-a02 승인 · 반려 사유 (U-08) | ⬜ | ⬜ | ⬜ | ⬜ |
 | demo | `GET /api/health` | 시연 패널 (확장 · 목업 전용, 봉투) | ⬜ | ✅ | ⬜ | ⬜ |
 | demo | `POST /api/demo/reset` | 시연 패널 (확장 · 목업 전용, 봉투) | ⬜ | ✅ | ⬜ | ⬜ |
 
-- 목업 사진(재학 인증 업로드)은 메모리에만 있어 새로고침하거나 시연 초기화를 하면 사라진다(운영자 화면은 그때 정적 견본 사진을 보인다, 2B-R9). 이 기능의 목업은 아직 없다(`POST /verifications/enrollment` ⬜).
+- 목업 사진(재학 인증 업로드)은 메모리에만 있어 새로고침하거나 시연 초기화를 하면 사라진다(운영자 화면은 그때 정적 견본 사진을 보인다, 2B-R9). 목업은 `POST /verifications/enrollment` ✅(`jpg · png 5MB`)다. 동의 대기인 고교생의 `GET /users/me`에는 목업 전용 확장 `guardian_consent_token`이 붙고, 실서버에는 없다(2B′-R10).
 
 ## 팀 요청 · 블로커
 

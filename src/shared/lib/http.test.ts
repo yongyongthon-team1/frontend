@@ -140,7 +140,7 @@ describe('upload', () => {
     await expect(upload('/files', new FormData())).rejects.toMatchObject({
       status: 413,
       code: 'FILE_TOO_LARGE',
-      message: '10MB 이하 이미지만 올릴 수 있어요.',
+      message: '5MB 이하 이미지만 올릴 수 있어요.',
     });
   });
 

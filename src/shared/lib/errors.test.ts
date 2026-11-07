@@ -47,6 +47,15 @@ describe('2C에서 새로 쓰는 에러 코드', () => {
   });
 });
 
+describe('2B′-R7 사진 규칙(jpg · png, 5MB)', () => {
+  it.each([
+    ['FILE_TYPE', 'jpg, png 이미지만 올릴 수 있어요.'],
+    ['FILE_TOO_LARGE', '5MB 이하 이미지만 올릴 수 있어요.'],
+  ])('%s는 표의 문구', (code, message) => {
+    expect(errorMessage(code)).toBe(message);
+  });
+});
+
 describe('isErrorCode', () => {
   it('표에 있는 이름만 true', () => {
     expect(isErrorCode('TOUR_CLOSED')).toBe(true);

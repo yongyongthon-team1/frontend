@@ -1,7 +1,7 @@
 export interface TestImageOptions {
   /** 기본 `image/jpeg`. 형식 오류 시험에는 `application/pdf` 같은 값을 준다. */
   type?: string;
-  /** 주면 파일이 이 크기인 것처럼 보인다(내용은 작게 둔다). 10MB 경계 시험용. */
+  /** 주면 파일이 이 크기인 것처럼 보인다(내용은 작게 둔다). 용량 경계(5MB) 시험용. */
   size?: number;
 }
 

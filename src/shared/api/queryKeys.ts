@@ -49,5 +49,9 @@ export const qk = {
   myStore: ['myStore'] as const,
   /** 사장님 방문 · 리뷰 리포트(S-07) — 리포트 · 내 가게 · 상점 리뷰를 합성한 값. */
   storeReport: ['storeReport'] as const,
+  /** 보호자 동의 안내(공개, U-06). 링크 토큰마다 한 항목. */
+  consent: (token: string) => ['consent', token] as const,
+  /** 시연 도구용 보호자 링크 토큰(목업 확장 `guardian_consent_token`, 2B′-R10). */
+  demoConsentToken: ['demoConsentToken'] as const,
   health: ['health'] as const,
 };

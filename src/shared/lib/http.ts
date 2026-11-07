@@ -3,7 +3,7 @@ import { errorMessage, resolveErrorCode, type ErrorCode } from './errors';
 
 export const DEFAULT_TIMEOUT_MS = 15_000;
 export const AI_TIMEOUT_MS = 30_000;
-/** 사진 업로드 제한 시간(느린 회선의 10MB). */
+/** 사진 업로드 제한 시간(느린 회선의 5MB). */
 export const UPLOAD_TIMEOUT_MS = 60_000;
 
 export class ApiError extends Error {
