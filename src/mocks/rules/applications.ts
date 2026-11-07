@@ -2,7 +2,7 @@ import { computeCancellable, type ApplicationStatus } from '@/features/applicati
 import { mockNow } from '@/mocks/clock';
 import type { ApplicationRow, DB, TourRow } from '@/mocks/db/schema';
 import { nextId } from '@/mocks/db/ids';
-import { seoulDateKey, toSeoulIso } from '@/shared/lib/date';
+import { toSeoulIso } from '@/shared/lib/date';
 import { expireCouponsForApplication, issueCouponsForApplication } from './coupons';
 import { fieldError, MockApiError } from './errors';
 
@@ -162,7 +162,7 @@ export function cancelApplication(
   if (app.userId !== userId) throw new MockApiError(403, 'FORBIDDEN');
   if (!isActive(app)) throw new MockApiError(409, 'ALREADY_PROCESSED');
   const tour = findTour(db, app.tourId);
-  if (seoulDateKey(now) >= seoulDateKey(tour.startsAt)) {
+  if (!computeCancellable(app.status, tour.startsAt, now)) {
     throw new MockApiError(409, 'CANCEL_AFTER_TOUR_DATE');
   }
 

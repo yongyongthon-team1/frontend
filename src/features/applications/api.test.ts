@@ -204,6 +204,17 @@ describe('신청 오류 세분 (2C-R15, 명세 A-01 · A-02 · A-03 예시 봉�
     });
   });
 
+  it('E403_VERIFICATION_REQUIRED: 내 정보를 다시 읽지 못하면 기본 표의 코드(NOT_VERIFIED)로 둔다', async () => {
+    loginAs(STUDENT);
+    applyFails(APPLY_NOT_VERIFIED, 403);
+    server.use(http.get('/api/users/me', () => wireFail('E500')));
+    await expect(postApplication(1, '수업이 궁금해요', listCampuses())).rejects.toMatchObject({
+      status: 403,
+      code: 'NOT_VERIFIED',
+      backendCode: 'E403_VERIFICATION_REQUIRED',
+    });
+  });
+
   it('E409_ALREADY_APPLIED는 DUPLICATE_APPLICATION', async () => {
     loginAs(STUDENT);
     applyFails(APPLY_DUPLICATE, 409);
@@ -253,13 +264,35 @@ describe('신청 오류 세분 (2C-R15, 명세 A-01 · A-02 · A-03 예시 봉�
   });
 });
 
+describe('취소 오류 세분의 다시 읽기 실패', () => {
+  beforeEach(() => {
+    resetDb({ today: new Date() });
+  });
+  afterEach(() => configureHttp({ getToken: () => null }));
+
+  it('E409_INVALID_APPLICATION_STATUS: 신청을 다시 읽지 못하면 기본 표의 코드(ALREADY_PROCESSED)로 둔다', async () => {
+    loginAs(STUDENT);
+    server.use(
+      http.post('/api/applications/:applicationId/cancel', () =>
+        HttpResponse.json(CANCEL_INVALID, { status: 409 }),
+      ),
+      http.get('/api/users/me/tours', () => wireFail('E500')),
+    );
+    await expect(postCancelApplication(77, listCampuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+      backendCode: 'E409_INVALID_APPLICATION_STATUS',
+    });
+  });
+});
+
 describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
   beforeEach(() => {
     resetDb({ today: new Date() });
   });
   afterEach(() => configureHttp({ getToken: () => null }));
 
-  it('coupon_count가 없으면 GET /users/me/coupons?tour_id로 센다 — 탐방이 같은 행은 탐방 상세 · 쿠폰을 한 번씩만 부른다', async () => {
+  it('coupon_count가 없으면 GET /users/me/coupons?tour_id로 센다 — 승인 행에만 주고, 탐방이 같은 행은 탐방 상세 · 쿠폰을 한 번씩만 부른다', async () => {
     loginAs(STUDENT);
     const [row] = MY_TOURS_HIGH_SCHOOL.data.items; // 확장 없음
     const older = { ...row, application_id: 70, application_status: 'CANCELED' };
@@ -281,6 +314,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
       courseStatus: 'CONFIRMED',
       tour: { id: 31, universityName: '단국대학교', campusName: '죽전캠퍼스' },
     });
+    expect(apps[1]).toMatchObject({ id: 70, status: 'CANCELED', couponCount: 0 }); // 2C-R27: 승인 행만
     expect(seen.filter((r) => r.startsWith('GET /tours/31'))).toEqual(['GET /tours/31']);
     expect(seen.filter((r) => r.startsWith('GET /users/me/coupons'))).toEqual([
       'GET /users/me/coupons?tour_id=31&page=1&size=50',

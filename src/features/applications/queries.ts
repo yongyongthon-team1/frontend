@@ -24,7 +24,8 @@ import type { ApplicantsBoard, GuideTourSummary, MyApplication } from './model';
 
 /**
  * 탐방 신청. 성공하면 탐방 상세(내 신청 · 남은 자리)와 내 신청 목록을 다시 불러온다 — 추천은 건드리지 않는다.
- * 실패해도 탐방 상세를 다시 불러와, 방금 정원이 찬 경우처럼 바뀐 신청 가능 상태를 화면에 반영한다.
+ * 실패해도 탐방 상세를 다시 불러와, 방금 정원이 찬 경우처럼 바뀐 신청 가능 상태를 화면에 반영한다. 신청은 됐는데 뒤따르는
+ * 다시 읽기가 실패해 오류가 된 경우에도 내 신청 목록 · 상세가 낡지 않게 함께 다시 불러온다.
  */
 export function useApplyToTour(tourId: number): UseMutationResult<MyApplication, ApiError, string> {
   const queryClient = useQueryClient();
@@ -37,6 +38,7 @@ export function useApplyToTour(tourId: number): UseMutationResult<MyApplication,
     },
     onError: () => {
       void queryClient.invalidateQueries({ queryKey: qk.tour(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.myApplications }); // 상세 키(`qk.myApplication(id)`)의 접두사
     },
   });
 }
@@ -59,7 +61,7 @@ export function useMyApplication(id: number): UseQueryResult<MyApplication> {
 
 /**
  * 취소하면 내 신청(목록 · 상세 모두)과 그 탐방의 남은 자리, 내 쿠폰(취소하면 발급된 쿠폰이 만료된다)을 다시 불러온다.
- * 실패하면 내 신청만 다시 불러온다.
+ * 실패하면(취소는 됐는데 다시 읽기가 실패한 경우 포함) 내 신청(목록 · 상세)과 탐방을 다시 불러온다.
  */
 export function useCancelMyApplication(
   id: number,
@@ -74,7 +76,8 @@ export function useCancelMyApplication(
     },
     // 실패해도 서버 값(`cancellable` 등)을 다시 받아 화면의 취소 버튼 · 사유를 맞춘다.
     onError: () => {
-      void queryClient.invalidateQueries({ queryKey: qk.myApplications });
+      void queryClient.invalidateQueries({ queryKey: qk.myApplications }); // 상세 키(`qk.myApplication(id)`)의 접두사
+      void queryClient.invalidateQueries({ queryKey: qk.allTours }); // 실패에는 탐방 id가 없다
     },
   });
 }
@@ -118,8 +121,10 @@ function useBoardMutation(
     },
     // 실패하면(409 이미 처리됨 · 정원 초과 등 — 다른 기기에서 먼저 처리했을 수 있다) 보드를 서버 기준으로 다시 불러온다
     // (설계 5.5 — 판정 15 · 18과 같은 원칙).
+    // 결정은 됐는데 보드를 다시 읽다 실패했을 때도 같다 — 가이드 탐방 목록의 신청 수도 함께 다시 받는다.
     onError: () => {
       void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.guideTours });
     },
   });
 }

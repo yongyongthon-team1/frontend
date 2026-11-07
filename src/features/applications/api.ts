@@ -43,7 +43,7 @@ export function listMyTourRows(): Promise<WireMyTourRow[]> {
 
 /**
  * 행마다 탐방 상세(탐방당 한 번)와 쿠폰 수를 함께 불러 내 신청으로 읽는다. 쿠폰 수는 확장 `coupon_count`, 없으면(실서버)
- * `GET /users/me/coupons?tour_id`의 개수다(탐방당 한 번, 2C-R8). 취소 가능 여부는 어댑터의 지금 시각으로 계산한다.
+ * `GET /users/me/coupons?tour_id`의 개수를 승인 행에만 준다(탐방당 한 번, 2C-R8 · 2C-R27) — 다른 행은 0이다. 취소 가능 여부는 어댑터의 지금 시각으로 계산한다.
  */
 async function composeMyApplications(
   rows: WireMyTourRow[],
@@ -55,7 +55,7 @@ async function composeMyApplications(
     rows.map(async (row) => {
       const [tour, couponCount] = await Promise.all([
         tourOf(row.tourId),
-        row.couponCount ?? couponsOf(row.tourId),
+        row.couponCount ?? (row.applicationStatus === 'APPROVED' ? couponsOf(row.tourId) : 0),
       ]);
       return fromWireMyTourRow(row, tour, couponCount, now);
     }),
