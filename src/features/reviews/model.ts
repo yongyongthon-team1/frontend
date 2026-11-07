@@ -1,5 +1,7 @@
 // 상점 리뷰(R-01 · R-02)의 도메인 모양과 상수. 화면(상점 시트 · 리포트 · 리뷰 쓰기)이 같이 쓴다.
 
+import type { CourseStop } from '@/features/courses/model';
+
 /** 리뷰 한 줄 평 최대 길이(명세 R-01 `content` 100자 이내). */
 export const REVIEW_CONTENT_MAX = 100;
 /** 상점 시트 · 리포트가 보이는 최근 리뷰 수. */
@@ -37,4 +39,25 @@ export interface CreatedReview {
   rating: number;
   content: string;
   createdAt: string;
+}
+
+/** 상점 시트가 그리는 요약 · 평균 · 수. */
+export interface MergedStoreReview {
+  summary: string | null;
+  average: number | null;
+  count: number;
+}
+
+/**
+ * 상점 시트의 리뷰 값(2B′-R16): R-02 응답이 오면 그 요약 · 평균 · 수(전체 기준), 오기 전이나 실패하면 코스 지점 값, 둘 다 없으면
+ * null. 데이터 우선 — 로딩 · 실패에 오류 문구를 두지 않는다.
+ */
+export function mergeStoreReview(
+  stop: CourseStop['review'],
+  fetched: StoreReviews | undefined,
+): MergedStoreReview | null {
+  if (fetched !== undefined) {
+    return { summary: fetched.summary, average: fetched.average, count: fetched.count };
+  }
+  return stop;
 }

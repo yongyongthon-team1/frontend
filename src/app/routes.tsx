@@ -3,6 +3,7 @@ import { ApplicantsPage } from '@/pages/guide/ApplicantsPage';
 import { CourseConfirmPage } from '@/pages/guide/CourseConfirmPage';
 import { CourseDraftPage } from '@/pages/guide/CourseDraftPage';
 import { CourseEditPage } from '@/pages/guide/CourseEditPage';
+import { GuideCourseMapPage } from '@/pages/guide/GuideCourseMapPage';
 import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
 import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
@@ -180,7 +181,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/tours/:tourId/course',
-                    element: <PlaceholderPage title="확정 코스 지도 보기" wireframe="hs-s08" />,
+                    element: <GuideCourseMapPage />, // 확정 코스 지도 보기(고교생 H04 재사용)
                   },
                   {
                     path: '/guide/tours/:tourId/course/draft',

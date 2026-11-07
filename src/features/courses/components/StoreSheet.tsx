@@ -1,6 +1,9 @@
 import { Link } from 'react-router';
 import type { Coupon } from '@/features/coupons/model';
 import type { CourseStop } from '@/features/courses/model';
+import { RecentReviews } from '@/features/reviews/components/RecentReviews';
+import { mergeStoreReview } from '@/features/reviews/model';
+import { useStoreReviews } from '@/features/reviews/queries';
 import { AiBadge } from '@/shared/ui/AiBadge';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
 import { buttonClass } from '@/shared/ui/buttonStyles';
@@ -26,7 +29,9 @@ export function StoreSheet({ stop, coupon, onOpenChange }: StoreSheetProps) {
 }
 
 function StoreDetail({ stop, coupon }: { stop: CourseStop; coupon: Coupon | null }) {
-  const { review, partnership } = stop;
+  const { partnership } = stop;
+  const reviews = useStoreReviews(stop.type === 'STORE' ? stop.storeId : null);
+  const review = mergeStoreReview(stop.review, reviews.data);
   // AI 요약은 리뷰 수가 없어도(실서버에는 리뷰 수가 없다) 보이고, 별점 줄은 리뷰가 있을 때만이다(2C-R12 ⑥).
   const hasSummary = Boolean(review?.summary);
   const hasReviews = review !== null && review.count > 0;
@@ -65,6 +70,8 @@ function StoreDetail({ stop, coupon }: { stop: CourseStop; coupon: Coupon | null
       ) : review ? (
         <p className="text-[13px] text-muted">아직 리뷰가 없어요.</p>
       ) : null}
+
+      <RecentReviews items={reviews.data?.items ?? []} />
 
       {stop.dataSource ? <p className="text-xs text-muted">{stop.dataSource}</p> : null}
 

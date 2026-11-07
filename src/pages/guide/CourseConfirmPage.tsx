@@ -225,6 +225,12 @@ function ConfirmedCourse({
           </p>
         </section>
 
+        <div className="mt-4">
+          <Link to={`${base}/course`} className={buttonClass('secondary')}>
+            확정 코스 지도 보기
+          </Link>
+        </div>
+
         <BottomAction>
           <Link to="/guide/tours" className={buttonClass('primary')}>
             내가 개설한 탐방으로

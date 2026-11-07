@@ -1,11 +1,13 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { SeedCheckpoint } from '@/mocks/db/seed';
 import { getDb, mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
+import { qk } from '@/shared/api/queryKeys';
 import { formatDotDateWeekday, formatMonthDay } from '@/shared/lib/date';
 import { COURSE_VIEW } from '@/test/fixtures/backend/courses';
+import { STORE_REVIEWS } from '@/test/fixtures/backend/reviews';
 import { findApplicationId, renderApp } from '@/test/renderApp';
 import { wireFail, wireOk } from '@/test/wire';
 
@@ -164,6 +166,84 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     expect(within(sheet).queryByText(/리뷰 0개/)).not.toBeInTheDocument();
     expect(within(sheet).queryByText('아직 리뷰가 없어요.')).not.toBeInTheDocument();
     expect(within(sheet).getByText('제휴 혜택 · 쿠폰 사용 가능')).toBeInTheDocument();
+  });
+
+  it('상점 시트는 R-02 응답의 요약 · 별점 · 리뷰 수와 접힌 최근 리뷰 3개를 보인다 (2B′-R16)', async () => {
+    const { user } = await openCourseMap('CONFIRMED');
+    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
+    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    expect(within(sheet).getByText('✦ AI 리뷰 요약')).toBeInTheDocument();
+    // 요약 문장은 R-02 응답(가장 최근 요약 행)의 것 — 목업이 코스 지점 값과 같은 행을 준다.
+    expect(within(sheet).getByText(/^학생들은 양이 넉넉하고/)).toBeInTheDocument();
+    expect(within(sheet).getByText('별점 4.6 · 리뷰 5개')).toBeInTheDocument();
+    const toggle = await within(sheet).findByRole('button', { name: '최근 리뷰 3개' });
+    expect(toggle).toHaveAttribute('aria-expanded', 'false');
+    expect(
+      within(sheet).queryByText('시험 기간엔 사람이 많지만 음식은 빨리 나와요.'),
+    ).not.toBeInTheDocument();
+    await user.click(toggle);
+    expect(
+      within(sheet).getByText('시험 기간엔 사람이 많지만 음식은 빨리 나와요.'),
+    ).toBeInTheDocument();
+    expect(within(sheet).getByRole('list', { name: '최근 리뷰' })).toBeInTheDocument();
+  });
+
+  it('캠퍼스 지점 시트는 상점 리뷰를 부르지 않는다 (상점 시트를 먼저 열어 양성 대조)', async () => {
+    const reviewGets: string[] = [];
+    const { user } = await openCourseMap('CONFIRMED');
+    server.events.on('request:start', ({ request }) => {
+      const { pathname } = new URL(request.url);
+      if (request.method === 'GET' && pathname.startsWith('/api/stores/')) {
+        reviewGets.push(pathname);
+      }
+    });
+    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
+    await screen.findByRole('button', { name: '최근 리뷰 3개' });
+    expect(reviewGets).toEqual(['/api/stores/1/reviews']); // 양성 대조: 상점 지점은 부른다
+    await user.keyboard('{Escape}');
+
+    await user.click(screen.getByRole('button', { name: /예술·디자인대학/ }));
+    const sheet = await screen.findByRole('dialog', { name: '예술·디자인대학' });
+    // 요청이 나갈 시간을 준 뒤 센다.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(within(sheet).queryByRole('button', { name: /최근 리뷰/ })).not.toBeInTheDocument();
+    expect(reviewGets).toEqual(['/api/stores/1/reviews']);
+  });
+
+  it('R-02 요청이 실패하면 시트는 지점 요약 그대로이고 오류 문구 · 최근 리뷰 버튼이 없다', async () => {
+    server.use(http.get('/api/stores/:storeId/reviews', () => wireFail('E500')));
+    const { user, queryClient } = await openCourseMap('CONFIRMED');
+    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
+    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    // 5xx는 한 번 더 시도한다 — 오류 상태가 될 때까지 기다린 뒤에 단언해야 실패 처리를 증명한다(PM4).
+    await waitFor(
+      () => expect(queryClient.getQueryState(qk.storeReviews(1))?.status).toBe('error'),
+      {
+        timeout: 3000,
+      },
+    );
+    expect(within(sheet).getByText('✦ AI 리뷰 요약')).toBeInTheDocument();
+    expect(within(sheet).getByText(/^학생들은 양이 넉넉하고/)).toBeInTheDocument();
+    expect(within(sheet).getByText('별점 4.6 · 리뷰 5개')).toBeInTheDocument();
+    expect(within(sheet).queryByRole('button', { name: /최근 리뷰/ })).not.toBeInTheDocument();
+    expect(within(sheet).queryByRole('alert')).not.toBeInTheDocument();
+    expect(within(sheet).queryByText(/오류|실패|다시 시도/)).not.toBeInTheDocument();
+  }, 10_000);
+
+  it('실서버 모양(C-04 코스 + R-02 리뷰): 요약 · 별점은 R-02 값, 최근 리뷰는 R-02 항목', async () => {
+    server.use(
+      http.get('/api/tours/:tourId/course', () => wireOk(COURSE_VIEW.data)),
+      http.get('/api/stores/:storeId/reviews', () => wireOk(STORE_REVIEWS.data)),
+    );
+    const { user } = await openCourseMap('CONFIRMED');
+    await user.click(await screen.findByRole('button', { name: /용인 분식/ }));
+    const sheet = await screen.findByRole('dialog', { name: '용인 분식' });
+    expect(await within(sheet).findByText('별점 4.5 · 리뷰 11개')).toBeInTheDocument();
+    expect(within(sheet).getByText('양이 많고 가격이 착하다는 평이 많아요')).toBeInTheDocument();
+    const toggle = within(sheet).getByRole('button', { name: '최근 리뷰 1개' });
+    await user.click(toggle);
+    expect(within(sheet).getByText('양도 많고 맛있었어요')).toBeInTheDocument();
+    expect(within(sheet).getByText(/^김\*늘 · /)).toBeInTheDocument();
   });
 
   it('미확정이면 준비 중', async () => {

@@ -553,6 +553,19 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
     ).toBeInTheDocument();
   });
 
+  it('완료 상태의 보조 링크 `확정 코스 지도 보기`는 가이드 확정 코스 화면으로 간다', async () => {
+    const { user, router } = await renderApp('/guide/tours/1/course/confirm', {
+      as: 'guide',
+      checkpoint: 'CONFIRMED',
+    });
+    await screen.findByRole('heading', { name: '코스를 확정했어요' });
+    const link = screen.getByRole('link', { name: '확정 코스 지도 보기' });
+    expect(link).toHaveAttribute('href', '/guide/tours/1/course');
+    await user.click(link);
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course');
+    expect(await screen.findByText('우리의 2시간 30분 코스')).toBeInTheDocument();
+  });
+
   it('신청자 보드를 못 불러와도 완료 카드는 그대로, 승인 수 줄만 짧은 오류와 다시 시도', async () => {
     server.use(http.get('/api/tours/:tourId/applications', () => wireFail('E403')));
     const { user } = await renderApp('/guide/tours/1/course/confirm', {

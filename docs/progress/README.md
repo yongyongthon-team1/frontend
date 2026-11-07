@@ -34,7 +34,7 @@
 | `hs-s05` | 탐방 상세 · 신청 · V2(H03) | `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s06` | 신청 완료 · 승인 대기 · V2(H08) | `/tours/:tourId/apply/done` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s07` | 내 탐방 · 승인 완료 · V2(H10 신청 내역 상세) | `/my-tours/:applicationId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `hs-s08` | 탐방 코스 · V2(H04 단계 막대 · 시간표, 지도는 아래 `지도로 보기` 펼침 · H14 코스 준비 중) | `/my-tours/:applicationId/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `hs-s08` | 탐방 코스 · V2(H04 단계 막대 · 시간표, 지도는 아래 `지도로 보기` 펼침 · H14 코스 준비 중 · 상점 시트 R-02(요약 · 별점 · 최근 리뷰) ✅) | `/my-tours/:applicationId/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s09` | 상점 쿠폰 · 사용 · V2(H05 내 쿠폰 · 코드 3자리씩, H15 사용 완료는 같은 주소의 USED 모습) | `/my-tours/:applicationId/coupons` · `/coupons/:couponId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s10` | 방문 리뷰 작성 | `/reviews/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a01` | 회원가입 · 역할 선택 | `/signup` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -71,13 +71,13 @@
 | `owner-a03` | 쿠폰·리포트 예외 상태 · V2(O08 쿠폰 오류 · 만료) | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | — | 모집 중 탐방 둘러보기 (가이드 · 사장님 `탐색` 탭, 읽기 전용) | `/explore` | P2 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | — | 사장님 내 정보 · 로그아웃 | `/owner/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| — | 확정 코스 지도 보기 (고교생 지도 화면 재사용, `hs-s08`) | `/guide/tours/:tourId/course` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| — | 확정 코스 지도 보기 (고교생 지도 화면 재사용, `hs-s08`; G08 완료 상태의 `확정 코스 지도 보기` 링크 · 상점 시트 R-02) ✅ | `/guide/tours/:tourId/course` | P1 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
 | — | 404 · 에러 화면 | `*` | P1 | ✅ | ➖ | ➖ | ⬜ | ⬜ |
 
 - `hs-a06`, `owner-a03`은 별도 라우트가 없는 상태 화면이다. 위 표의 라우트는 그 상태가 얹히는 화면이다.
 - 코드가 `—`인 행은 와이어프레임이 없는 라우트다. 화면은 와이어 없이 설계 문서(5.3)를 기준으로 만든다.
 - `hs-s08`은 목업 · 도식 지도로 확인했다. 카카오맵(실제 지도)은 JavaScript 키(팀 요청 16)가 오면 고정 도메인에서 확인한다.
-- `hs-s08` 상점 시트의 `최근 리뷰`(펼치기, 설계 5.6 · R-02)는 계약에만 먼저 넣었다(`CourseStop.review.recent` 최신순 최대 3개, 판정 34). 프론트 타입 · 목업 · 화면은 MVP 2단계에서 만든다.
+- `hs-s08` 상점 시트의 `최근 리뷰`(펼치기, 설계 5.6 · R-02)는 MVP 2B′ Task 2에서 `GET /stores/{storeId}/reviews`로 만들었다(요약 · 평균 · 수는 응답이 오면 그 값, 오기 전 · 실패하면 코스 지점 값).
 - `owner-s03`의 O07에는 V2에 없는 `이번 탐방으로 온 학생 {n}명`을 시연의 상권 효과 장면용으로 남겼다(판정 2A-R13). `owner-s02`에서 제휴가 없으면 `제휴 혜택을 설정해 주세요` 문구만 보이고(링크는 2B의 `/owner/store/partnership`이 생기면), 가게 연결은 `/owner/store/connect`(자리)로 간다.
 - `owner-a03`은 쿠폰 오류 3종(이미 사용 · 만료/다른 가게 · 없는 코드)과 "아직 사용할 수 없는 쿠폰"까지다. 리포트 빈 상태는 `owner-s04`(P2)와 함께 만든다.
 - `guide-s05`는 순서 · 한줄평 · 삭제까지다(V2 G03의 지점 시트). 지점 추가 · 상점 교체는 2단계(`guide-a03`)에서 만든다. 백엔드는 지점 단위 편집이 없어 전체 스팟 PUT(빌더)이다(`buildSpots`, 2C-R13). 백엔드가 지점 1곳 이상을 요구해 마지막 지점의 빼기는 사유 `지점은 1곳 이상 있어야 해요.`와 함께 잠긴다(2C-R12 ②).
@@ -127,7 +127,7 @@
 | stores | `GET /api/users/me/store/report` | owner-s04 방문 · 리뷰 리포트 (S-07, P2, 필드 미확정) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 (U-07) | ⬜ | ⬜ | ⬜ | ⬜ |
 | reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
-| reviews | `GET /api/stores/:storeId/reviews` | hs-s08 상점 시트의 `최근 리뷰` (R-02, `page=1&size=3` 한 쪽. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
+| reviews | `GET /api/stores/:storeId/reviews` | hs-s08 · 가이드 확정 코스 상점 시트의 요약 · 별점 · 접힌 `최근 리뷰` ✅ 화면 연결 (R-02, `page=1&size=3` 한 쪽, 캠퍼스 지점은 부르지 않음. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05) | ⬜ | ⬜ | ⬜ | ⬜ |
 | verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 (U-06) | ⬜ | ⬜ | ⬜ | ⬜ |
 | verification | `GET /api/guardian-consents/:consentToken` | hs-a02 보호자 동의 안내 (U-06) | ⬜ | ⬜ | ⬜ | ⬜ |
