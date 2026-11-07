@@ -51,6 +51,19 @@ describe('탐방 찾기 결과 (T-01 · hs-s04)', () => {
     expect(within(rows[0]).getByText('경희대 국제캠퍼스 산업디자인학과 탐방')).toBeInTheDocument();
   });
 
+  it('원문 카드 머리 줄 오른쪽에 `내 희망 사항` 링크(›는 이름에 들지 않음) → /me/wishes', async () => {
+    await renderApp(`/tours?${search()}`, { as: 'student' });
+    await screen.findByRole('heading', { level: 1 });
+    const link = within(wishCard()).getByRole('link', { name: '내 희망 사항' });
+    expect(link).toHaveAttribute('href', '/me/wishes');
+    expect(link).toHaveClass('min-h-11');
+    expect(link).toHaveTextContent('내 희망 사항›');
+    // 머리 줄 안, 제목 글자와 같은 줄이다.
+    expect(link.parentElement).toContainElement(
+      within(wishCard()).getByText('내가 남긴 희망 사항'),
+    );
+  });
+
   it('희망 날짜가 있으면 원문 카드 아래 줄에 `{M월 D일} 희망`', async () => {
     await renderApp(`/tours?${search({ date: '2027-01-15' })}`, { as: 'student' });
     await screen.findByRole('heading', { level: 1 });

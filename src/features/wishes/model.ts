@@ -23,6 +23,12 @@ export interface TourWishInput {
   date: string | null;
 }
 
+/** T-08 가이드의 거르기 조건. 학교를 빼면 서버 기본(내 인증 학교)이고, 학과는 부분 일치다. */
+export interface GuideWishFilter {
+  universityId?: number;
+  major?: string;
+}
+
 export const WISH_MAJOR_MAX = 30;
 export const WISH_TEXT_MAX = 100;
 
@@ -55,4 +61,19 @@ export function toWishInput(values: WishFormValues): TourWishInput {
     wish: values.wish.trim(),
     date: values.date === '' ? null : values.date,
   };
+}
+
+/**
+ * 수정 화면의 변경분(2C-R21): `before`와 값이 다른 칸만 담는다(날짜는 null끼리면 같다). 목록 항목의 학교를 모르면
+ * (`before.universityId`가 null) 화면에서 고른 학교를 늘 담는다.
+ */
+export function diffWishPatch(before: TourWish, after: TourWishInput): Partial<TourWishInput> {
+  const patch: Partial<TourWishInput> = {};
+  if (before.universityId === null || before.universityId !== after.universityId) {
+    patch.universityId = after.universityId;
+  }
+  if (before.major !== after.major) patch.major = after.major;
+  if (before.wish !== after.wish) patch.wish = after.wish;
+  if (before.date !== after.date) patch.date = after.date;
+  return patch;
 }

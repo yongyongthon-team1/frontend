@@ -1,5 +1,6 @@
 import type { TourFilter } from '@/features/tours/model';
 import type { WishSearch } from '@/features/tours/wishSearch';
+import type { GuideWishFilter } from '@/features/wishes/model';
 
 // TanStack Query 키는 모두 여기서 만든다. 첫 요소가 묶음 이름이고, 인자 없는 목록 키(`qk.myApplications`)는 같은
 // 묶음 상세 키(`qk.myApplication(id)`)의 접두사라 목록을 무효화하면 상세도 다시 불러온다. 가이드의 신청자 · 코스는
@@ -16,6 +17,8 @@ export const qk = {
   wishTours: (s: WishSearch) => ['tours', 'wish', s] as const,
   /** 내 희망 사항 목록(T-07). 희망 사항을 등록 · 수정하면 무효화한다. */
   myWishes: ['myWishes'] as const,
+  /** 가이드가 보는 고교생 희망 사항(T-08). 학교 · 학과 조건마다 한 항목. */
+  guideWishes: (f: GuideWishFilter) => ['guideWishes', f] as const,
   myApplications: ['myApplications'] as const,
   myApplication: (id: number) => ['myApplications', id] as const,
   myCoupons: (applicationId?: number) => ['myCoupons', 'list', applicationId ?? null] as const,

@@ -40,6 +40,8 @@
 | `hs-a01` | 회원가입 · 역할 선택 | `/signup` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a02` | 보호자 동의 페이지 | `/consent/:token` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a03` | 내 정보 · 인증 상태 | `/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `T-07` | 내 희망 사항 · 고치기(V2 부품, 시안 없음) | `/me/wishes` · `/me/wishes/:wishId/edit` | P1 | ✅ | ✅ | ⬜ | V2 부품(시안 없음) | ⬜ |
+| `T-08` | 고교생 희망 사항(가이드, V2 부품, 시안 없음) | `/guide/wishes` | P1 | ✅ | ✅ | ⬜ | V2 부품(시안 없음) | ⬜ |
 | `hs-a04` | 탐방 신청서 · V2(H07) | `/tours/:tourId/apply` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-a05` | 내 탐방 상태별 목록 · V2(H06 예정된 탐방) | `/my-tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `H09` | 지난 탐방 (V2) | `/my-tours?tab=past` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -96,6 +98,9 @@
 | campuses | `GET /api/campuses/:campusId/insight` (확장 · 목업 전용, 봉투) | hs-s04, guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours` (T-01 보완, 쿼리 `status · campus_id · major · date_from · date_to · page · size`, 백엔드 와이어) | hs-s03 홈 모집 중 목록, hs-s04 탐방 찾기 결과(`status=RECRUITING&campus_id&major[&date_from]`, 0건이면 `campus_id`만으로 같은 학교 대체 — hs-a06), `/explore`(P2) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `POST /api/tour-wishes` (T-01 희망 사항 등록, 백엔드 와이어 · 고교생만, 본문 `{ campus_id, major, wish, date }`, 학교 칸 오류 `campus_id` → 폼 `universityId`. AI 없음 — 저장만 하고 탐방은 `GET /tours`로 찾는다) | hs-s03 | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | `GET /api/users/me/tour-wishes` (T-07, 백엔드 와이어 · 고교생만, 최신순. 목업 확장 `campus_id` · `date`가 없으면 학교는 이름 조인, 날짜 없음) | T-07 `/me/wishes`, 수정 화면의 원래 값 | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | `PATCH /api/users/me/tour-wishes/:wishId` (T-07, 백엔드 와이어 · 본인 글만, 바뀐 칸만 `{ campus_id?, major?, wish?, date? }`, 학교 칸 오류 `campus_id` → 폼 `universityId`. 목업 확장 `campus_id` · `created_at`) | T-07 `/me/wishes/:wishId/edit` | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | `GET /api/tour-wishes` (T-08, 백엔드 와이어 · 재학 인증을 마친 대학생만, 쿼리 `campus_id` · `major`(부분 일치) · `page` · `size`, 학교를 빼면 내 인증 학교. 이름 같은 개인정보는 없다) | T-08 `/guide/wishes` | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours/:tourId` (T-02, 백엔드 와이어) | hs-s05, hs-a04, hs-s06, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | #14 `POST /api/guide/tours` | guide-s02 탐방 개설 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | tours | #15 `GET /api/guide/tours/:id` | guide-s07 탐방 종료 · guide-a04 탐방 취소 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |

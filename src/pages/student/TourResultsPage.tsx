@@ -44,6 +44,16 @@ function WishCard({ search, campus }: { search: WishSearch; campus: University |
     <section aria-label="내가 남긴 희망 사항" className="mt-4 rounded-xl bg-brand-soft p-5">
       <div className="flex items-center justify-between gap-3">
         <p className="text-[13px] font-bold text-brand">내가 남긴 희망 사항</p>
+        {/* 눌림 영역은 44로 넓히되 위아래 음수 여백으로 머리 줄(카드) 높이는 그대로다. `›`는 장식이라 링크 이름은 `내 희망 사항`. */}
+        <Link
+          to="/me/wishes"
+          className="-my-3.5 inline-flex min-h-11 shrink-0 items-center text-[13px] font-bold text-brand"
+        >
+          내 희망 사항
+          <span aria-hidden className="ml-0.5">
+            ›
+          </span>
+        </Link>
       </div>
       <p
         data-testid="wish-text"

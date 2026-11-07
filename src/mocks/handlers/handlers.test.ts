@@ -31,7 +31,7 @@ import { buildSpots } from '@/features/courses/spots';
 import { getMyStore } from '@/features/stores/api';
 import { findWishTours, getTour, listTours } from '@/features/tours/api';
 import type { TourFilter } from '@/features/tours/model';
-import { postTourWish } from '@/features/wishes/api';
+import { listGuideWishes, listMyWishes, patchTourWish, postTourWish } from '@/features/wishes/api';
 import { getMockFile, putMockFile } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { configureHttp, request, upload } from '@/shared/lib/http';
@@ -75,7 +75,12 @@ import {
 } from '@/test/fixtures/backend/coupons';
 import { MY_STORE } from '@/test/fixtures/backend/stores';
 import { TOUR_DETAIL, TOURS_LIST } from '@/test/fixtures/backend/tours';
-import { WISH_CREATED } from '@/test/fixtures/backend/wishes';
+import {
+  GUIDE_WISHES,
+  MY_WISHES,
+  WISH_CREATED,
+  WISH_UPDATED,
+} from '@/test/fixtures/backend/wishes';
 import { expectWireShape, rawFetch, wireFail } from '@/test/wire';
 import { formFile, readBody, readForm, withErrors } from './util';
 
@@ -581,7 +586,173 @@ describe('wishes', () => {
       code: 'FORBIDDEN',
       backendCode: 'E403',
     });
-    expect(getDb().tourWishes).toEqual([]);
+    expect(getDb().tourWishes).toHaveLength(4); // 시드뿐
+  });
+});
+
+describe('wishes (T-07 · T-08)', () => {
+  type Items = { items: Record<string, unknown>[] };
+  const wishId = (email: string) => getDb().tourWishes.find((w) => w.userId === userId(email))!.id;
+
+  it('내 희망 사항: 시연에서 처음 남기는 김민지는 비어 있다가 남긴 글이 맨 앞에 온다', async () => {
+    await login('student@demo.kr');
+    expect(await listMyWishes(listCampuses())).toEqual([]);
+    await postTourWish(
+      { universityId: 2, major: '산업디자인', wish: '작업실이 궁금해요.', date: null },
+      listCampuses(),
+    );
+    const list = await listMyWishes(listCampuses());
+    expect(list).toHaveLength(1);
+    expect(list[0]).toMatchObject({ universityId: 2, campusLabel: '경희대학교 국제캠퍼스' });
+  });
+
+  it('GET /users/me/tour-wishes 와이어: 명세 T-07 목록과 같은 모양(+ 확장 campus_id · date), 본인 것만, 고교생만', async () => {
+    const { token } = await login('seojun@demo.kr');
+    const raw = await rawFetch<{ code: string; data: Items & Record<string, unknown> }>(
+      '/users/me/tour-wishes',
+      { method: 'GET', token },
+    );
+    expect(raw.status).toBe(200);
+    expect(raw.body.code).toBe('S200');
+    expectWireShape(raw.body.data, MY_WISHES.data, ['campus_id', 'date']);
+    expect(raw.body.data).toMatchObject({ page: 1, size: 20, total: 1 });
+    expect(raw.body.data.items[0]).toMatchObject({
+      campus_name: '명지대학교 자연캠퍼스',
+      campus_id: 4,
+      major: '컴퓨터공학',
+      wish: '코딩 동아리가 어떤 프로젝트를 하는지 보고 싶어요.',
+    });
+    const guide = await login('guide@demo.kr');
+    const forbidden = await rawFetch('/users/me/tour-wishes', {
+      method: 'GET',
+      token: guide.token,
+    });
+    expect(forbidden.status).toBe(403);
+    expect((await rawFetch('/users/me/tour-wishes', { method: 'GET' })).status).toBe(401);
+  });
+
+  it('PATCH 와이어: 200 S200, 명세 예시 모양(+ 확장 campus_id · created_at)이고 보낸 칸만 바뀐다', async () => {
+    const { token } = await login('haeun@demo.kr');
+    const id = wishId('haeun@demo.kr');
+    const before = structuredClone(getDb().tourWishes.find((w) => w.id === id)!);
+    const raw = await rawFetch<{ code: string; data: Record<string, unknown> }>(
+      `/users/me/tour-wishes/${id}`,
+      {
+        method: 'PATCH',
+        token,
+        body: { wish: '  학식도 먹어 보고 싶어요.  ', date: '2027-01-16' },
+      },
+    );
+    expect(raw.status).toBe(200);
+    expect(raw.body.code).toBe('S200');
+    expectWireShape(raw.body.data, WISH_UPDATED.data, ['campus_id', 'created_at']);
+    expect(raw.body.data).toMatchObject({
+      wish_id: id,
+      campus_id: 2,
+      major: '시각디자인',
+      wish: '학식도 먹어 보고 싶어요.',
+      date: '2027-01-16',
+      created_at: before.createdAt,
+    });
+    expect(getDb().tourWishes.find((w) => w.id === id)).toMatchObject({
+      universityId: before.universityId,
+      major: before.major,
+      content: '학식도 먹어 보고 싶어요.',
+      preferredDate: '2027-01-16',
+      createdAt: before.createdAt,
+    });
+  });
+
+  it('patchTourWish는 받은 칸만 snake 키로 보낸다(학교 칸 오류는 universityId로 온다)', async () => {
+    await login('haeun@demo.kr');
+    const id = wishId('haeun@demo.kr');
+    const bodies: unknown[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'PATCH') {
+        void request
+          .clone()
+          .json()
+          .then((b: unknown) => bodies.push(b));
+      }
+    });
+    const updated = await patchTourWish(id, { wish: '바뀐 글' }, listCampuses());
+    await patchTourWish(id, { universityId: 3, date: null }, listCampuses());
+    server.events.removeAllListeners('request:start');
+    expect(bodies).toEqual([{ wish: '바뀐 글' }, { campus_id: 3, date: null }]);
+    expect(updated).toMatchObject({
+      id,
+      universityId: 2,
+      campusLabel: '경희대학교 국제캠퍼스',
+      wish: '바뀐 글',
+    });
+    await expect(patchTourWish(id, { universityId: 999 }, listCampuses())).rejects.toMatchObject({
+      fieldErrors: { universityId: '학교를 골라 주세요.' },
+    });
+  });
+
+  it('PATCH 오류: 남의 글 403(E403), 없는 글 404(E404), 가이드 403, 101자는 wish 칸 오류', async () => {
+    await login('haeun@demo.kr');
+    await expect(
+      patchTourWish(wishId('seojun@demo.kr'), { wish: '가' }, listCampuses()),
+    ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN', backendCode: 'E403' });
+    await expect(patchTourWish(99999, { wish: '가' }, listCampuses())).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+      backendCode: 'E404',
+    });
+    await expect(
+      patchTourWish(wishId('haeun@demo.kr'), { wish: '가'.repeat(101) }, listCampuses()),
+    ).rejects.toMatchObject({ fieldErrors: { wish: '희망 사항은 1~100자로 적어 주세요.' } });
+    await login('guide@demo.kr');
+    await expect(
+      patchTourWish(wishId('haeun@demo.kr'), { wish: '가' }, listCampuses()),
+    ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+  });
+
+  it('GET /tour-wishes 와이어: 명세 T-08 목록과 같은 모양(+ campus_id · date), 학생 이름은 내려주지 않는다', async () => {
+    const { token } = await login('guide@demo.kr');
+    const raw = await rawFetch<{ data: Items }>('/tour-wishes', { method: 'GET', token });
+    expect(raw.status).toBe(200);
+    expectWireShape(raw.body.data, GUIDE_WISHES.data, ['campus_id', 'date']);
+    expect(raw.body.data.items.map((w) => w.major)).toEqual(['시각디자인', '산업디자인']);
+    const text = JSON.stringify(raw.body);
+    for (const name of ['이하은', '정우진', 'haeun', 'past1']) expect(text).not.toContain(name);
+  });
+
+  it('listGuideWishes: 학교 · 학과는 쿼리(campus_id · major)로 가고, 비우면 보내지 않는다', async () => {
+    await login('guide@demo.kr');
+    const urls: string[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (new URL(request.url).pathname === '/api/tour-wishes') urls.push(request.url);
+    });
+    const byMajor = await listGuideWishes({ universityId: 2, major: '산업' }, listCampuses());
+    const other = await listGuideWishes({ universityId: 5 }, listCampuses());
+    const mine = await listGuideWishes({}, listCampuses());
+    server.events.removeAllListeners('request:start');
+    expect(byMajor.map((w) => w.major)).toEqual(['산업디자인']);
+    expect(other.map((w) => w.major)).toEqual(['통번역']);
+    expect(mine.map((w) => w.major)).toEqual(['시각디자인', '산업디자인']);
+    const queries = urls.map((u) => new URL(u).searchParams);
+    expect(queries[0].get('campus_id')).toBe('2');
+    expect(queries[0].get('major')).toBe('산업');
+    expect(queries[1].has('major')).toBe(false);
+    expect(queries[2].has('campus_id')).toBe(false);
+  });
+
+  it('GET /tour-wishes 오류: 고교생 403(E403), 인증 전 · 심사 중 가이드 403(E403_VERIFICATION_REQUIRED)', async () => {
+    await login('student@demo.kr');
+    await expect(listGuideWishes({}, listCampuses())).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
+    for (const email of ['guide-new@demo.kr', 'guide-pending@demo.kr']) {
+      await login(email);
+      await expect(listGuideWishes({}, listCampuses())).rejects.toMatchObject({
+        status: 403,
+        code: 'NOT_VERIFIED',
+        backendCode: 'E403_VERIFICATION_REQUIRED',
+      });
+    }
   });
 });
 

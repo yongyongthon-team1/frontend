@@ -8,7 +8,7 @@ import type { TourStatus } from '@/features/tours/model';
 // DATE는 `YYYY-MM-DD`, DATETIME은 `+09:00` ISO 8601 문자열이다.
 // `id`가 users.id를 가리키는 테이블(프로필 · 인증 · 동의)은 ERD 그대로 `id`가 사용자 ID다.
 
-export const MOCK_DB_VERSION = 3;
+export const MOCK_DB_VERSION = 4;
 
 export type StudentVerificationStatus = 'PENDING' | 'APPROVED' | 'REJECTED';
 export type GuardianConsentStatus = 'PENDING' | 'AGREED' | 'REJECTED';

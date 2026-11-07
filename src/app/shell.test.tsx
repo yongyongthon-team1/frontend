@@ -123,6 +123,9 @@ describe('레이아웃', () => {
   it.each([
     ['student', '/verify', 'MY', ['탐색', '내 탐방']],
     ['guide', '/guide/verify', 'MY', ['내 탐방', '코스 편집']],
+    ['guide', '/guide/wishes', '내 탐방', ['코스 편집', 'MY']],
+    ['student', '/me/wishes', 'MY', ['탐색', '내 탐방']],
+    ['student', '/me/wishes/1/edit', 'MY', ['탐색', '내 탐방']],
     ['owner', '/owner/verify', '내 가게', ['쿠폰']],
   ])('%s 인증 화면(%s)에서 %s 탭만 활성', async (as, path, tab, others) => {
     await renderApp(path, { as });
@@ -165,6 +168,8 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/reviews/new', 'HIGH_SCHOOL'],
   ['/verify', 'HIGH_SCHOOL'],
   ['/me', 'HIGH_SCHOOL'],
+  ['/me/wishes', 'HIGH_SCHOOL'],
+  ['/me/wishes/1/edit', 'HIGH_SCHOOL'],
   ['/guide', 'UNIVERSITY'],
   ['/guide/course', 'UNIVERSITY'],
   ['/guide/tours/1/course/confirm', 'UNIVERSITY'],
@@ -181,6 +186,7 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/guide/tours/1/cancel', 'UNIVERSITY'],
   ['/guide/me', 'UNIVERSITY'],
   ['/guide/verify', 'UNIVERSITY'],
+  ['/guide/wishes', 'UNIVERSITY'],
   ['/explore', 'ANY'],
   ['/owner/coupons/redeem', 'OWNER'],
   ['/owner/store', 'OWNER'],

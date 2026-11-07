@@ -6,6 +6,7 @@ import { CourseEditPage } from '@/pages/guide/CourseEditPage';
 import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
 import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
+import { GuideWishesPage } from '@/pages/guide/GuideWishesPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
 import { MyStorePage } from '@/pages/owner/MyStorePage';
@@ -15,12 +16,15 @@ import { ApplyPage } from '@/pages/student/ApplyPage';
 import { CouponDetailPage } from '@/pages/student/CouponDetailPage';
 import { CouponListPage } from '@/pages/student/CouponListPage';
 import { CourseMapPage } from '@/pages/student/CourseMapPage';
+import { EditWishPage } from '@/pages/student/EditWishPage';
 import { HomePage } from '@/pages/student/HomePage';
 import { MyTourDetailPage } from '@/pages/student/MyTourDetailPage';
 import { MyToursPage } from '@/pages/student/MyToursPage';
+import { MyWishesPage } from '@/pages/student/MyWishesPage';
 import { TourDetailPage } from '@/pages/student/TourDetailPage';
 import { TourResultsPage } from '@/pages/student/TourResultsPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
+import { ListRow } from '@/shared/ui/ListRow';
 import { ErrorPage, RouteErrorPage } from './ErrorPage';
 import { RequireAuth } from './guards/RequireAuth';
 import { RequireRole } from './guards/RequireRole';
@@ -126,8 +130,22 @@ export const routes: RouteObject[] = [
                   {
                     path: '/me',
                     element: (
-                      <PlaceholderPage title="내 정보 · 인증 상태" wireframe="hs-a03" showLogout />
+                      <PlaceholderPage title="내 정보 · 인증 상태" wireframe="hs-a03" showLogout>
+                        <ListRow
+                          to="/me/wishes"
+                          title="내 희망 사항"
+                          meta="남긴 희망 사항을 보고 고쳐요."
+                        />
+                      </PlaceholderPage>
                     ),
+                  },
+                  {
+                    path: '/me/wishes',
+                    element: <MyWishesPage />, // T-07 내 희망 사항
+                  },
+                  {
+                    path: '/me/wishes/:wishId/edit',
+                    element: <EditWishPage />, // T-07 희망 사항 고치기
                   },
                 ],
               },
@@ -147,6 +165,10 @@ export const routes: RouteObject[] = [
                   {
                     path: '/guide/tours',
                     element: <GuideToursPage />,
+                  },
+                  {
+                    path: '/guide/wishes',
+                    element: <GuideWishesPage />, // T-08 고교생 희망 사항
                   },
                   {
                     path: '/guide/tours/new',

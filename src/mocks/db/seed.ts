@@ -793,6 +793,53 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
     generatedAt: stamp(-28),
   });
 
+  // 탐방 희망 사항(T-01) 시드: 가이드 화면(T-08)이 비지 않게 학생 넷의 글을 둔다(제안 문구, 가상의 글). 김민지는 시연에서 처음 남긴다.
+  const wishRows = [
+    [
+      haeun,
+      2,
+      '시각디자인',
+      '디자인 작업실에서 선배들이 과제하는 모습을 보고, 학생 식당도 가 보고 싶어요.',
+      null,
+      stamp(-3, '19:20'),
+    ],
+    [
+      past1,
+      2,
+      '산업디자인',
+      '제품 디자인 수업에서 무엇을 만드는지 궁금해요.\n실기 준비 이야기도 듣고 싶어요.',
+      null,
+      stamp(-6, '21:05'),
+    ],
+    [
+      seojun,
+      4,
+      '컴퓨터공학',
+      '코딩 동아리가 어떤 프로젝트를 하는지 보고 싶어요.',
+      rel(45),
+      stamp(-4, '20:10'),
+    ],
+    [
+      yujin,
+      5,
+      '통번역',
+      '통역 실습실을 구경하고 선배에게 어학 공부법을 묻고 싶어요.',
+      null,
+      stamp(-2, '18:40'),
+    ],
+  ] as const;
+  for (const [author, universityId, major, content, preferredDate, at] of wishRows) {
+    add(db.tourWishes, {
+      userId: author.id,
+      universityId,
+      major,
+      content,
+      preferredDate,
+      createdAt: at,
+      updatedAt: at,
+    });
+  }
+
   // 김민지(student@demo.kr)는 시연에서 직접 신청하는 학생이라 START에는 신청 · 쿠폰이 없다.
   if (checkpoint === 'START') return db;
 

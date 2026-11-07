@@ -23,7 +23,7 @@ export const TABS: Record<Role, TabItem[]> = {
       label: '내 탐방',
       icon: List,
       end: true,
-      match: ['/guide/tours'],
+      match: ['/guide/tours', '/guide/wishes'],
       exclude: [/^\/guide\/tours\/\d+\/course(\/|$)/],
     },
     {

@@ -129,6 +129,63 @@ describe('가이드 홈 (G01 · G11)', () => {
     expect(screen.queryByText('진행 예정인 탐방이 없어요.')).not.toBeInTheDocument();
   });
 
+  describe('고교생 희망 사항 진입 (T-08)', () => {
+    /** 행이 있고 `내가 개설한 탐방` 링크 바로 위(문서 순서로 앞)에 있다. */
+    async function expectWishesRow() {
+      const row = await screen.findByRole('link', { name: /^고교생 희망 사항/ });
+      expect(row).toHaveAttribute('href', '/guide/wishes');
+      expect(row).toHaveTextContent('학생들이 남긴 희망 사항을 보고 탐방을 준비해요.');
+      const all = screen.getByRole('link', { name: '내가 개설한 탐방' });
+      expect(row.compareDocumentPosition(all) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+      expect(screen.getAllByRole('link', { name: /^고교생 희망 사항/ })).toHaveLength(1);
+    }
+
+    it('START(신청자 있음): `내가 개설한 탐방` 위에 행이 있고 `신청자 확인하기`는 그대로', async () => {
+      await renderApp('/guide', { as: 'guide' });
+      await expectWishesRow();
+      expect(
+        screen.getAllByRole('link', { name: '신청자 확인하기' }).map((a) => a.getAttribute('href')),
+      ).toContain('/guide/tours/1/applicants');
+    });
+
+    it('APPLIED', async () => {
+      await renderApp('/guide', { as: 'guide', checkpoint: 'APPLIED' });
+      await expectWishesRow();
+    });
+
+    it('G11 신청자 없음', async () => {
+      await renderPatched('/guide', { as: 'guide' }, (db) => {
+        db.tours.find((t) => t.id === 1)!.status = 'COMPLETED';
+      });
+      await screen.findByRole('heading', { level: 1, name: '아직 신청자가 없어요.' });
+      await expectWishesRow();
+    });
+
+    it('진행 예정 탐방이 없는 빈 상태', async () => {
+      await renderPatched('/guide', { as: 'guide' }, (db) => {
+        for (const t of db.tours) {
+          if (t.status === 'RECRUITING' || t.status === 'CLOSED') t.status = 'COMPLETED';
+        }
+      });
+      await screen.findByText('진행 예정인 탐방이 없어요.');
+      await expectWishesRow();
+    });
+
+    it('누르면 /guide/wishes, `내 탐방` 탭이 켜진 채', async () => {
+      const { user, router } = await renderApp('/guide', { as: 'guide' });
+      await user.click(await screen.findByRole('link', { name: /^고교생 희망 사항/ }));
+      expect(router.state.location.pathname).toBe('/guide/wishes');
+      const nav = await screen.findByRole('navigation', { name: '주요 메뉴' });
+      expect(within(nav).getByRole('link', { name: '내 탐방' })).toHaveAttribute(
+        'aria-current',
+        'page',
+      );
+      expect(within(nav).getByRole('link', { name: '코스 편집' })).not.toHaveAttribute(
+        'aria-current',
+      );
+    });
+  });
+
   it('불러오는 동안에도 h1이 있다(화면 낭독기용)', async () => {
     server.use(http.get('/api/users/me/tours', () => new Promise<never>(() => {})));
     await renderApp('/guide', { as: 'guide' });

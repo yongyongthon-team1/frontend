@@ -13,6 +13,7 @@ import {
 import { distanceMeters } from './geo';
 import { MOCK_DOC_SAMPLE } from './files';
 import { createSeed, DEMO_TOUR_ID, DEMO_UNIVERSITY_ID } from './seed';
+import { MOCK_DB_VERSION } from './schema';
 import type { DB } from './schema';
 
 const today = new Date('2026-11-15T01:00:00Z'); // KST 10:00
@@ -41,6 +42,62 @@ function maxId(db: DB): number {
 }
 
 describe('createSeed', () => {
+  it('희망 사항 4행(김민지는 없다) · DB 버전 4', () => {
+    const db = createSeed(today);
+    expect(db.version).toBe(4);
+    expect(MOCK_DB_VERSION).toBe(4);
+    const emailOf = (userId: number) => db.users.find((u) => u.id === userId)?.email;
+    expect(
+      db.tourWishes.map((w) => [
+        w.id,
+        emailOf(w.userId),
+        w.universityId,
+        w.major,
+        w.content,
+        w.preferredDate,
+        w.createdAt,
+      ]),
+    ).toEqual([
+      [
+        1,
+        'haeun@demo.kr',
+        2,
+        '시각디자인',
+        '디자인 작업실에서 선배들이 과제하는 모습을 보고, 학생 식당도 가 보고 싶어요.',
+        null,
+        '2026-11-12T19:20:00+09:00',
+      ],
+      [
+        2,
+        'past1@demo.kr',
+        2,
+        '산업디자인',
+        '제품 디자인 수업에서 무엇을 만드는지 궁금해요.\n실기 준비 이야기도 듣고 싶어요.',
+        null,
+        '2026-11-09T21:05:00+09:00',
+      ],
+      [
+        3,
+        'seojun@demo.kr',
+        4,
+        '컴퓨터공학',
+        '코딩 동아리가 어떤 프로젝트를 하는지 보고 싶어요.',
+        '2026-12-30',
+        '2026-11-11T20:10:00+09:00',
+      ],
+      [
+        4,
+        'yujin@demo.kr',
+        5,
+        '통번역',
+        '통역 실습실을 구경하고 선배에게 어학 공부법을 묻고 싶어요.',
+        null,
+        '2026-11-13T18:40:00+09:00',
+      ],
+    ]);
+    expect(db.tourWishes.every((w) => w.updatedAt === w.createdAt)).toBe(true);
+  });
+
   it('대학 5곳', () =>
     expect(createSeed(today).universities.map((u) => u.name)).toEqual([
       '강남대학교',

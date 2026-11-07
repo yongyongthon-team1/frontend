@@ -12,6 +12,7 @@ import { formatAmPm, formatDotDateWeekday, formatLongDate } from '@/shared/lib/d
 import { BOTTOM_ACTION_PAGE_TAB_ROOT, BottomAction } from '@/shared/ui/BottomAction';
 import { BrandMark } from '@/shared/ui/BrandMark';
 import { buttonClass } from '@/shared/ui/buttonStyles';
+import { ListRow } from '@/shared/ui/ListRow';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { Page } from '@/shared/ui/Page';
@@ -20,6 +21,19 @@ import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
 
 const dot = ' · ';
+
+/** 화면 맨 아래 `내가 개설한 탐방` 바로 위의 행: 학생들이 남긴 희망 사항(T-08)으로 간다. */
+function GuideWishesLink() {
+  return (
+    <div className="mt-6">
+      <ListRow
+        to="/guide/wishes"
+        title="고교생 희망 사항"
+        meta="학생들이 남긴 희망 사항을 보고 탐방을 준비해요."
+      />
+    </div>
+  );
+}
 
 /** 화면 맨 아래 링크. `›`는 장식이라 링크 이름은 `내가 개설한 탐방`이다. */
 function AllToursLink() {
@@ -88,6 +102,7 @@ export function GuideHomePage() {
             action={{ label: '새 탐방 개설하기', to: '/guide/tours/new' }}
           />
         </div>
+        <GuideWishesLink />
         <AllToursLink />
       </Page>
     );
@@ -154,6 +169,7 @@ export function GuideHomePage() {
         </ul>
       )}
 
+      <GuideWishesLink />
       <AllToursLink />
     </Page>
   );
@@ -200,6 +216,7 @@ function NoApplicants({ tour }: { tour: GuideTourSummary }) {
         승인된 신청자가 1명 이상이면 코스 초안 생성을 진행할 수 있어요.
       </p>
 
+      <GuideWishesLink />
       <AllToursLink />
 
       <BottomAction>

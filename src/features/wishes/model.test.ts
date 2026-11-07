@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { toWishInput, wishFormSchema, type WishFormValues } from './model';
+import {
+  diffWishPatch,
+  toWishInput,
+  wishFormSchema,
+  type TourWish,
+  type WishFormValues,
+} from './model';
 
 const valid: WishFormValues = {
   universityId: '2',
@@ -59,5 +65,50 @@ describe('toWishInput', () => {
 
   it('날짜가 있으면 그대로', () => {
     expect(toWishInput({ ...valid, date: '2027-01-15' }).date).toBe('2027-01-15');
+  });
+});
+
+describe('diffWishPatch', () => {
+  const before: TourWish = {
+    id: 5,
+    universityId: 2,
+    campusLabel: '경희대학교 국제캠퍼스',
+    major: '산업디자인',
+    wish: '작업실을 구경하고 싶어요.',
+    date: null,
+    createdAt: '2026-11-04T21:00:00+09:00',
+  };
+  const same = {
+    universityId: 2,
+    major: '산업디자인',
+    wish: '작업실을 구경하고 싶어요.',
+    date: null,
+  };
+
+  it('그대로면 빈 객체', () => {
+    expect(diffWishPatch(before, same)).toEqual({});
+  });
+
+  it('값이 다른 칸만 담는다', () => {
+    expect(diffWishPatch(before, { ...same, wish: '학식도 먹고 싶어요.' })).toEqual({
+      wish: '학식도 먹고 싶어요.',
+    });
+    expect(diffWishPatch(before, { ...same, universityId: 3, major: '통번역' })).toEqual({
+      universityId: 3,
+      major: '통번역',
+    });
+  });
+
+  it('날짜: null끼리는 키가 없고, 날짜를 지우면 date: null, 넣으면 그 날짜', () => {
+    expect(diffWishPatch({ ...before, date: null }, same)).not.toHaveProperty('date');
+    expect(diffWishPatch({ ...before, date: '2027-01-15' }, same)).toEqual({ date: null });
+    expect(diffWishPatch(before, { ...same, date: '2027-01-16' })).toEqual({ date: '2027-01-16' });
+    expect(
+      diffWishPatch({ ...before, date: '2027-01-15' }, { ...same, date: '2027-01-15' }),
+    ).toEqual({});
+  });
+
+  it('학교를 모르는 항목(before.universityId null)이면 고른 학교를 늘 담는다', () => {
+    expect(diffWishPatch({ ...before, universityId: null }, same)).toEqual({ universityId: 2 });
   });
 });
