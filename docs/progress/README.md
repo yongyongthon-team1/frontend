@@ -28,7 +28,7 @@
 | 코드 | 화면 | 라우트 | 우선 | UI | 목업 | 실API | 하이파이 | QA |
 |---|---|---|---|---|---|---|---|---|
 | `hs-s01` | 로그인 | `/login` | P0 | ✅ | ✅ | ⬜ | ⬜ | ⬜ |
-| `hs-s02` | 재학 인증 · 보호자 동의 | `/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-s02` | 재학 인증 · 보호자 동의 ✅(U-05 · U-06 — 학생증 업로드, 보호자 동의 요청 · 대기 · 완료, 시연 도구가 켜졌을 때 `보호자 페이지 열기` · `동의 완료로 건너뛰기`) | `/verify` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
 | `hs-s03` | 홈 · T-01 희망 사항 등록(H01 V2 부품) | `/` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s04` | T-01 탐방 찾기 결과(H02 V2 부품 · 희망 원문 카드 + 모집 중 탐방) | `/tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s05` | 탐방 상세 · 신청 · V2(H03) | `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -128,8 +128,8 @@
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 (U-07) | ⬜ | ⬜ | ⬜ | ⬜ |
 | reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 ✅ 화면 연결 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
 | reviews | `GET /api/stores/:storeId/reviews` | hs-s08 · 가이드 확정 코스 상점 시트의 요약 · 별점 · 접힌 `최근 리뷰` ✅ 화면 연결 (R-02, `page=1&size=3` 한 쪽, 캠퍼스 지점은 부르지 않음. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
-| verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05, multipart `school_name`(고교생) · `campus_id`(대학생) + `document`, jpg · png 5MB. 고교생은 이어서 `PATCH /users/me`로 학년을 저장. 화면은 MVP 2B′ Task 10 · 11) | ⬜ | ✅ | ⬜ | ⬜ |
-| verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 (U-06, 거부 · 만료일 때만 다시 요청, 링크 7일. 화면은 MVP 2B′ Task 10) | ⬜ | ✅ | ⬜ | ⬜ |
+| verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05, multipart `school_name`(고교생) · `campus_id`(대학생) + `document`, jpg · png 5MB. 고교생은 이어서 `PATCH /users/me`로 학년을 저장. 고교생 화면 ✅ 연결(`/verify`), 대학생 화면은 MVP 2B′ Task 11) | ⬜ | ✅ | ⬜ | ⬜ |
+| verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 ✅ 화면 연결 (U-06, 거부 · 만료일 때만 다시 요청, 링크 7일) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `GET /api/guardian-consents/:consentToken` | hs-a02 보호자 동의 안내 ✅ 화면 연결 (U-06, 로그인 없이 `auth: false`. 처리된 링크는 200 + 그 상태, 만료 `E410_EXPIRED` → `CONSENT_LINK_EXPIRED`, 없는 토큰 `E404` → `CONSENT_LINK_INVALID`) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `PATCH /api/guardian-consents/:consentToken` | hs-a02 동의 · 거부 ✅ 화면 연결 (U-06, 본문 `{ agree }`, 로그인 없이 `auth: false`, 처리한 요청은 `E409_ALREADY_PROCESSED`) | ⬜ | ✅ | ⬜ | ⬜ |
 | admin | `GET /api/admin/verifications` | owner-s06 인증 심사 목록 (U-08 보완) | ⬜ | ⬜ | ⬜ | ⬜ |

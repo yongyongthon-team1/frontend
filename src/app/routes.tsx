@@ -31,6 +31,7 @@ import { MyWishesPage } from '@/pages/student/MyWishesPage';
 import { ReviewNewPage } from '@/pages/student/ReviewNewPage';
 import { TourDetailPage } from '@/pages/student/TourDetailPage';
 import { TourResultsPage } from '@/pages/student/TourResultsPage';
+import { VerifyPage } from '@/pages/student/VerifyPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
 import { ListRow } from '@/shared/ui/ListRow';
 import { ErrorPage, RouteErrorPage } from './ErrorPage';
@@ -130,7 +131,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/verify',
-                    element: <PlaceholderPage title="재학 인증 · 보호자 동의" wireframe="hs-s02" />,
+                    element: <VerifyPage />,
                   },
                   {
                     path: '/me',
