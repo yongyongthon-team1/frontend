@@ -50,10 +50,7 @@ describe('request', () => {
   it('에러 봉투를 ApiError로', async () => {
     server.use(
       http.get('/api/err', () =>
-        HttpResponse.json(
-          { code: 'TOUR_CLOSED', message: 'x', details: { a: 1 } },
-          { status: 409 },
-        ),
+        wireFail('E409_TOUR_FULL', { data: { remaining_seats: 0 }, message: 'x' }),
       ),
     );
     const promise = request('/err');
@@ -61,22 +58,21 @@ describe('request', () => {
     await expect(promise).rejects.toMatchObject({
       status: 409,
       code: 'TOUR_CLOSED',
-      details: { a: 1 },
+      backendCode: 'E409_TOUR_FULL',
+      details: { remainingSeats: 0 },
     });
   });
 
   it('필드 에러를 담는다', async () => {
     server.use(
       http.post('/api/form', () =>
-        HttpResponse.json(
-          { code: 'VALIDATION', message: 'v', fieldErrors: { email: '형식' } },
-          { status: 400 },
-        ),
+        wireFail('E400', { errors: [{ field: 'email', reason: '형식' }] }),
       ),
     );
     await expect(request('/form', { method: 'POST', body: {} })).rejects.toMatchObject({
       status: 400,
       code: 'VALIDATION',
+      backendCode: 'E400',
       fieldErrors: { email: '형식' },
     });
   });
@@ -84,11 +80,7 @@ describe('request', () => {
   it('401이면 onUnauthorized 호출', async () => {
     const spy = vi.fn();
     configureHttp({ onUnauthorized: spy });
-    server.use(
-      http.get('/api/me', () =>
-        HttpResponse.json({ code: 'UNAUTHORIZED', message: 'u' }, { status: 401 }),
-      ),
-    );
+    server.use(http.get('/api/me', () => wireFail('E401')));
     await expect(request('/me')).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
     expect(spy).toHaveBeenCalledTimes(1);
   });
@@ -100,7 +92,7 @@ describe('request', () => {
     server.use(
       http.post('/api/auth/login', ({ request: req }) => {
         seenAuth.push(req.headers.get('Authorization'));
-        return HttpResponse.json({ code: 'INVALID_CREDENTIALS', message: 'x' }, { status: 401 });
+        return wireFail('E401_INVALID_CREDENTIALS');
       }),
     );
     await expect(
@@ -444,7 +436,7 @@ describe('오류 봉투', () => {
     });
   });
 
-  it('전환 기간: 옛 오류 모양도 받는다', async () => {
+  it('봉투가 아닌 오류 본문은 code가 있어도 UNKNOWN(fieldErrors 없음)', async () => {
     server.use(
       http.get('/api/legacy', () =>
         HttpResponse.json(
@@ -454,11 +446,24 @@ describe('오류 봉투', () => {
       ),
     );
     const error = await request('/legacy').catch((e: unknown) => e);
-    expect(error).toMatchObject({
-      code: 'TOUR_CLOSED',
-      fieldErrors: { a: 'b' },
-      backendCode: null,
-    });
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({ status: 409, code: 'UNKNOWN', backendCode: null });
+    expect((error as ApiError).fieldErrors).toBeUndefined();
+    expect((error as ApiError).details).toBeUndefined();
+  });
+
+  it('HTML 502 본문도 UNKNOWN', async () => {
+    server.use(
+      http.get(
+        '/api/html',
+        () =>
+          new HttpResponse('<html><body>502 Bad Gateway</body></html>', {
+            status: 502,
+            headers: { 'Content-Type': 'text/html' },
+          }),
+      ),
+    );
+    await expect(request('/html')).rejects.toMatchObject({ status: 502, code: 'UNKNOWN' });
   });
 
   it('봉투 401은 onUnauthorized를 한 번 부르고, auth:false의 401은 부르지 않는다', async () => {

@@ -150,7 +150,7 @@ export const BACKEND_ERROR_MAP: Readonly<Record<string, ErrorCode>> = {
 };
 
 /**
- * 받은 백엔드 코드를 `ErrorCode`로(2C-R4). 순서: 호출별 `errorMap` → (전환 기간) 이미 `ErrorCode` 이름 →
+ * 받은 백엔드 코드를 `ErrorCode`로(2C-R4). 순서: 호출별 `errorMap` →
  * 기본 표 → `E###_<이름>`의 `<이름>`이 `ErrorCode`면 그것(목업 확장 코드) → `UNKNOWN`.
  */
 export function resolveErrorCode(
@@ -160,7 +160,6 @@ export function resolveErrorCode(
   const mapped =
     errorMap && Object.hasOwn(errorMap, backendCode) ? errorMap[backendCode] : undefined;
   if (mapped) return mapped;
-  if (isErrorCode(backendCode)) return backendCode;
   if (Object.hasOwn(BACKEND_ERROR_MAP, backendCode)) return BACKEND_ERROR_MAP[backendCode];
   const suffix = /^E\d{3}_(.+)$/.exec(backendCode)?.[1];
   if (suffix !== undefined && isErrorCode(suffix)) return suffix;

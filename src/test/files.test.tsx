@@ -2,8 +2,9 @@ import { render, screen } from '@testing-library/react';
 import userEvent from '@testing-library/user-event';
 import { http, HttpResponse } from 'msw';
 import { describe, expect, it } from 'vitest';
-import { formFile, readForm, withErrors } from '@/mocks/handlers/util';
+import { formFile, readForm } from '@/mocks/handlers/util';
 import { server } from '@/mocks/node';
+import { withWire } from '@/mocks/wire/envelope';
 import { upload } from '@/shared/lib/http';
 import { testImage } from './files';
 
@@ -25,7 +26,7 @@ describe('jsdom 업로드 경로(전역 FormData · File이 Node 구현이어도
     server.use(
       http.post(
         '/api/_upload',
-        withErrors(async ({ request }) => {
+        withWire(async ({ request }) => {
           const file = formFile(await readForm(request), 'document');
           return HttpResponse.json({ name: file?.name, type: file?.type });
         }),

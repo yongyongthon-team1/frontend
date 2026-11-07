@@ -149,8 +149,8 @@ describe('fail', () => {
       errors: null,
       timestamp: expect.stringMatching(TIMESTAMP) as string,
     });
-    const withErrors = wireFail('E400', { errors: [{ field: 'document', reason: 'x' }] });
-    expect(((await withErrors.json()) as { errors: unknown }).errors).toEqual([
+    const withFields = wireFail('E400', { errors: [{ field: 'document', reason: 'x' }] });
+    expect(((await withFields.json()) as { errors: unknown }).errors).toEqual([
       { field: 'document', reason: 'x' },
     ]);
   });

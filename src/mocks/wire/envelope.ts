@@ -80,7 +80,7 @@ export function fail(error: MockApiError): Response {
   });
 }
 
-/** `withErrors`의 봉투판. `MockApiError`는 `fail`로, 다른 오류는 그대로 던진다. */
+/** 핸들러 경계. `MockApiError`는 `fail`로, 다른 오류는 그대로 던진다. */
 export function withWire(resolver: Resolver): HttpResponseResolver {
   return async ({ request, params }) => {
     try {

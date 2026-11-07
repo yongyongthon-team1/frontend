@@ -1,8 +1,8 @@
 import { errorMessage, type ErrorCode } from '@/shared/lib/errors';
 
 /**
- * 목업 규칙이 던지는 API 오류. 핸들러(Task 9 `withErrors`)가 `status`와
- * `{ code, message, details, fieldErrors }` 본문으로 바꿔 응답한다. 메시지를 주지 않으면 에러 코드 표의 문구를 쓴다.
+ * 목업 규칙이 던지는 API 오류. 핸들러 경계(`withWire`)가 `fail`로 오류 봉투
+ * (`code` · `message` · `data` ← `details` · `errors` ← `fieldErrors`)와 그 상태 코드로 바꿔 응답한다. 메시지를 주지 않으면 에러 코드 표의 문구를 쓴다.
  */
 export class MockApiError extends Error {
   constructor(

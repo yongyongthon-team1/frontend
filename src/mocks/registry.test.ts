@@ -1,8 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { handlersByDomain, selectHandlers } from './registry';
 
-// 등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS ∪ LEGACY (2C-R24).
-// 도메인 태스크가 자기 줄을 LEGACY · NOT_MOCKED에서 지운다. 끝나면 LEGACY는 없어지고 NOT_MOCKED는 2B가 채울 20개다.
+// 등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS (2C-R24).
+// NOT_MOCKED는 2B가 채울 20개이고, 등록 핸들러는 26(백엔드) + 3(확장) = 29개다.
 // 경로는 `/api`를 뗀 꼴이다(비교할 때 `label(h).replace(' /api/', ' /')`).
 
 /** `docs/api/backend-spec.md`의 `### METHOD /path` 46개(명세 순서). */
@@ -58,7 +58,7 @@ const BACKEND_CONTRACT: string[] = [
 /** 목업 전용 확장 엔드포인트(2C-R8). */
 const EXTENSIONS: string[] = ['GET /health', 'POST /demo/reset', 'GET /campuses/:campusId/insight'];
 
-/** 아직 목업이 없는 백엔드 경로. 도메인 태스크가 자기 줄을 지운다. 끝에 남는 20개는 2B 몫이다. */
+/** 아직 목업이 없는 백엔드 경로 20개. 2B가 채운다(채울 때마다 자기 줄을 지운다). */
 const NOT_MOCKED: string[] = [
   'POST /verifications/enrollment',
   'POST /guardian-consents',
@@ -81,9 +81,6 @@ const NOT_MOCKED: string[] = [
   'GET /stores/:storeId/reviews',
   'GET /campuses/:campusId/places',
 ];
-
-/** 아직 바꾸지 않은 옛 경로(전환 기간). 도메인 태스크가 자기 줄을 지운다 — Task 11 뒤 비었고 Task 13이 목록째 지운다. */
-const LEGACY: string[] = [];
 
 const label = (h: { info: { method: unknown; path: unknown } }) =>
   `${String(h.info.method)} ${String(h.info.path)}`.replace(' /api/', ' /');
@@ -114,17 +111,17 @@ describe('registry', () => {
     expect(EXTENSIONS.filter((e) => BACKEND_CONTRACT.includes(e))).toEqual([]);
   });
 
-  it('LEGACY ∩ (BACKEND_CONTRACT − NOT_MOCKED) = ∅ (옛 줄을 지우지 않은 채 새 줄을 더하는 실수를 잡는다)', () => {
-    const mocked = BACKEND_CONTRACT.filter((e) => !NOT_MOCKED.includes(e));
-    expect(LEGACY.filter((e) => mocked.includes(e))).toEqual([]);
+  it('NOT_MOCKED는 2B 몫 20개이고 겹치지 않는다', () => {
+    expect(NOT_MOCKED).toHaveLength(20);
+    expect(new Set(NOT_MOCKED).size).toBe(20);
   });
 
-  it('등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS ∪ LEGACY', () => {
+  it('등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS, 모두 29개', () => {
     const expected = new Set([
       ...BACKEND_CONTRACT.filter((e) => !NOT_MOCKED.includes(e)),
       ...EXTENSIONS,
-      ...LEGACY,
     ]);
+    expect(expected.size).toBe(29);
     const registered = selectHandlers('all').map(label);
     expect(new Set(registered).size).toBe(registered.length);
     expect(sorted(registered)).toEqual(sorted(expected));

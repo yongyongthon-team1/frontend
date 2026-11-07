@@ -125,17 +125,7 @@ async function toApiError(res: Response, options: RequestOptions): Promise<ApiEr
   const parsed = parseJson(await res.text());
   // 2C-R2 해석(통제자 확정): 실패 본문은 `code`만으로 봉투다 — `data` 키는 요구하지 않는다.
   if (hasEnvelopeCode(parsed)) return envelopeError(res.status, parsed, options);
-  // 전환 기간: 옛 오류 모양 `{ code: ErrorCode, fieldErrors, details }`(Task 13이 지운다).
-  if (isRecord(parsed) && typeof parsed.code === 'string') {
-    const code = resolveErrorCode(parsed.code, options.errorMap);
-    return new ApiError(res.status, code, errorMessage(code), {
-      fieldErrors: isRecord(parsed.fieldErrors)
-        ? (parsed.fieldErrors as Record<string, string>)
-        : undefined,
-      details: detailsOf(parsed.details),
-    });
-  }
-  // JSON `code`가 없는 413(본문 없음 · 프록시의 HTML 오류 쪽)은 업로드 한도 초과다(계약 6절 18번).
+  // 봉투가 아닌 413(본문 없음 · 프록시의 HTML 오류 쪽)은 업로드 한도 초과다(계약 6절 18번).
   if (res.status === 413) {
     return new ApiError(413, 'FILE_TOO_LARGE', errorMessage('FILE_TOO_LARGE'));
   }

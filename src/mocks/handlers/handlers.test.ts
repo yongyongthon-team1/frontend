@@ -81,8 +81,9 @@ import {
   WISH_CREATED,
   WISH_UPDATED,
 } from '@/test/fixtures/backend/wishes';
+import { withWire } from '@/mocks/wire/envelope';
 import { expectWireShape, rawFetch, wireFail } from '@/test/wire';
-import { formFile, readBody, readForm, withErrors } from './util';
+import { formFile, readBody, readForm } from './util';
 
 // 핸들러를 실제 HTTP 클라이언트로 부른다. 테스트 setup이 전체 핸들러를 건 MSW 서버를 켜고,
 // 지연을 0으로 두고, 매 테스트 전에 오늘 기준 시드(START)로 DB를 되돌린다.
@@ -2051,7 +2052,7 @@ describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
     server.use(
       http.post(
         '/api/_probe',
-        withErrors(async () => {
+        withWire(async () => {
           throw fieldError('email', '이메일 형식이 맞지 않아요.');
         }),
       ),
@@ -2059,13 +2060,16 @@ describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
     const res = await fetch('/api/_probe', { method: 'POST' });
     expect(res.status).toBe(400);
     expect(await res.json()).toEqual({
-      code: 'VALIDATION',
+      code: 'E400',
       message: '입력값을 다시 확인해 주세요.',
-      fieldErrors: { email: '이메일 형식이 맞지 않아요.' },
+      data: null,
+      errors: [{ field: 'email', reason: '이메일 형식이 맞지 않아요.' }],
+      timestamp: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+09:00$/),
     });
     await expect(request('/_probe', { method: 'POST' })).rejects.toMatchObject({
       status: 400,
       code: 'VALIDATION',
+      backendCode: 'E400',
       fieldErrors: { email: '이메일 형식이 맞지 않아요.' },
     });
   });
@@ -2074,13 +2078,13 @@ describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
     server.use(
       http.post(
         '/api/_probe',
-        withErrors(async () => {
+        withWire(async () => {
           throw fieldError('email');
         }),
       ),
       http.put(
         '/api/_probe',
-        withErrors(async () => {
+        withWire(async () => {
           throw fieldError('email', '이미 가입된 이메일이에요.', 'EMAIL_DUPLICATE', 409);
         }),
       ),
@@ -2089,26 +2093,29 @@ describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
       status: 400,
       fieldErrors: { email: '입력값을 확인해 주세요.' },
     });
-    await expect(request('/_probe', { method: 'PUT' })).rejects.toMatchObject({
+    await expect(
+      request('/_probe', { method: 'PUT', errorMap: { E409: 'EMAIL_DUPLICATE' } }),
+    ).rejects.toMatchObject({
       status: 409,
+      backendCode: 'E409',
       code: 'EMAIL_DUPLICATE',
       message: '이미 가입된 이메일이에요.',
       fieldErrors: { email: '이미 가입된 이메일이에요.' },
     });
   });
 
-  it('fieldErrors가 없는 MockApiError의 본문에는 fieldErrors가 없다', async () => {
+  it('fieldErrors가 없는 MockApiError의 봉투는 errors: null', async () => {
     server.use(
       http.post(
         '/api/_probe',
-        withErrors(async () => {
+        withWire(async () => {
           throw new MockApiError(404, 'NOT_FOUND');
         }),
       ),
     );
     const res = await fetch('/api/_probe', { method: 'POST' });
     expect(res.status).toBe(404);
-    expect(await res.json()).not.toHaveProperty('fieldErrors');
+    expect(await res.json()).toMatchObject({ code: 'E404', data: null, errors: null });
   });
 
   describe('multipart', () => {
@@ -2116,7 +2123,7 @@ describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
       server.use(
         http.post(
           '/api/_upload',
-          withErrors(async ({ request: req }) => {
+          withWire(async ({ request: req }) => {
             const form = await readForm(req);
             const file = formFile(form, 'document');
             return HttpResponse.json({

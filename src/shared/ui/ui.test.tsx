@@ -755,7 +755,7 @@ describe('V2 StatusChip · InfoCard tone · TextField label', () => {
   });
 
   it('InfoCard tone: brand는 brand-soft, local은 local-soft, muted는 neutral-100', () => {
-    const { container, rerender } = render(<InfoCard title="왜 추천했나요?" tone="brand" />);
+    const { container, rerender } = render(<InfoCard title="탐방 안내" tone="brand" />);
     expect(container.firstChild).toHaveClass('bg-brand-soft');
     rerender(<InfoCard title="동네" tone="local" />);
     expect(container.firstChild).toHaveClass('bg-local-soft');

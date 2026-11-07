@@ -66,8 +66,8 @@ describe('resolveErrorCode', () => {
     expect(resolveErrorCode('E409_TOUR_FULL', { E409_TOUR_FULL: 'CAPACITY_EXCEEDED' })).toBe(
       'CAPACITY_EXCEEDED',
     ));
-  it('이미 ErrorCode 이름이면 그대로(전환 기간)', () =>
-    expect(resolveErrorCode('TOUR_CLOSED')).toBe('TOUR_CLOSED'));
+  it('ErrorCode 이름 그대로는 백엔드 코드가 아니라서 UNKNOWN', () =>
+    expect(resolveErrorCode('TOUR_CLOSED')).toBe('UNKNOWN'));
   it('기본 표', () => {
     expect(resolveErrorCode('E409_TOUR_FULL')).toBe('TOUR_CLOSED');
     expect(resolveErrorCode('E422_PARTNER_REQUIRED')).toBe('COURSE_PARTNER_REQUIRED');
