@@ -11,9 +11,9 @@ import {
 } from '@/features/auth/model';
 import { nextId } from '@/mocks/db/ids';
 import type { DB, GuideProfileRow, UserRow } from '@/mocks/db/schema';
-import { fieldError, MockApiError } from './errors';
 import { toSeoulIso } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
+import { fieldError, MockApiError } from './errors';
 
 // 가입(U-01) · 내 정보 수정(U-03) · 가이드 프로필(U-04) 규칙. 본문은 검증되지 않은 JSON이라 입력을 `Record<string, unknown>`로 받는다.
 // 본문은 백엔드 이름(`schoolName` · `interestMajor` · `intro`, `readBody`가 camel로 되돌린 것)으로 읽고 칸 오류도 그 이름으로

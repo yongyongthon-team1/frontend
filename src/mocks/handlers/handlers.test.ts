@@ -22,21 +22,23 @@ import { COURSE_CRITERIA } from '@/mocks/ai/course';
 import { getMockFile, putMockFile } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { configureHttp, request, upload } from '@/shared/lib/http';
-import { MockApiError } from '@/mocks/rules/errors';
+import { fieldError, MockApiError } from '@/mocks/rules/errors';
 import { server } from '@/mocks/node';
 import { testImage } from '@/test/files';
 import {
   GUIDE_PROFILE_OK,
+  LOGIN_FAILED,
   LOGIN_OK,
   LOGOUT_OK,
   ME_HIGH_SCHOOL,
+  ME_PATCH_OK,
   ME_UNIVERSITY,
+  SIGNUP_DUPLICATE,
   SIGNUP_OK,
 } from '@/test/fixtures/backend/auth';
 import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
 import { MY_STORE } from '@/test/fixtures/backend/stores';
 import { expectWireShape, rawFetch, wireFail } from '@/test/wire';
-import { fieldError } from '@/mocks/rules/errors';
 import { formFile, readBody, readForm, withErrors } from './util';
 
 // 핸들러를 실제 HTTP 클라이언트로 부른다. 테스트 setup이 전체 핸들러를 건 MSW 서버를 켜고,
@@ -164,6 +166,20 @@ describe('auth', () => {
     expect(onUnauthorized).not.toHaveBeenCalled();
     await expect(fetchMe()).rejects.toMatchObject({ status: 401 });
     expect(onUnauthorized).toHaveBeenCalledTimes(1);
+  });
+
+  it('명세 U-02 로그인 실패 예시(E401_INVALID_CREDENTIALS)를 그대로 받으면 INVALID_CREDENTIALS이고 세션을 끊지 않는다', async () => {
+    const onUnauthorized = vi.fn();
+    configureHttp({ getToken: () => 'some-session', onUnauthorized });
+    server.use(
+      http.post('/api/auth/login', () => HttpResponse.json(LOGIN_FAILED, { status: 401 })),
+    );
+    await expect(apiLogin({ email: 'a@b.kr', password: 'x' })).rejects.toMatchObject({
+      status: 401,
+      code: 'INVALID_CREDENTIALS',
+      backendCode: 'E401_INVALID_CREDENTIALS',
+    });
+    expect(onUnauthorized).not.toHaveBeenCalled();
   });
 
   it('없는 이메일도 401 INVALID_CREDENTIALS', async () =>
@@ -1091,6 +1107,37 @@ describe('가입 · 프로필 (POST /auth/signup · PATCH /users/me · PUT /user
       backendCode: 'E409',
       fieldErrors: { email: '이미 가입된 이메일이에요.' },
     });
+  });
+
+  it('명세 U-01 이메일 중복 예시(E409, errors 없음)를 그대로 받으면 EMAIL_DUPLICATE + 어댑터가 채운 fieldErrors.email', async () => {
+    server.use(
+      http.post('/api/auth/signup', () => HttpResponse.json(SIGNUP_DUPLICATE, { status: 409 })),
+    );
+    await expect(postSignup(signupBody)).rejects.toMatchObject({
+      status: 409,
+      code: 'EMAIL_DUPLICATE',
+      backendCode: 'E409',
+      fieldErrors: { email: '이미 가입된 이메일이에요.' },
+    });
+  });
+
+  it('명세 U-03 PATCH 응답 예시(다섯 칸)를 받아도 patchMe는 본문을 쓰지 않고 GET /users/me로 다시 읽는다', async () => {
+    await login('student@demo.kr');
+    server.use(http.patch('/api/users/me', () => HttpResponse.json(ME_PATCH_OK, { status: 200 })));
+    const seen = await requestsDuring(async () => {
+      expect(
+        await patchMe({
+          name: '김하늘',
+          highSchoolName: null,
+          grade: null,
+          interestedMajor: null,
+        }),
+      ).toMatchObject({
+        role: 'HIGH_SCHOOL',
+        studentProfile: { highSchoolName: '수원영통고등학교' },
+      });
+    });
+    expect(seen).toEqual(['PATCH /users/me', 'GET /users/me']);
   });
 
   it('patchMe: 새 Me를 주고(이름도 바뀐다) PATCH 응답은 GET /users/me와 같은 모양', async () => {

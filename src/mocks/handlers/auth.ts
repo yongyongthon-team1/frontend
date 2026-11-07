@@ -64,6 +64,7 @@ export const authHandlers = [
     }),
   ),
 
+  // 응답: 명세 본문은 "GET /users/me와 같은 형태"라 하면서 예시는 다섯 칸뿐이다. 목업은 전체 `WireMe`를 주고, 클라이언트(`patchMe`)는 본문을 쓰지 않고 `fetchMe()`로 다시 읽는다.
   // 내 정보 수정(U-03). 아무 역할이나 부르고, 고교생이 아니면서 학교 · 학년 · 관심 학과를 보내면 규칙이 403을 던진다.
   http.patch(
     api('/users/me'),

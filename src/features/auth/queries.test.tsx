@@ -1,13 +1,22 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, waitFor } from '@testing-library/react';
+import { http } from 'msw';
 import type { ReactNode } from 'react';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { getDb, mutate } from '@/mocks/db/store';
+import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
 import { configureHttp } from '@/shared/lib/http';
 import { loginAs } from '@/test/loginAs';
+import { wireFail } from '@/test/wire';
 import { fetchMe } from './api';
-import { refetchMe, useSaveGuideProfile, useSignup, useUpdateStudentProfile } from './queries';
+import {
+  refetchMe,
+  useLogin,
+  useSaveGuideProfile,
+  useSignup,
+  useUpdateStudentProfile,
+} from './queries';
 import { useSession } from './session';
 
 let queryClient: QueryClient;
@@ -20,6 +29,26 @@ beforeEach(() => {
   useSession.setState({ token: null });
 });
 afterEach(() => configureHttp({ getToken: () => null }));
+
+describe('useLogin', () => {
+  it('사장님 로그인이 3단계(GET /users/me/store)에서 실패하면 토큰도 내 정보 캐시도 건드리지 않는다', async () => {
+    queryClient.setQueryData(qk.me, { email: 'before@demo.kr' });
+    queryClient.setQueryData(qk.myApplications, ['이전 사용자']);
+    server.use(http.get('/api/users/me/store', () => wireFail('E500')));
+    const clear = vi.spyOn(queryClient, 'clear');
+    const { result } = renderHook(() => useLogin(), { wrapper });
+    await act(async () => {
+      await result.current
+        .mutateAsync({ email: 'owner1@demo.kr', password: 'demo1234' })
+        .catch(() => undefined);
+    });
+    await waitFor(() => expect(result.current.error).toMatchObject({ status: 500 }));
+    expect(useSession.getState().token).toBeNull();
+    expect(queryClient.getQueryData(qk.me)).toEqual({ email: 'before@demo.kr' });
+    expect(queryClient.getQueryData(qk.myApplications)).toEqual(['이전 사용자']);
+    expect(clear).not.toHaveBeenCalled();
+  });
+});
 
 describe('useSignup', () => {
   it('성공하면 이전 캐시를 비운 다음 토큰 · 내 정보를 넣는다 (useLogin과 같은 순서: clear → setToken → setQueryData)', async () => {

@@ -1,6 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fieldError } from '@/mocks/rules/errors';
-import { MockApiError } from '@/mocks/rules/errors';
+import { fieldError, MockApiError } from '@/mocks/rules/errors';
 import { ERROR_CODES, resolveErrorCode, type ErrorCode } from '@/shared/lib/errors';
 import { wireFail, wireOk } from '@/test/wire';
 import { LOSSY_CODES, toBackendError } from './errorCodes';
