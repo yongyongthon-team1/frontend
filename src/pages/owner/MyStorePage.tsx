@@ -176,8 +176,8 @@ function StoreHome({ store }: { store: MyStore }) {
         ))}
       </ol>
 
-      {/* 링크 셋은 한 줄에 모아 무대 높이를 아낀다(좁으면 줄이 바뀐다). `쿠폰 코드 입력하기` 자리는 그대로다. */}
-      <div className="mt-2 flex flex-wrap gap-x-5">
+      {/* 링크 셋을 한 줄에 둔다(390px 폭에서 한 줄로 들어가고 더 좁으면 줄이 바뀐다). `쿠폰 코드 입력하기` 자리는 그대로다. */}
+      <div className="mt-2 flex flex-wrap gap-x-4">
         {LINKS.filter((link) => link.to !== '/owner/store/partnership' || partnership).map(
           ({ to, label }) => (
             <Link

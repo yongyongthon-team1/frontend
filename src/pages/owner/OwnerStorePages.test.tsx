@@ -286,6 +286,11 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
     expect(screen.queryByText('카페 단풍')).not.toBeInTheDocument();
     expect(screen.getByText('가게 이름으로 찾아 주세요')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '다음으로' })).toBeDisabled();
+    await user.type(screen.getByLabelText('가게 이름 검색'), '페');
+    expect(await screen.findByText('카페 단풍')).toBeInTheDocument();
+    expect(screen.queryByText('가게 이름으로 찾아 주세요')).not.toBeInTheDocument();
+    await user.type(screen.getByLabelText('가게 이름 검색'), '{Backspace}');
+    expect(screen.queryByText('카페 단풍')).not.toBeInTheDocument();
 
     // 1자를 제출해도 같다
     await search(user, '카');
@@ -388,6 +393,68 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
       ).toBeDisabled(),
     );
     expect(screen.getByRole('button', { name: '다음으로' })).toBeDisabled();
+  });
+
+  /** 카페 단풍을 골라 `다음으로` → `연결하기`까지 누른다. 확인 전에 `beforeConfirm`이 목업 DB를 고칠 수 있다. */
+  async function linkCafe(user: User, beforeConfirm: () => void) {
+    await screen.findByRole('search');
+    await search(user, '카페');
+    const free = (await screen.findByText('카페 단풍')).closest('li')!;
+    await user.click(within(free).getByRole('button', { name: '카페 단풍 이 가게 연결하기' }));
+    beforeConfirm();
+    await user.click(screen.getByRole('button', { name: '다음으로' }));
+    await user.click(
+      within(await screen.findByRole('alertdialog')).getByRole('button', { name: '연결하기' }),
+    );
+  }
+
+  it('연결하는 사이 이미 가게가 생겼으면(STORE_LIMIT): 토스트 + 폼 대신 이미 연결된 가게 카드', async () => {
+    const { user, router } = await renderApp('/owner/store/connect', { as: OWNER_NOSTORE });
+    await linkCafe(user, () =>
+      mutate((db) => {
+        const owner = db.users.find((u) => u.email === OWNER_NOSTORE)!;
+        db.stores.find((s) => s.name === '죽전 돼지국밥')!.ownerId = owner.id;
+      }),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-sonner-toast]')).toHaveTextContent(
+        '계정당 가게는 1개만 연결할 수 있어요.',
+      ),
+    );
+    expect(await screen.findByText('이미 연결된 가게가 있어요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '내 가게 보기' })).toHaveAttribute(
+      'href',
+      '/owner/store',
+    );
+    expect(screen.queryByRole('search')).not.toBeInTheDocument();
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/owner/store/connect');
+  });
+
+  it('연결하는 사이 인증이 풀렸으면(BIZ_NOT_VERIFIED): 토스트 + 사업자 인증 전 상태(검색 · 등록 비활성, 사업자 인증하기)', async () => {
+    const { user, router } = await renderApp('/owner/store/connect', { as: OWNER_NOSTORE });
+    await linkCafe(user, () =>
+      mutate((db) => {
+        const owner = db.users.find((u) => u.email === OWNER_NOSTORE)!;
+        db.businessVerifications.find((b) => b.id === owner.id)!.isVerified = false;
+      }),
+    );
+    await waitFor(() =>
+      expect(document.querySelector('[data-sonner-toast]')).toHaveTextContent(
+        '사업자 인증을 마친 뒤에 가게를 연결할 수 있어요.',
+      ),
+    );
+    await waitFor(() => expect(screen.getByLabelText('가게 이름 검색')).toBeDisabled());
+    expect(screen.getByRole('button', { name: '검색' })).toBeDisabled();
+    expect(screen.getByRole('button', { name: /내 가게 직접 등록/ })).toBeDisabled();
+    expect(screen.getByRole('button', { name: '다음으로' })).toBeDisabled();
+    expect(screen.getByText('사업자 인증을 마치면 가게를 연결할 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '사업자 인증하기' })).toHaveAttribute(
+      'href',
+      '/owner/verify',
+    );
+    expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/owner/store/connect');
   });
 
   it('직접 등록: 가까운 학교의 캠퍼스 중심 좌표를 본문에 싣고 O06으로', async () => {
