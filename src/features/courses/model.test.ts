@@ -6,6 +6,9 @@ import {
   stopDurations,
   stopKindLabel,
   studentCourseLabel,
+  walkingLabel,
+  walkingMinutes,
+  MAX_COURSE_STOPS,
 } from './model';
 
 describe('slotTimes', () => {
@@ -92,4 +95,20 @@ describe('partnerStopCount', () => {
     ).toBe(2));
 
   it('없으면 0', () => expect(partnerStopCount([{ partnership: null }])).toBe(0));
+});
+
+describe('도보 시간 (2B′-R15)', () => {
+  it('80m에 1분, 올림, 최소 1분', () => {
+    expect(walkingMinutes(72)).toBe(1);
+    expect(walkingMinutes(0)).toBe(1);
+    expect(walkingMinutes(480)).toBe(6);
+    expect(walkingMinutes(481)).toBe(7);
+  });
+
+  it('라벨은 `도보 약 N분`', () => {
+    expect(walkingLabel(321)).toBe('도보 약 5분');
+    expect(walkingLabel(72)).toBe('도보 약 1분');
+  });
+
+  it('코스 지점은 최대 5곳', () => expect(MAX_COURSE_STOPS).toBe(5));
 });

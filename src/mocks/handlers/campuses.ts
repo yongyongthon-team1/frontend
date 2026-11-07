@@ -2,9 +2,14 @@ import { http } from 'msw';
 import { getDb } from '@/mocks/db/store';
 import { delayBase } from '@/mocks/latency';
 import { MockApiError } from '@/mocks/rules/errors';
-import { toWireCampus, toWireInsight } from '@/mocks/wire/campuses';
+import {
+  campusPlacesOf,
+  toWireCampus,
+  toWireCampusPlace,
+  toWireInsight,
+} from '@/mocks/wire/campuses';
 import { ok, okItems, withWire } from '@/mocks/wire/envelope';
-import { api } from './util';
+import { api, requireUser } from './util';
 
 export const campusHandlers = [
   // D-01. 로그인 없이 부른다.
@@ -26,6 +31,17 @@ export const campusHandlers = [
       const university = getDb().universities.find((u) => u.id === Number(params.campusId));
       if (!university) throw new MockApiError(404, 'NOT_FOUND');
       return ok(toWireInsight(university));
+    }),
+  ),
+
+  // C-02 보완. 로그인한 누구나. 코스 편집이 캠퍼스 건물 지점을 고를 때 쓴다.
+  http.get(
+    api('/campuses/:campusId/places'),
+    withWire(async ({ request, params }) => {
+      await delayBase();
+      const db = getDb();
+      requireUser(request, db);
+      return okItems(campusPlacesOf(db, Number(params.campusId)).map(toWireCampusPlace));
     }),
   ),
 ];

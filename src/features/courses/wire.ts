@@ -1,12 +1,15 @@
 import type { TourDetail } from '@/features/tours/model';
+import { distanceMeters, type LatLng } from '@/shared/lib/geo';
 import {
   COURSE_CRITERIA,
   PARTNER_DISCOUNT_FALLBACK,
   partnerStopCount,
   STORE_DATA_SOURCE,
+  type CampusPlace,
   type Course,
   type CourseStatus,
   type CourseStop,
+  type NearbyStore,
   type StopType,
 } from './model';
 
@@ -60,6 +63,52 @@ export interface SpotInput {
   /** `HH:mm` */
   startTime: string;
   comment?: string;
+}
+
+/** S-02 `GET /stores/nearby`의 항목. 거리 칸은 없다. */
+export interface WireNearbyStore {
+  storeId: number;
+  name: string;
+  category: string;
+  address: string;
+  lat: number;
+  lng: number;
+  isPartner: boolean;
+  reviewSummary: string | null;
+}
+
+/** C-02 보완 `GET /campuses/{campusId}/places`의 항목. */
+export interface WireCampusPlace {
+  campusBuildingId: number;
+  name: string;
+  description: string | null;
+  lat: number;
+  lng: number;
+}
+
+/** 주변 상점 → 도메인. `distanceM`은 `origin`(캠퍼스 중심)에서 잰 직선거리 미터다(2B′-R15). */
+export function fromWireNearbyStore(w: WireNearbyStore, origin: LatLng): NearbyStore {
+  return {
+    storeId: w.storeId,
+    name: w.name,
+    category: w.category,
+    address: w.address,
+    lat: w.lat,
+    lng: w.lng,
+    isPartner: w.isPartner,
+    reviewSummary: w.reviewSummary,
+    distanceM: distanceMeters(origin, { lat: w.lat, lng: w.lng }),
+  };
+}
+
+export function fromWireCampusPlace(w: WireCampusPlace): CampusPlace {
+  return {
+    campusBuildingId: w.campusBuildingId,
+    name: w.name,
+    description: w.description,
+    lat: w.lat,
+    lng: w.lng,
+  };
 }
 
 /** 캠퍼스 지점의 분류 라벨(백엔드는 캠퍼스 지점의 `category`를 null로 준다). */

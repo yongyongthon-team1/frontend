@@ -24,8 +24,10 @@ import {
 import { getInsight, listCampuses } from '@/features/campuses/api';
 import { getCouponLookup, getMyCoupon, getMyCoupons, postRedeem } from '@/features/coupons/api';
 import {
+  getCampusPlaces,
   getCourse,
   getGuideCourse,
+  getNearbyStores,
   postConfirmCourse,
   postCourseDraft,
   putCourseSpots,
@@ -64,7 +66,7 @@ import {
   MY_TOURS_HIGH_SCHOOL,
   MY_TOURS_UNIVERSITY,
 } from '@/test/fixtures/backend/applications';
-import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
+import { CAMPUS_PLACES, CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
 import {
   COURSE_CONFIRM_OK,
   COURSE_DRAFT,
@@ -85,7 +87,7 @@ import {
   REVIEW_NOT_USED,
   STORE_REVIEWS,
 } from '@/test/fixtures/backend/reviews';
-import { MY_STORE, STORE_REPORT } from '@/test/fixtures/backend/stores';
+import { MY_STORE, NEARBY_STORES, STORE_REPORT } from '@/test/fixtures/backend/stores';
 import {
   TOUR_CANCEL_INVALID,
   TOUR_CANCELED,
@@ -1823,6 +1825,150 @@ describe('courses', () => {
       dataSource: '공공데이터(인허가) 기반',
     });
     expect(cafe).toMatchObject({ name: '카페 모래시계', partnership: null });
+  });
+});
+
+describe('주변 상점 · 캠퍼스 장소 (GET /stores/nearby · GET /campuses/:campusId/places)', () => {
+  type Items = { code: string; data: { items: Record<string, unknown>[] } };
+
+  it('S-02 와이어: 명세 예시와 같은 모양(학생 토큰), 경희대는 반경 1km 안 상점 1 · 2 · 3 · 4', async () => {
+    const { token } = await login('student@demo.kr');
+    const res = await rawFetch<Items>('/stores/nearby?campus_id=2', { method: 'GET', token });
+    expect([res.status, res.body.code]).toEqual([200, 'S200']);
+    expectWireShape(res.body.data, NEARBY_STORES.data);
+    expect(res.body.data.items.map((i) => i.store_id)).toEqual([1, 2, 3, 4]); // 목업은 id 순, 거리 순서는 프론트 몫
+    expect(res.body.data.items.every((i) => i.is_partner === true)).toBe(true);
+    expect(Object.keys(res.body.data.items[0]).sort()).toEqual(
+      Object.keys(NEARBY_STORES.data.items[0]).sort(),
+    );
+  });
+
+  it('category 쿼리는 같은 업종만 남긴다', async () => {
+    const { token } = await login('student@demo.kr');
+    const all = await rawFetch<Items>('/stores/nearby?campus_id=2', { method: 'GET', token });
+    const cafes = await rawFetch<Items>(
+      `/stores/nearby?campus_id=2&category=${encodeURIComponent('카페')}`,
+      { method: 'GET', token },
+    );
+    expect(cafes.body.data.items.length).toBeGreaterThan(0);
+    expect(cafes.body.data.items.length).toBeLessThan(all.body.data.items.length);
+    expect(cafes.body.data.items.every((i) => i.category === '카페')).toBe(true);
+  });
+
+  it('getNearbyStores: 단국대는 [6, 5](가까운 순) · 비제휴, 경희대는 거리 오름차순 · 모두 제휴 · 상점 1은 시드 AI 요약', async () => {
+    await login('student@demo.kr');
+    const campuses = await listCampuses();
+    const dankook = await getNearbyStores(3, campuses);
+    expect(dankook.map((s) => s.storeId)).toEqual([6, 5]);
+    expect(dankook.every((s) => !s.isPartner)).toBe(true);
+
+    const khu = await getNearbyStores(2, campuses);
+    expect(new Set(khu.map((s) => s.storeId))).toEqual(new Set([1, 2, 3, 4]));
+    expect(khu.map((s) => s.distanceM)).toEqual(
+      [...khu.map((s) => s.distanceM)].sort((a, b) => a - b),
+    );
+    expect(khu.every((s) => s.isPartner)).toBe(true);
+    const seeded = getDb()
+      .reviewSummaries.filter((r) => r.storeId === 1)
+      .sort((a, b) => Date.parse(b.generatedAt) - Date.parse(a.generatedAt) || b.id - a.id)[0];
+    expect(seeded.summary).not.toBe('');
+    expect(khu.find((s) => s.storeId === 1)?.reviewSummary).toBe(seeded.summary);
+  });
+
+  it('요약이 없는 상점은 reviewSummary null', async () => {
+    await login('student@demo.kr');
+    const dankook = await getNearbyStores(3, await listCampuses());
+    expect(dankook.map((s) => s.reviewSummary)).toEqual([null, null]);
+  });
+
+  it('제휴 기간이 지난 상점은 isPartner false', async () => {
+    mutate((db) => {
+      for (const p of db.partnerships) if (p.storeId === 1) p.endDate = '2000-01-01';
+    });
+    await login('student@demo.kr');
+    const khu = await getNearbyStores(2, await listCampuses());
+    expect(khu.find((s) => s.storeId === 1)?.isPartner).toBe(false);
+    expect(khu.find((s) => s.storeId === 2)?.isPartner).toBe(true);
+  });
+
+  it('없는 캠퍼스는 요청 없이 NOT_FOUND(어댑터), 서버는 404 E404', async () => {
+    const { token } = await login('student@demo.kr');
+    const campuses = await listCampuses();
+    // 양성 대조: 있는 캠퍼스는 요청이 나간다.
+    expect(await requestsDuring(() => getNearbyStores(3, campuses))).toEqual([
+      'GET /stores/nearby',
+    ]);
+    let error: unknown;
+    const seen = await requestsDuring(async () => {
+      error = await getNearbyStores(0, campuses).catch((e: unknown) => e);
+    });
+    expect(error).toMatchObject({ status: 404, code: 'NOT_FOUND' });
+    expect(seen).toEqual([]);
+    const raw = await rawFetch<{ code: string }>('/stores/nearby?campus_id=99', {
+      method: 'GET',
+      token,
+    });
+    expect([raw.status, raw.body.code]).toEqual([404, 'E404']);
+  });
+
+  it('campus_id가 없거나 양의 정수가 아니면 400 E400 + campus_id 칸 오류, 로그인 없이는 401', async () => {
+    const { token } = await login('student@demo.kr');
+    for (const q of ['', '?campus_id=0', '?campus_id=-1', '?campus_id=abc', '?campus_id=1.5']) {
+      const res = await rawFetch<{
+        code: string;
+        errors: { field: string; reason: string }[];
+      }>(`/stores/nearby${q}`, { method: 'GET', token });
+      expect([res.status, res.body.code]).toEqual([400, 'E400']);
+      expect(res.body.errors).toEqual([{ field: 'campus_id', reason: '캠퍼스를 골라 주세요.' }]);
+    }
+    const anonymous = await rawFetch('/stores/nearby?campus_id=2', { method: 'GET' });
+    expect(anonymous.status).toBe(401);
+  });
+
+  it('C-02 보완 와이어: 명세 예시와 같은 모양, getCampusPlaces는 건물 id 순', async () => {
+    const { token } = await login('guide@demo.kr');
+    const res = await rawFetch<Items>('/campuses/2/places', { method: 'GET', token });
+    expect([res.status, res.body.code]).toEqual([200, 'S200']);
+    expectWireShape(res.body.data, CAMPUS_PLACES.data);
+    expect(Object.keys(res.body.data.items[0]).sort()).toEqual(
+      Object.keys(CAMPUS_PLACES.data.items[0]).sort(),
+    );
+    const places = await getCampusPlaces(2);
+    expect(places.map((p) => p.name)).toEqual(['예술·디자인대학', '중앙도서관', '학생회관']);
+    const ids = places.map((p) => p.campusBuildingId);
+    expect(ids).toEqual([...ids].sort((a, b) => a - b));
+  });
+
+  it('없는 캠퍼스는 404 E404, 로그인 없이는 401', async () => {
+    const { token } = await login('guide@demo.kr');
+    await expect(getCampusPlaces(99)).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+    const raw = await rawFetch<{ code: string }>('/campuses/99/places', { method: 'GET', token });
+    expect([raw.status, raw.body.code]).toEqual([404, 'E404']);
+    const anonymous = await rawFetch('/campuses/2/places', { method: 'GET' });
+    expect(anonymous.status).toBe(401);
+  });
+
+  it('초안에 캠퍼스 장소를 add로 보내면 지점 4개 · 끝은 중앙도서관 · 추천 이유 null(Review Focus 4)', async () => {
+    resetDb({ today: new Date(), checkpoint: 'APPROVED' });
+    await login('guide@demo.kr');
+    const campuses = await listCampuses();
+    const draft = await postCourseDraft(1, campuses);
+    const library = (await getCampusPlaces(2)).find((p) => p.name === '중앙도서관')!;
+    const next = await putCourseSpots(
+      1,
+      buildSpots(draft, {
+        kind: 'add',
+        place: { type: 'CAMPUS', campusBuildingId: library.campusBuildingId },
+      }),
+      campuses,
+    );
+    expect(next.stops).toHaveLength(4);
+    expect(next.stops.map((s) => s.name).slice(0, 3)).toEqual(draft.stops.map((s) => s.name));
+    expect(next.stops[3]).toMatchObject({
+      type: 'CAMPUS',
+      name: '중앙도서관',
+      recommendationReason: null,
+    });
   });
 });
 

@@ -7,11 +7,21 @@ import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
 import { toCamel } from '@/shared/lib/caseKeys';
 import { configureHttp } from '@/shared/lib/http';
-import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
+import { CAMPUS_PLACES, CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
 import { COURSE_CONFIRM_OK, COURSE_SPOTS_OK } from '@/test/fixtures/backend/courses';
+import { NEARBY_STORES } from '@/test/fixtures/backend/stores';
 import { TOUR_31, TOUR_DETAIL } from '@/test/fixtures/backend/tours';
 import { wireFail, wireOk } from '@/test/wire';
-import { useConfirmCourse, useCreateDraft, useGuideCourse, useReorderStops } from './queries';
+import {
+  useAddStop,
+  useCampusPlaces,
+  useConfirmCourse,
+  useCreateDraft,
+  useGuideCourse,
+  useNearbyStores,
+  useReorderStops,
+  useReplaceStop,
+} from './queries';
 import { fromWireCourse, type WireCourse } from './wire';
 
 // 명세 C-02 예시(탐방 31, 13:00 시작): 지점 1 = 상점 201(한줄평), 지점 2 = 캠퍼스 건물 3(한줄평).
@@ -214,5 +224,107 @@ describe('코스 훅', () => {
       });
     });
     await waitFor(() => expect(courseGets).toBe(2));
+  });
+
+  it('useAddStop: 전체 스팟 PUT에 지금 지점(한줄평 포함)이 그대로 있고 맨 끝에 새 장소가 한줄평 없이 붙는다', async () => {
+    const seen = serveTour31();
+    const { queryClient, wrapper } = setup(SPOTS_31);
+    const { result } = renderHook(() => useAddStop(31), { wrapper });
+    await act(() => result.current.mutateAsync({ type: 'STORE', storeId: 205 }));
+    expect(seen.courseGets).toBe(0);
+    expect(seen.puts).toEqual([
+      {
+        spots: [
+          {
+            stop_type: 'STORE',
+            store_id: 201,
+            start_time: '13:00',
+            comment: '학생들이 즐겨 가는 분식집이에요',
+          },
+          {
+            stop_type: 'CAMPUS',
+            campus_building_id: 3,
+            start_time: '14:10',
+            comment: '시험 기간엔 24시간 열려요',
+          },
+          { stop_type: 'STORE', store_id: 205, start_time: '15:00' },
+        ],
+      },
+    ]);
+    expect(queryClient.getQueryData(qk.guideCourse(31))).toEqual(SPOTS_31);
+  });
+
+  it('useReplaceStop: 그 지점만 새 장소(한줄평 없이)로 바뀌고 다른 지점의 한줄평은 그대로다', async () => {
+    const seen = serveTour31();
+    const { wrapper } = setup(SPOTS_31);
+    const { result } = renderHook(() => useReplaceStop(31), { wrapper });
+    await act(() =>
+      result.current.mutateAsync({ stopId: 1, place: { type: 'CAMPUS', campusBuildingId: 4 } }),
+    );
+    expect(seen.puts).toEqual([
+      {
+        spots: [
+          { stop_type: 'CAMPUS', campus_building_id: 4, start_time: '13:00' },
+          {
+            stop_type: 'CAMPUS',
+            campus_building_id: 3,
+            start_time: '14:10',
+            comment: '시험 기간엔 24시간 열려요',
+          },
+        ],
+      },
+    ]);
+  });
+
+  it('useReplaceStop: 없는 지점 id면 PUT 없이 실패한다', async () => {
+    const seen = serveTour31();
+    const { wrapper } = setup(SPOTS_31);
+    const { result } = renderHook(() => useReplaceStop(31), { wrapper });
+    await act(async () => {
+      await expect(
+        result.current.mutateAsync({ stopId: 9, place: { type: 'STORE', storeId: 205 } }),
+      ).rejects.toThrow('replace: 지점 id가 맞지 않아요');
+    });
+    expect(seen.puts).toEqual([]);
+  });
+
+  it('useNearbyStores: 캠퍼스 중심에서 잰 거리로 가까운 순, null이면 요청하지 않는다', async () => {
+    const seen: string[] = [];
+    server.use(
+      http.get('/api/campuses', () => wireOk(CAMPUSES_LIST.data)),
+      http.get('/api/stores/nearby', ({ request }) => {
+        seen.push(new URL(request.url).searchParams.get('campus_id') ?? '');
+        return wireOk({
+          items: [
+            { ...NEARBY_STORES.data.items[0], store_id: 1, name: '먼 곳', lat: 37.3319 },
+            NEARBY_STORES.data.items[0],
+          ],
+        });
+      }),
+    );
+    const { wrapper } = setup();
+    const off = renderHook(() => useNearbyStores(null), { wrapper });
+    const on = renderHook(() => useNearbyStores(1), { wrapper });
+    await waitFor(() => expect(on.result.current.data).toBeTruthy());
+    expect(on.result.current.data?.map((s) => s.storeId)).toEqual([202, 1]);
+    expect(off.result.current.fetchStatus).toBe('idle');
+    expect(seen).toEqual(['1']);
+  });
+
+  it('useCampusPlaces: 서버 순서 그대로, null이면 요청하지 않는다', async () => {
+    let calls = 0;
+    server.use(
+      http.get('/api/campuses/:campusId/places', () => {
+        calls += 1;
+        return wireOk(CAMPUS_PLACES.data);
+      }),
+    );
+    const { wrapper } = setup();
+    const off = renderHook(() => useCampusPlaces(null), { wrapper });
+    const on = renderHook(() => useCampusPlaces(1), { wrapper });
+    await waitFor(() => expect(on.result.current.data).toBeTruthy());
+    expect(on.result.current.data?.map((p) => p.name)).toEqual(['중앙도서관']);
+    expect(off.result.current.fetchStatus).toBe('idle');
+    expect(calls).toBe(1);
   });
 });

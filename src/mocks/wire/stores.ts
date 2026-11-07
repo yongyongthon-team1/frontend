@@ -1,6 +1,10 @@
+import type { WireNearbyStore } from '@/features/courses/wire';
 import type { WireMyStore } from '@/features/stores/wire';
 import { computePartnershipState } from '@/features/stores/model';
 import type { DB, StoreRow } from '@/mocks/db/schema';
+import { partnershipOn } from '@/mocks/rules/courses';
+import { seoulDateKey } from '@/shared/lib/date';
+import { latestReviewSummary } from './reviews';
 
 // 가게 행 → 와이어 객체(`ok`가 키를 snake로 바꾼다). 도메인 객체를 만들던 `toMyStore`의 자리(2C-R26).
 
@@ -34,5 +38,22 @@ export function toWireMyStore(db: DB, store: StoreRow, now: Date): WireMyStore {
           endDate: current.p.endDate,
         }
       : null,
+  };
+}
+
+/**
+ * S-02 항목. `isPartner`는 오늘(서울) 유효한 제휴가 있는지(9절 38번), `reviewSummary`는 가장 최근 AI 요약(없으면 null)이다.
+ * 거리 칸은 명세에 없다.
+ */
+export function toWireNearbyStore(db: DB, store: StoreRow, now: Date): WireNearbyStore {
+  return {
+    storeId: store.id,
+    name: store.name,
+    category: store.category,
+    address: store.address,
+    lat: store.latitude,
+    lng: store.longitude,
+    isPartner: partnershipOn(db, store.id, seoulDateKey(now)) !== undefined,
+    reviewSummary: latestReviewSummary(db, store.id)?.summary ?? null,
   };
 }

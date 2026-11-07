@@ -28,3 +28,20 @@ export const CAMPUSES_LIST = {
 export const D01: University[] = CAMPUSES_LIST.data.items.map((c) =>
   fromWireCampus(toCamel<WireCampus>(c)),
 );
+
+// `docs/api/backend-spec.md` C-02 보완 `GET /campuses/{campusId}/places`(캠퍼스 장소 조회)의 응답 예시(한 글자도 바꾸지 않았다).
+export const CAMPUS_PLACES = {
+  code: 'S200',
+  message: '조회 성공',
+  data: {
+    items: [
+      {
+        campus_building_id: 3,
+        name: '중앙도서관',
+        description: '24시간 열람실이 있어요',
+        lat: 37.3226,
+        lng: 127.1261,
+      },
+    ],
+  },
+};

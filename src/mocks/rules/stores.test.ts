@@ -2,7 +2,9 @@ import { beforeEach, describe, expect, it } from 'vitest';
 import type { DB } from '@/mocks/db/schema';
 import { createSeed } from '@/mocks/db/seed';
 import { addDaysKey, seoulDateKey } from '@/shared/lib/date';
-import { myStoreOf, storeReport } from './stores';
+import { COURSE_RADIUS_M } from '@/mocks/ai/course';
+import { distanceMeters } from '@/shared/lib/geo';
+import { myStoreOf, nearbyStores, storeReport } from './stores';
 
 const now = new Date('2026-11-15T05:00:00Z'); // 시연일 KST 14:00
 
@@ -160,5 +162,48 @@ describe('방문 · 리뷰 리포트 (GET /users/me/store/report)', () => {
     expect(storeReport(db, owner(1), noQuery, now).visitCount).toBe(used.length - 1);
     used[1].status = 'EXPIRED';
     expect(storeReport(db, owner(1), noQuery, now).visitCount).toBe(used.length - 2);
+  });
+});
+
+describe('주변 상점 (GET /stores/nearby, 2B′-R15)', () => {
+  const center = (campusId: number) => {
+    const u = db.universities.find((x) => x.id === campusId)!;
+    return { lat: u.latitude, lng: u.longitude };
+  };
+
+  it('캠퍼스 중심에서 COURSE_RADIUS_M 안의 상점만, id 순', () => {
+    for (const campusId of [1, 2, 3, 4, 5]) {
+      const stores = nearbyStores(db, campusId, null);
+      expect(stores.map((s) => s.id)).toEqual([...stores.map((s) => s.id)].sort((a, b) => a - b));
+      for (const s of stores) {
+        expect(
+          distanceMeters(center(campusId), { lat: s.latitude, lng: s.longitude }),
+        ).toBeLessThanOrEqual(COURSE_RADIUS_M);
+      }
+      const outside = db.stores.filter((s) => !stores.includes(s));
+      for (const s of outside) {
+        expect(
+          distanceMeters(center(campusId), { lat: s.latitude, lng: s.longitude }),
+        ).toBeGreaterThan(COURSE_RADIUS_M);
+      }
+    }
+    expect(nearbyStores(db, 2, null).map((s) => s.id)).toEqual([1, 2, 3, 4]);
+    expect(nearbyStores(db, 3, null).map((s) => s.id)).toEqual([5, 6]);
+  });
+
+  it('category가 있으면 같은 업종만(없으면 전부)', () => {
+    const all = nearbyStores(db, 2, null);
+    const category = all[0].category;
+    const same = nearbyStores(db, 2, category);
+    expect(same.length).toBeGreaterThan(0);
+    expect(same.every((s) => s.category === category)).toBe(true);
+    expect(same).toEqual(all.filter((s) => s.category === category));
+    expect(nearbyStores(db, 2, '없는업종')).toEqual([]);
+  });
+
+  it('없는 캠퍼스는 404 NOT_FOUND', () => {
+    expect(() => nearbyStores(db, 99, null)).toThrowError(
+      expect.objectContaining({ status: 404, code: 'NOT_FOUND' }),
+    );
   });
 });

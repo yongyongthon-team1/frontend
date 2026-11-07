@@ -1,13 +1,15 @@
 import { fromWireMyStore } from '@/features/stores/wire';
+import { COURSE_RADIUS_M } from '@/mocks/ai/course';
 import type { MyStore } from '@/features/stores/model';
 import type { DB, StoreRow } from '@/mocks/db/schema';
 import type { WireStoreReport } from '@/features/stores/wire';
 import { averageRating } from '@/mocks/wire/reviews';
 import { toWireMyStore } from '@/mocks/wire/stores';
 import { addDaysKey, seoulDateKey } from '@/shared/lib/date';
+import { distanceMeters } from '@/shared/lib/geo';
 import { fieldError, MockApiError } from './errors';
 
-// 사장님의 가게 조회 · 리포트 규칙(조회만 — 연결 · 등록 · 제휴 설정은 MVP 2B′). DB는 고치지 않는다.
+// 사장님의 가게 조회 · 리포트 규칙과 주변 상점 조회(조회만 — 연결 · 등록 · 제휴 설정은 MVP 2B′). DB는 고치지 않는다.
 
 /** 이 사장님의 가게(계정당 1개). 연결된 가게가 없으면 404 STORE_NOT_LINKED. */
 export function ownerStoreOf(db: DB, ownerId: number): StoreRow {
@@ -66,4 +68,21 @@ export function storeReport(
     reviewCount: ratings.length,
     averageRating: averageRating(ratings),
   };
+}
+
+/**
+ * S-02 주변 상점. 캠퍼스 중심에서 `COURSE_RADIUS_M`(코스 초안과 같은 반경) 안의 상점을 id 순으로 돌려준다 — 거리 · 가까운 순은
+ * 프론트가 계산한다(2B′-R15). `category`가 있으면 같은 업종만. 없는 캠퍼스는 404 NOT_FOUND.
+ */
+export function nearbyStores(db: DB, campusId: number, category: string | null): StoreRow[] {
+  const campus = db.universities.find((u) => u.id === campusId);
+  if (!campus) throw new MockApiError(404, 'NOT_FOUND');
+  const center = { lat: campus.latitude, lng: campus.longitude };
+  return db.stores
+    .filter(
+      (s) =>
+        (category === null || s.category === category) &&
+        distanceMeters(center, { lat: s.latitude, lng: s.longitude }) <= COURSE_RADIUS_M,
+    )
+    .sort((a, b) => a.id - b.id);
 }

@@ -3,6 +3,51 @@ import { formatTime, toSeoulIso } from '@/shared/lib/date';
 export type CourseStatus = 'DRAFT' | 'CONFIRMED';
 export type StopType = 'CAMPUS' | 'STORE';
 
+/**
+ * 코스에 넣을 장소 한 곳(2B′-R14). 상점과 캠퍼스 건물을 같은 모양으로 다뤄 `buildSpots`의 추가 · 교체와 장소 고르기 화면이 함께 쓴다.
+ */
+export type PlaceRef =
+  { type: 'STORE'; storeId: number } | { type: 'CAMPUS'; campusBuildingId: number };
+
+/** S-02 주변 상점. 와이어에 거리 칸이 없어 `distanceM`은 프론트가 캠퍼스 중심에서 잰 미터다(2B′-R15). */
+export interface NearbyStore {
+  storeId: number;
+  name: string;
+  category: string;
+  address: string;
+  lat: number;
+  lng: number;
+  isPartner: boolean;
+  /** AI 리뷰 요약. 리뷰가 없으면 null. */
+  reviewSummary: string | null;
+  distanceM: number;
+}
+
+/** C-02 보완 캠퍼스 장소(건물). */
+export interface CampusPlace {
+  campusBuildingId: number;
+  name: string;
+  description: string | null;
+  lat: number;
+  lng: number;
+}
+
+/** 코스 지점 상한(2B′-R14). 명세에 없어 프론트만 막는다. */
+export const MAX_COURSE_STOPS = 5;
+
+/** 걸음 속도: 분당 80m. */
+const WALKING_METERS_PER_MIN = 80;
+
+/** 도보 분(올림, 최소 1분). */
+export function walkingMinutes(distanceM: number): number {
+  return Math.max(1, Math.ceil(distanceM / WALKING_METERS_PER_MIN));
+}
+
+/** `도보 약 N분`. */
+export function walkingLabel(distanceM: number): string {
+  return `도보 약 ${walkingMinutes(distanceM)}분`;
+}
+
 export interface CourseStop {
   id: number;
   order: number;

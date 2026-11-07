@@ -1,8 +1,17 @@
 import { getTour, type CampusesInput } from '@/features/tours/api';
 import { errorMessage } from '@/shared/lib/errors';
-import { AI_TIMEOUT_MS, ApiError, request } from '@/shared/lib/http';
-import type { Course, CourseStatus } from './model';
-import { fromWireCourse, type SpotInput, type WireConfirm, type WireCourse } from './wire';
+import { AI_TIMEOUT_MS, ApiError, listAll, request, withQuery } from '@/shared/lib/http';
+import type { CampusPlace, Course, CourseStatus, NearbyStore } from './model';
+import {
+  fromWireCampusPlace,
+  fromWireCourse,
+  fromWireNearbyStore,
+  type SpotInput,
+  type WireCampusPlace,
+  type WireConfirm,
+  type WireCourse,
+  type WireNearbyStore,
+} from './wire';
 
 // 백엔드 C. 코스(C-01~04). 학생 · 가이드 모두 `GET /tours/{tourId}/course`로 읽고(2C-R14), 탐방 정보는
 // `GET /tours/{tourId}`를 같은 때 불러 합성한다(2C-R7). `campuses`는 그 상세의 캠퍼스 조인(2C-R9)용이고 배열이나
@@ -99,4 +108,29 @@ export async function postConfirmCourse(tourId: number, campuses: CampusesInput)
   const course = await getGuideCourse(tourId, campuses);
   if (course === null) throw new ApiError(404, 'NOT_FOUND', errorMessage('NOT_FOUND'));
   return { ...course, issuedCouponCount: res.couponCount };
+}
+
+/**
+ * 주변 상점(S-02). 거리 칸이 없어 캠퍼스 중심(`University.lat/lng`)에서 직선거리를 재고 가까운 순(같으면 이름 순)으로 정렬한다(2B′-R15).
+ * 캠퍼스 목록에 그 학교가 없으면 요청 없이 404 NOT_FOUND다. 반경 · 제휴 여부는 서버 몫이다.
+ */
+export async function getNearbyStores(
+  universityId: number,
+  campuses: CampusesInput,
+): Promise<NearbyStore[]> {
+  const campus = (await campuses).find((u) => u.id === universityId);
+  if (campus === undefined) throw new ApiError(404, 'NOT_FOUND', errorMessage('NOT_FOUND'));
+  const wire = await listAll<WireNearbyStore>(
+    withQuery('/stores/nearby', { campus_id: campus.id }),
+  );
+  const origin = { lat: campus.lat, lng: campus.lng };
+  return wire
+    .map((w) => fromWireNearbyStore(w, origin))
+    .sort((a, b) => a.distanceM - b.distanceM || a.name.localeCompare(b.name, 'ko'));
+}
+
+/** 캠퍼스 장소(C-02 보완), 서버 순서 그대로. 없는 캠퍼스는 404 NOT_FOUND. */
+export async function getCampusPlaces(universityId: number): Promise<CampusPlace[]> {
+  const wire = await listAll<WireCampusPlace>(`/campuses/${universityId}/places`);
+  return wire.map(fromWireCampusPlace);
 }

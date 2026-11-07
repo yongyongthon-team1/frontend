@@ -40,3 +40,23 @@ export const STORE_REPORT = {
     average_rating: 4.5,
   },
 };
+
+// `docs/api/backend-spec.md` S-02 `GET /stores/nearby`(주변 상점 조회)의 응답 예시(한 글자도 바꾸지 않았다).
+export const NEARBY_STORES = {
+  code: 'S200',
+  message: '조회 성공',
+  data: {
+    items: [
+      {
+        store_id: 202,
+        name: '캠퍼스 카페',
+        category: '카페',
+        address: '경기 용인시 처인구 ...',
+        lat: 37.3225,
+        lng: 127.1271,
+        is_partner: false,
+        review_summary: null,
+      },
+    ],
+  },
+};

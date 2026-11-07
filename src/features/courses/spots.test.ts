@@ -149,3 +149,112 @@ describe('buildSpots (2C-R13)', () => {
     });
   });
 });
+
+describe('buildSpots add · replace (2B′-R14, Review Focus 4)', () => {
+  /** 시작 14:00, 지점 1 캠퍼스(건물 3, 한줄평 없음) · 2 상점 201(`a`) · 3 상점 202(`b`). 전체 PUT이라 빠지면 조용히 사라진다. */
+  const NOTED: Course = {
+    ...COURSE,
+    stops: [
+      stop({ id: 1, order: 1, type: 'CAMPUS', category: '캠퍼스', campusBuildingId: 3 }),
+      stop({ id: 2, order: 2, storeId: 201, description: 'a' }),
+      stop({ id: 3, order: 3, storeId: 202, description: 'b' }),
+    ],
+  };
+
+  it('add: 맨 끝에 한줄평 없이 붙고, 앞 지점의 캠퍼스 건물 · 한줄평 · 시각은 그대로다', () => {
+    const spots = buildSpots(NOTED, { kind: 'add', place: { type: 'STORE', storeId: 205 } });
+    expect(spots).toEqual([
+      { stopType: 'CAMPUS', campusBuildingId: 3, startTime: '14:00' },
+      { stopType: 'STORE', storeId: 201, startTime: '15:10', comment: 'a' },
+      { stopType: 'STORE', storeId: 202, startTime: '16:00', comment: 'b' },
+      { stopType: 'STORE', storeId: 205, startTime: '16:50' },
+    ]);
+    expect(spots[3]).not.toHaveProperty('comment');
+  });
+
+  it('add: 캠퍼스 장소도 같은 모양으로 붙는다(storeId 없이)', () => {
+    const spots = buildSpots(NOTED, {
+      kind: 'add',
+      place: { type: 'CAMPUS', campusBuildingId: 4 },
+    });
+    expect(spots[3]).toEqual({ stopType: 'CAMPUS', campusBuildingId: 4, startTime: '16:50' });
+    expect(spots[3]).not.toHaveProperty('storeId');
+  });
+
+  it('add: 섞인 배열에서도 order 순서의 맨 끝에 붙는다', () => {
+    const spots = buildSpots(COURSE, { kind: 'add', place: { type: 'STORE', storeId: 205 } });
+    expect(spots.map((s) => s.startTime)).toEqual(['14:00', '15:10', '16:00', '16:50']);
+    expect(spots[0]).toMatchObject({ stopType: 'CAMPUS', campusBuildingId: 3 });
+    expect(spots[3]).toMatchObject({ stopType: 'STORE', storeId: 205 });
+  });
+
+  it('replace: 같은 자리 · 같은 시각에 새 상점이 한줄평 없이 들어가고 다른 지점은 그대로다', () => {
+    const spots = buildSpots(NOTED, {
+      kind: 'replace',
+      stopId: 2,
+      place: { type: 'STORE', storeId: 205 },
+    });
+    expect(spots).toEqual([
+      { stopType: 'CAMPUS', campusBuildingId: 3, startTime: '14:00' },
+      { stopType: 'STORE', storeId: 205, startTime: '15:10' },
+      { stopType: 'STORE', storeId: 202, startTime: '16:00', comment: 'b' },
+    ]);
+    expect(spots[1]).not.toHaveProperty('comment');
+  });
+
+  it('replace: 캠퍼스 지점을 다른 캠퍼스 장소로 바꿀 수 있고 나머지 한줄평은 그대로다', () => {
+    expect(
+      buildSpots(NOTED, {
+        kind: 'replace',
+        stopId: 1,
+        place: { type: 'CAMPUS', campusBuildingId: 4 },
+      }),
+    ).toEqual([
+      { stopType: 'CAMPUS', campusBuildingId: 4, startTime: '14:00' },
+      { stopType: 'STORE', storeId: 201, startTime: '15:10', comment: 'a' },
+      { stopType: 'STORE', storeId: 202, startTime: '16:00', comment: 'b' },
+    ]);
+  });
+
+  it('replace: 상점 지점을 캠퍼스 장소로(또 그 반대로) 바꿀 수 있다', () => {
+    const toCampus = buildSpots(NOTED, {
+      kind: 'replace',
+      stopId: 3,
+      place: { type: 'CAMPUS', campusBuildingId: 4 },
+    });
+    expect(toCampus[2]).toEqual({ stopType: 'CAMPUS', campusBuildingId: 4, startTime: '16:00' });
+    const toStore = buildSpots(NOTED, {
+      kind: 'replace',
+      stopId: 1,
+      place: { type: 'STORE', storeId: 205 },
+    });
+    expect(toStore[0]).toEqual({ stopType: 'STORE', storeId: 205, startTime: '14:00' });
+  });
+
+  it('replace: 없는 지점 id면 던진다', () => {
+    expect(() =>
+      buildSpots(NOTED, { kind: 'replace', stopId: 9, place: { type: 'STORE', storeId: 205 } }),
+    ).toThrow('replace: 지점 id가 맞지 않아요');
+  });
+
+  it('상한 · 같은 장소 중복은 빌더가 보지 않는다(화면 몫, 2B′-R14)', () => {
+    const dup = buildSpots(NOTED, { kind: 'add', place: { type: 'STORE', storeId: 201 } });
+    expect(dup.filter((s) => s.storeId === 201)).toHaveLength(2);
+    const five: Course = {
+      ...NOTED,
+      stops: Array.from({ length: 5 }, (_, i) =>
+        stop({ id: i + 1, order: i + 1, storeId: 300 + i }),
+      ),
+    };
+    expect(buildSpots(five, { kind: 'add', place: { type: 'STORE', storeId: 205 } })).toHaveLength(
+      6,
+    );
+  });
+
+  it('장소 id가 비어 있는 코스를 읽은 채 편집하면 던진다(add도 기존 지점을 다시 보낸다)', () => {
+    const broken: Course = { ...NOTED, stops: [stop({ id: 1, order: 1, storeId: null })] };
+    expect(() =>
+      buildSpots(broken, { kind: 'add', place: { type: 'STORE', storeId: 205 } }),
+    ).toThrow('지점 1에 장소 id가 없어요');
+  });
+});

@@ -12,13 +12,15 @@ import { qk } from '@/shared/api/queryKeys';
 import { errorMessage } from '@/shared/lib/errors';
 import { ApiError } from '@/shared/lib/http';
 import {
+  getCampusPlaces,
   getCourse,
   getGuideCourse,
+  getNearbyStores,
   postConfirmCourse,
   postCourseDraft,
   putCourseSpots,
 } from './api';
-import type { Course } from './model';
+import type { CampusPlace, Course, NearbyStore, PlaceRef } from './model';
 import { buildSpots, type SpotEdit } from './spots';
 
 // 훅은 캠퍼스 목록을 기다리지 않고 `loadCampuses`의 약속째 넘긴다 — 캠퍼스 요청과 코스 요청이 동시에 나간다(errata G13).
@@ -118,6 +120,42 @@ export function useUpdateStop(
 
 export function useDeleteStop(tourId: number): UseMutationResult<Course, ApiError, number> {
   return useSpotEdit(tourId, (stopId: number) => ({ kind: 'remove', stopId }));
+}
+
+/** 맨 끝에 장소 하나를 더한다. 5곳 상한 · 같은 장소 중복은 화면이 먼저 막는다(2B′-R14). */
+export function useAddStop(tourId: number): UseMutationResult<Course, ApiError, PlaceRef> {
+  return useSpotEdit(tourId, (place: PlaceRef) => ({ kind: 'add', place }));
+}
+
+/** 지점 하나를 다른 장소로 바꾼다(같은 자리 · 한줄평은 비운다). */
+export function useReplaceStop(
+  tourId: number,
+): UseMutationResult<Course, ApiError, { stopId: number; place: PlaceRef }> {
+  return useSpotEdit(tourId, ({ stopId, place }: { stopId: number; place: PlaceRef }) => ({
+    kind: 'replace',
+    stopId,
+    place,
+  }));
+}
+
+/** 이 학교 주변 상점 후보(가까운 순). `universityId`가 null이면(탐방 학교를 모름, 2B′-R15) 부르지 않는다. */
+export function useNearbyStores(universityId: number | null): UseQueryResult<NearbyStore[]> {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: qk.nearbyStores(universityId ?? -1),
+    queryFn:
+      universityId === null
+        ? skipToken
+        : () => getNearbyStores(universityId, loadCampuses(queryClient)),
+  });
+}
+
+/** 이 학교 캠퍼스 장소 후보. `universityId`가 null이면 부르지 않는다. */
+export function useCampusPlaces(universityId: number | null): UseQueryResult<CampusPlace[]> {
+  return useQuery({
+    queryKey: qk.campusPlaces(universityId ?? -1),
+    queryFn: universityId === null ? skipToken : () => getCampusPlaces(universityId),
+  });
 }
 
 /** 확정하면 쿠폰이 발급되고 코스 상태가 바뀌므로 신청자 보드와 가이드 탐방 목록도 다시 불러온다. */

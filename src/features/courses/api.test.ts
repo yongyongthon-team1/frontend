@@ -5,13 +5,17 @@ import { resetDb } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
 import { DEMO_EMAILS } from '@/shared/config/demoAccounts';
 import { configureHttp } from '@/shared/lib/http';
+import { CAMPUS_PLACES, CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
 import { COURSE_CONFIRM_OK, COURSE_NOT_READY } from '@/test/fixtures/backend/courses';
+import { NEARBY_STORES } from '@/test/fixtures/backend/stores';
 import { loginAs } from '@/test/loginAs';
 import { wireFail, wireOk } from '@/test/wire';
 import {
   getCourse,
   getGuideCourse,
+  getCampusPlaces,
   getGuideCourseStatus,
+  getNearbyStores,
   postConfirmCourse,
   postCourseDraft,
   putCourseSpots,
@@ -132,5 +136,66 @@ describe('코스 API (MSW 목업)', () => {
     );
     const course = await postConfirmCourse(1, await listCampuses());
     expect(course.issuedCouponCount).toBe(COURSE_CONFIRM_OK.data.coupon_count);
+  });
+
+  describe('주변 상점 · 캠퍼스 장소', () => {
+    const store = (storeId: number, name: string, lat: number) => ({
+      ...NEARBY_STORES.data.items[0],
+      store_id: storeId,
+      name,
+      lat,
+    });
+
+    it('getNearbyStores: 캠퍼스 중심에서 가까운 순, 거리가 같으면 이름 순(ko)', async () => {
+      server.use(
+        http.get('/api/campuses', () => wireOk(CAMPUSES_LIST.data)),
+        http.get('/api/stores/nearby', ({ request }) => {
+          expect(new URL(request.url).searchParams.get('campus_id')).toBe('1');
+          return wireOk({
+            items: [
+              store(1, '하나 식당', 37.3225),
+              store(2, '가나 식당', 37.3225),
+              store(3, '먼 곳', 37.3319),
+              store(4, '가까운 곳', 37.3221),
+            ],
+          });
+        }),
+      );
+      const list = await getNearbyStores(1, listCampuses());
+      expect(list.map((s) => s.name)).toEqual(['가까운 곳', '가나 식당', '하나 식당', '먼 곳']);
+    });
+
+    it('getNearbyStores: 캠퍼스 목록에 없는 학교는 요청 없이 NOT_FOUND', async () => {
+      let nearbyCalls = 0;
+      server.use(
+        http.get('/api/campuses', () => wireOk(CAMPUSES_LIST.data)),
+        http.get('/api/stores/nearby', () => {
+          nearbyCalls += 1;
+          return wireOk({ items: [] });
+        }),
+      );
+      await expect(getNearbyStores(0, listCampuses())).rejects.toMatchObject({
+        status: 404,
+        code: 'NOT_FOUND',
+      });
+      expect(nearbyCalls).toBe(0);
+      // 양성 대조: 있는 학교는 요청이 나간다.
+      await getNearbyStores(1, listCampuses());
+      expect(nearbyCalls).toBe(1);
+    });
+
+    it('getCampusPlaces: 서버 순서 그대로', async () => {
+      server.use(
+        http.get('/api/campuses/:campusId/places', () =>
+          wireOk({
+            items: [
+              { ...CAMPUS_PLACES.data.items[0], campus_building_id: 9, name: '나' },
+              CAMPUS_PLACES.data.items[0],
+            ],
+          }),
+        ),
+      );
+      expect((await getCampusPlaces(1)).map((p) => p.campusBuildingId)).toEqual([9, 3]);
+    });
   });
 });

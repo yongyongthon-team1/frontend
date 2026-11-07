@@ -1,6 +1,8 @@
 import { shortUniversityName } from '@/features/tours/model';
 import type { WireCampus, WireInsight } from '@/features/campuses/wire';
-import type { DB, UniversityRow } from '@/mocks/db/schema';
+import type { WireCampusPlace } from '@/features/courses/wire';
+import type { CampusPlaceRow, DB, UniversityRow } from '@/mocks/db/schema';
+import { MockApiError } from '@/mocks/rules/errors';
 
 // 캠퍼스 행 → 와이어 객체(`ok`가 키를 snake로 바꾼다). 도메인 객체를 만들던 `toUniversity`의 자리(2C-R26).
 
@@ -33,5 +35,24 @@ export function toWireInsight(row: UniversityRow): WireInsight {
     text: `${area}은 방학이면 대학가 손님이 크게 줄어요. 이 코스는 그 상권으로 신청자들을 보내요.`,
     source: INSIGHT_SOURCE,
     isPlaceholder: true,
+  };
+}
+
+/** 그 캠퍼스의 장소(건물), 건물 id 순. 없는 캠퍼스는 404 NOT_FOUND(장소가 0개인 캠퍼스는 빈 목록). */
+export function campusPlacesOf(db: DB, campusId: number): CampusPlaceRow[] {
+  if (!db.universities.some((u) => u.id === campusId)) throw new MockApiError(404, 'NOT_FOUND');
+  return db.campusPlaces
+    .filter((p) => p.universityId === campusId)
+    .sort((a, b) => a.campusBuildingId - b.campusBuildingId);
+}
+
+/** C-02 보완 항목. */
+export function toWireCampusPlace(row: CampusPlaceRow): WireCampusPlace {
+  return {
+    campusBuildingId: row.campusBuildingId,
+    name: row.name,
+    description: row.description,
+    lat: row.latitude,
+    lng: row.longitude,
   };
 }

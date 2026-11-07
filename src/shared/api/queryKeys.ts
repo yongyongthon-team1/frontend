@@ -39,6 +39,10 @@ export const qk = {
   guideCourse: (tourId: number) => ['guideCourse', tourId] as const,
   /** 가이드의 코스 전부의 접두사(무효화용). */
   allGuideCourses: ['guideCourse'] as const,
+  /** 코스 편집의 주변 상점 후보(S-02). 학교마다 한 항목. */
+  nearbyStores: (universityId: number) => ['nearbyStores', universityId] as const,
+  /** 코스 편집의 캠퍼스 장소 후보(C-02 보완). 학교마다 한 항목. */
+  campusPlaces: (universityId: number) => ['campusPlaces', universityId] as const,
   /** 뮤테이션 키: AI 코스 초안 생성. 화면이 다시 마운트돼도 진행 중인 생성을 알아본다. */
   courseDraft: (tourId: number) => ['courseDraft', tourId] as const,
   couponLookup: (code: string) => ['couponLookup', code] as const,

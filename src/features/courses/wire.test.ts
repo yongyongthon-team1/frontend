@@ -1,9 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { toCamel } from '@/shared/lib/caseKeys';
+import { CAMPUS_PLACES } from '@/test/fixtures/backend/campuses';
 import { COURSE_DRAFT, COURSE_VIEW } from '@/test/fixtures/backend/courses';
+import { NEARBY_STORES } from '@/test/fixtures/backend/stores';
 import { TOUR_31 } from '@/test/fixtures/backend/tours';
 import { COURSE_CRITERIA, type CourseStop } from './model';
-import { fromWireCourse, type WireCourse } from './wire';
+import {
+  fromWireCampusPlace,
+  fromWireCourse,
+  fromWireNearbyStore,
+  type WireCampusPlace,
+  type WireCourse,
+  type WireNearbyStore,
+} from './wire';
 
 const view = () => toCamel<WireCourse>(COURSE_VIEW.data);
 
@@ -105,5 +114,36 @@ describe('fromWireCourse (Review Focus 1: 확장 없는 실서버 응답)', () =
     const wire = view();
     const course = fromWireCourse({ ...wire, spots: [wire.spots[1], wire.spots[0]] }, TOUR_31);
     expect(course.stops.map((s) => s.order)).toEqual([1, 2]);
+  });
+});
+
+describe('주변 상점 · 캠퍼스 장소 (S-02 · C-02 보완)', () => {
+  it('명세 S-02 예시 → NearbyStore, 거리는 기준점(캠퍼스 중심)에서 잰 미터', () => {
+    const store = fromWireNearbyStore(toCamel<WireNearbyStore>(NEARBY_STORES.data.items[0]), {
+      lat: 37.3219,
+      lng: 127.1268,
+    });
+    expect(store).toEqual({
+      storeId: 202,
+      name: '캠퍼스 카페',
+      category: '카페',
+      address: '경기 용인시 처인구 ...',
+      lat: 37.3225,
+      lng: 127.1271,
+      isPartner: false,
+      reviewSummary: null,
+      distanceM: expect.any(Number),
+    });
+    expect(Math.round(store.distanceM)).toBe(72);
+  });
+
+  it('명세 C-02 보완 예시 → CampusPlace', () => {
+    expect(fromWireCampusPlace(toCamel<WireCampusPlace>(CAMPUS_PLACES.data.items[0]))).toEqual({
+      campusBuildingId: 3,
+      name: '중앙도서관',
+      description: '24시간 열람실이 있어요',
+      lat: 37.3226,
+      lng: 127.1261,
+    });
   });
 });

@@ -84,7 +84,7 @@
 
 ## API 연동
 
-도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 백엔드 명세([`../api/backend-spec.md`](../api/backend-spec.md))의 엔드포인트 46개와 목업 전용 확장 3개(`GET /health` · `POST /demo/reset` · `GET /campuses/:campusId/insight`)다. 2C에서 옛 프론트 계약([`../api/frontend-needs.md`](../api/frontend-needs.md), 기록으로만 남음)의 행을 백엔드 경로로 바꿨고, 목업은 백엔드 와이어(봉투 · snake_case · E 코드)로 응답한다. 목업 ✅는 32개 백엔드 경로와 확장 3개, 모두 35행이며 `registry.test.ts`의 `(BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS`와 같다. 나머지 14행(목업 ⬜)은 P1 화면의 API로, 2B′ 태스크가 하나씩 채운다. 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이고 묶음은 [`backend-alignment.md` 7-4](../api/backend-alignment.md)를 따른다(인사이트는 `campuses` 핸들러에 등록돼 있어 그 도메인에 적었다).
+도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 백엔드 명세([`../api/backend-spec.md`](../api/backend-spec.md))의 엔드포인트 46개와 목업 전용 확장 3개(`GET /health` · `POST /demo/reset` · `GET /campuses/:campusId/insight`)다. 2C에서 옛 프론트 계약([`../api/frontend-needs.md`](../api/frontend-needs.md), 기록으로만 남음)의 행을 백엔드 경로로 바꿨고, 목업은 백엔드 와이어(봉투 · snake_case · E 코드)로 응답한다. 목업 ✅는 34개 백엔드 경로와 확장 3개, 모두 37행이며 `registry.test.ts`의 `(BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS`와 같다. 나머지 12행(목업 ⬜)은 P1 화면의 API로, 2B′ 태스크가 하나씩 채운다. 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이고 묶음은 [`backend-alignment.md` 7-4](../api/backend-alignment.md)를 따른다(인사이트는 `campuses` 핸들러에 등록돼 있어 그 도메인에 적었다).
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
@@ -95,7 +95,7 @@
 | auth | `PATCH /api/users/me` | hs-a03 내 정보 수정 `/me/edit` (U-03) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `PUT /api/users/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` (U-04) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses` | hs-s03, guide-s02 (D-01) | ⬜ | ✅ | ⬜ | ⬜ |
-| campuses | `GET /api/campuses/:campusId/places` | guide-a03 캠퍼스 장소 탭(코스에 캠퍼스 지점 추가, 2B) | ⬜ | ⬜ | ⬜ | ⬜ |
+| campuses | `GET /api/campuses/:campusId/places` | guide-a03 캠퍼스 장소 탭(코스에 캠퍼스 지점 추가, C-02 보완. 로그인한 누구나, 목업은 건물 id 순. 화면은 MVP 2B′ Task 8) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses/:campusId/insight` | hs-s04, guide-s04 (확장 · 목업 전용, 봉투. 오류면 카드를 그리지 않는다) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours` | hs-s03 홈 모집 중 목록, hs-s04 탐방 찾기 결과(`status=RECRUITING&campus_id&major[&date_from]`, 0건이면 `campus_id`만으로 같은 학교 대체 — hs-a06), `/explore`(P2). 쿼리 `status · campus_id · major · date_from · date_to · page · size` (T-01 보완, 목업 확장 `campus_id`) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `POST /api/tour-wishes` | hs-s03 (T-01 희망 사항 등록 · 고교생만, 본문 `{ campus_id, major, wish, date }`, 학교 칸 오류 `campus_id` → 폼 `universityId`. AI 없음 — 저장만 하고 탐방은 `GET /tours`로 찾는다) | ⬜ | ✅ | ⬜ | ⬜ |
@@ -122,7 +122,7 @@
 | stores | `POST /api/users/me/store` | owner-a01 가게 연결 · 직접 등록 (S-01) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | `GET /api/users/me/store` | owner-s02 (O01 · O01-E), 쿠폰 사용 처리 (S-01 보완) | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `PATCH /api/users/me/store` | owner-s02 가게 정보 수정 (S-01, 화면 없음 · P2) | ⬜ | ⬜ | ⬜ | ⬜ |
-| stores | `GET /api/stores/nearby` | guide-a03 주변 상점 선택 (S-02) | ⬜ | ⬜ | ⬜ | ⬜ |
+| stores | `GET /api/stores/nearby` | guide-a03 주변 상점 선택 (S-02, `campus_id` 필수 · `category` 선택. 거리 · 순서는 프론트 — 캠퍼스 중심에서 직선거리로 가까운 순, 같으면 이름. 목업 반경은 `COURSE_RADIUS_M`, `is_partner`는 오늘 유효한 제휴. 화면은 MVP 2B′ Task 8) | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `PUT /api/users/me/store/partnership` | owner-s02 제휴 설정 `/owner/store/partnership` (S-03) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | `GET /api/users/me/store/report` | owner-s04 방문 · 리뷰 리포트 ✅ 화면 연결 (S-07, 쿼리 없이 부른다 — 기본 기간은 서버 몫, 목업은 오늘 −30일 ~ 오늘. AI 요약 · 최근 리뷰는 `GET /users/me/store` + `GET /stores/{storeId}/reviews`로 합성, `E404` → `STORE_NOT_LINKED`면 빈 상태) | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 (U-07) | ⬜ | ⬜ | ⬜ | ⬜ |
