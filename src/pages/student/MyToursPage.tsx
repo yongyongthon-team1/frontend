@@ -198,7 +198,7 @@ export function MyToursPage() {
             <div className="mt-6">
               <EmptyState
                 title="아직 신청한 탐방이 없어요."
-                action={{ label: '추천받으러 가기', to: '/' }}
+                action={{ label: '탐방 찾으러 가기', to: '/' }}
               />
             </div>
           ) : (
@@ -233,7 +233,7 @@ export function MyToursPage() {
           <div className="mt-6">
             <EmptyState
               title="아직 지난 탐방이 없어요."
-              action={{ label: '추천받으러 가기', to: '/' }}
+              action={{ label: '탐방 찾으러 가기', to: '/' }}
             />
           </div>
         ) : (

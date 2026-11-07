@@ -68,7 +68,6 @@ const NOT_MOCKED: string[] = [
   'GET /admin/verifications',
   'GET /admin/verifications/:verificationId',
   'PATCH /admin/verifications/:verificationId',
-  'POST /tour-wishes',
   'GET /users/me/tour-wishes',
   'PATCH /users/me/tour-wishes/:wishId',
   'GET /tour-wishes',
@@ -86,8 +85,8 @@ const NOT_MOCKED: string[] = [
   'GET /campuses/:campusId/places',
 ];
 
-/** 아직 바꾸지 않은 옛 경로(전환 기간). 도메인 태스크가 자기 줄을 지운다. */
-const LEGACY: string[] = ['POST /recommendations'];
+/** 아직 바꾸지 않은 옛 경로(전환 기간). 도메인 태스크가 자기 줄을 지운다 — Task 11 뒤 비었고 Task 13이 목록째 지운다. */
+const LEGACY: string[] = [];
 
 const label = (h: { info: { method: unknown; path: unknown } }) =>
   `${String(h.info.method)} ${String(h.info.path)}`.replace(' /api/', ' /');

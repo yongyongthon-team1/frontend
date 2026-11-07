@@ -38,8 +38,8 @@ const tour: TourDetail = {
   myApplication: null,
 };
 
-const rec = '/recommendations?q=a';
-const recAction = { label: '다른 추천 보기', to: rec };
+const rec = '/tours?school=2&major=a&wish=b';
+const recAction = { label: '다른 탐방 보기', to: rec };
 
 describe('applyButtonState', () => {
   it('비로그인이면 로그인 유도(활성)', () =>
@@ -107,13 +107,13 @@ describe('applyButtonState', () => {
     const s = applyButtonState(
       { ...base, verificationStatus: 'PENDING' },
       { ...tour, status: 'CLOSED', remainingSeats: 0 },
-      '/recommendations?q=a',
+      '/tours?school=2&major=a&wish=b',
     );
     expect(s).toMatchObject({
       kind: 'CLOSED',
       enabled: false,
       reason: '남은 자리가 없어요.',
-      action: { label: '다른 추천 보기', to: '/recommendations?q=a' },
+      action: { label: '다른 탐방 보기', to: '/tours?school=2&major=a&wish=b' },
     });
   });
 

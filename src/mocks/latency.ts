@@ -1,6 +1,6 @@
 import { delay } from 'msw';
 
-// 목업 응답 지연. 화면이 로딩 상태를 미리 버티게 일반 요청도 조금 늦추고, AI 흉내(추천 · 코스 초안)는 더 늦춘다.
+// 목업 응답 지연. 화면이 로딩 상태를 미리 버티게 일반 요청도 조금 늦추고, AI 흉내(코스 초안)는 더 늦춘다.
 // 테스트는 `setMockLatency({ base: 0, ai: 0 })`로 지연을 없앤다(0이면 타이머를 쓰지 않는다).
 
 export interface MockLatency {

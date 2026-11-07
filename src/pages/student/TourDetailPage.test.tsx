@@ -44,12 +44,21 @@ describe('탐방 상세 (hs-s05 · hs-a06 · V2 H03 · H13)', () => {
     expect(screen.getByRole('link', { name: '다른 탐방 보기 ›' })).toHaveAttribute('href', '/');
   });
 
-  it('마지막 추천 검색이 있으면 다른 탐방 보기는 그 목록으로', async () => {
+  it('마지막 탐방 찾기 검색이 있으면 다른 탐방 보기는 그 결과 화면으로', async () => {
+    useLastQuery.setState({ search: 'school=2&major=%EB%94%94%EC%9E%90%EC%9D%B8&wish=a' });
+    await renderApp('/tours/2', { as: 'student' });
+    expect(await screen.findByRole('link', { name: '다른 탐방 보기 ›' })).toHaveAttribute(
+      'href',
+      '/tours?school=2&major=%EB%94%94%EC%9E%90%EC%9D%B8&wish=a',
+    );
+  });
+
+  it('저장된 검색이 옛 추천 검색(q=)이면 다른 탐방 보기는 홈으로', async () => {
     useLastQuery.setState({ search: 'q=%EB%94%94%EC%9E%90%EC%9D%B8' });
     await renderApp('/tours/2', { as: 'student' });
     expect(await screen.findByRole('link', { name: '다른 탐방 보기 ›' })).toHaveAttribute(
       'href',
-      '/recommendations?q=%EB%94%94%EC%9E%90%EC%9D%B8',
+      '/',
     );
   });
 

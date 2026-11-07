@@ -3,7 +3,7 @@ import type { DB, TourRow } from '@/mocks/db/schema';
 import { remainingSeats } from './applications';
 
 /**
- * 탐방 행 → `TourSummary`. 목업 AI 추천과 핸들러의 DTO(Task 9 `views.ts`)가 함께 쓴다.
+ * 탐방 행 → `TourSummary`. 목업 쿠폰 와이어(`mocks/wire/coupons.ts`)가 쓴다.
  * 제목은 가이드가 정한 `title`, 없으면 "대학교 + 가이드 학과 + 탐방", 남은 자리는 정원 − 승인 수다.
  */
 export function buildTourSummary(db: DB, tour: TourRow): TourSummary {

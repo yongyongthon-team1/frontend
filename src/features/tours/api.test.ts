@@ -8,8 +8,9 @@ import { toWireTourItem } from '@/mocks/wire/tours';
 import { seoulDateKey } from '@/shared/lib/date';
 import { ApiError, configureHttp } from '@/shared/lib/http';
 import { wirePage } from '@/test/wire';
-import { getTour, listTours, recommend } from './api';
-import type { TourFilter } from './model';
+import { findWishTours, getTour, listTours } from './api';
+import type { TourFilter, WishToursResult } from './model';
+import type { WishSearch } from './wishSearch';
 
 describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
   beforeEach(() => {
@@ -19,10 +20,78 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
 
   afterEach(() => configureHttp({ getToken: () => null }));
 
-  it('recommend: 추천 결과', async () => {
-    const r = await recommend({ q: '산업디자인을 공부하고 싶어요.' });
-    expect(r.headline).toBe('디자인 분야에 관심이 많군요!');
-    expect(r.items.length).toBeGreaterThan(0);
+  describe('findWishTours (T-01 탐방 찾기, 2C-R16 · R17)', () => {
+    const search = (s: Partial<WishSearch>): WishSearch => ({
+      universityId: 2,
+      major: '산업디자인',
+      wish: '작업실을 구경하고 싶어요.',
+      date: null,
+      ...s,
+    });
+    const ids = (r: { tours: { id: number }[] }) => r.tours.map((t) => t.id);
+    /** 이 콜백을 도는 동안 나간 `GET /api/tours`의 검색 파라미터(키 순서대로). */
+    async function tourQueries(run: () => Promise<unknown>): Promise<Record<string, string>[]> {
+      const seen: Record<string, string>[] = [];
+      server.events.on('request:start', ({ request }) => {
+        const url = new URL(request.url);
+        if (request.method === 'GET' && url.pathname === '/api/tours') {
+          seen.push(Object.fromEntries(url.searchParams));
+        }
+      });
+      await run();
+      server.events.removeAllListeners('request:start');
+      return seen;
+    }
+
+    it('학교 · 학과에 맞는 모집 중 탐방을 날짜 빠른 순으로(대체 아님)', async () => {
+      const campuses = await listCampuses();
+      let result: WishToursResult | undefined;
+      const queries = await tourQueries(async () => {
+        result = await findWishTours(search({}), campuses);
+      });
+      expect(ids(result!)).toEqual([1, 6]);
+      expect(result!.fallback).toBe(false);
+      expect(queries).toEqual([
+        { status: 'RECRUITING', campus_id: '2', major: '산업디자인', page: '1', size: '50' },
+      ]);
+    });
+
+    it('학과에 맞는 탐방이 없으면 같은 학교 모집 중 탐방(대체) — 대체 조회는 학과 · 날짜를 뺀다', async () => {
+      const campuses = await listCampuses();
+      let result: WishToursResult | undefined;
+      const queries = await tourQueries(async () => {
+        result = await findWishTours(search({ major: '기계공학', date: '2026-01-01' }), campuses);
+      });
+      expect(ids(result!)).toEqual([1, 6]);
+      expect(result!.fallback).toBe(true);
+      expect(queries).toEqual([
+        {
+          status: 'RECRUITING',
+          campus_id: '2',
+          major: '기계공학',
+          date_from: '2026-01-01',
+          page: '1',
+          size: '50',
+        },
+        { status: 'RECRUITING', campus_id: '2', page: '1', size: '50' },
+      ]);
+    });
+
+    it('희망 날짜가 있으면 그날 이후(date_from)', async () => {
+      const campuses = await listCampuses();
+      const sixDay = seoulDateKey(getDb().tours.find((t) => t.id === 6)!.startsAt);
+      const result = await findWishTours(search({ date: sixDay }), campuses);
+      expect(ids(result)).toEqual([6]);
+      expect(result.fallback).toBe(false);
+    });
+
+    it('같은 학교에도 모집 중 탐방이 없으면 빈 목록(대체) — 단국대는 마감 탐방뿐', async () => {
+      const campuses = await listCampuses();
+      expect(await findWishTours(search({ universityId: 3, major: '디자인' }), campuses)).toEqual({
+        tours: [],
+        fallback: true,
+      });
+    });
   });
 
   it('listTours: 기본은 모집 중 5개(탐방 1 · 3 · 4 · 5 · 6)이고 시작 순이다', async () => {

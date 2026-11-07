@@ -1,12 +1,7 @@
 import type { University } from '@/features/campuses/model';
-import { AI_TIMEOUT_MS, listAll, request, withQuery } from '@/shared/lib/http';
-import type {
-  RecommendationQuery,
-  RecommendationResult,
-  TourDetail,
-  TourFilter,
-  TourSummary,
-} from './model';
+import { listAll, request, withQuery } from '@/shared/lib/http';
+import type { TourDetail, TourFilter, TourSummary, WishToursResult } from './model';
+import type { WishSearch } from './wishSearch';
 import {
   fromWireTourDetail,
   fromWireTourItem,
@@ -19,15 +14,6 @@ import {
  * 약속이면 탐방 요청과 캠퍼스 요청이 동시에 나간다(errata G13).
  */
 export type CampusesInput = University[] | Promise<University[]>;
-
-/** 관심사 문장으로 모집 중 탐방을 추천받는다(AI라 시간 제한이 길다). */
-export function recommend(q: RecommendationQuery): Promise<RecommendationResult> {
-  return request<RecommendationResult>('/recommendations', {
-    method: 'POST',
-    body: q,
-    timeoutMs: AI_TIMEOUT_MS,
-  });
-}
 
 /**
  * T-01 보완 `GET /tours`. 모든 쪽을 이어 받아 시작 시각 오름차순(같으면 id)으로 돌려준다.
@@ -52,6 +38,31 @@ export async function listTours(
   return items
     .map((w) => fromWireTourItem(w, joined))
     .sort((a, b) => Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.id - b.id);
+}
+
+/**
+ * T-01 탐방 찾기(2C-R16 · R17). 학교 · 학과(부분 일치) · 희망 날짜(있으면 그날 이후 `date_from`)에 맞는 모집 중 탐방을 찾고,
+ * 0건이면 학과 · 날짜를 빼고 같은 학교의 모집 중 탐방을 한 번 더 찾는다(대체). 둘 다 날짜 빠른 순(`listTours`)이다.
+ */
+export async function findWishTours(
+  search: WishSearch,
+  campuses: CampusesInput,
+): Promise<WishToursResult> {
+  const matched = await listTours(
+    {
+      status: 'RECRUITING',
+      universityId: search.universityId,
+      major: search.major,
+      ...(search.date ? { dateFrom: search.date } : {}),
+    },
+    campuses,
+  );
+  if (matched.length > 0) return { tours: matched, fallback: false };
+  const sameSchool = await listTours(
+    { status: 'RECRUITING', universityId: search.universityId },
+    campuses,
+  );
+  return { tours: sameSchool, fallback: true };
 }
 
 /** T-02 `GET /tours/{tourId}`. */

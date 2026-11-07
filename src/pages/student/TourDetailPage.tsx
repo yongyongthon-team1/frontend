@@ -1,7 +1,7 @@
 import { User } from 'lucide-react';
 import { Link, useNavigate, useParams } from 'react-router';
 import { useMe } from '@/features/auth/queries';
-import { recommendationsPath } from '@/features/tours/lastQuery';
+import { tourResultsPath } from '@/features/tours/lastQuery';
 import {
   applyButtonState,
   campusLabel,
@@ -105,7 +105,7 @@ export function TourDetailPage() {
     );
   }
 
-  const state = applyButtonState(me.data, tour, recommendationsPath());
+  const state = applyButtonState(me.data, tour, tourResultsPath());
   const action = state.action;
   const label = state.label === '탐방 신청하기' ? '이 탐방 신청하기' : state.label;
   const highlights = tourHighlights(tour.introduction);

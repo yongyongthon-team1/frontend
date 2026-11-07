@@ -3,7 +3,7 @@ import { useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { useApplyToTour } from '@/features/applications/queries';
 import { useMe } from '@/features/auth/queries';
-import { recommendationsPath } from '@/features/tours/lastQuery';
+import { tourResultsPath } from '@/features/tours/lastQuery';
 import { applyButtonState, campusLabel } from '@/features/tours/model';
 import { useTour } from '@/features/tours/queries';
 import { useDemoToolsOn } from '@/demo/demoStore';
@@ -66,7 +66,7 @@ export function ApplyPage() {
     );
   }
 
-  const state = applyButtonState(me.data, tour, recommendationsPath());
+  const state = applyButtonState(me.data, tour, tourResultsPath());
   const canApply = state.kind === 'APPLY';
 
   function onSubmit(e: FormEvent) {

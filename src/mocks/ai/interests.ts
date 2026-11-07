@@ -15,7 +15,7 @@ export const MAJOR_KEYWORDS: Record<string, string[]> = {
   사회복지: ['복지', '봉사', '상담', '사회'],
 };
 
-/** 학과 키 → 계열. 추천 제목(`{계열} 분야에 관심이 많군요!`)과 코스의 캠퍼스 장소 고르기에 쓴다. */
+/** 학과 키 → 계열. 코스 초안의 캠퍼스 장소 고르기에 쓴다. */
 export const MAJOR_FAMILY: Record<string, string> = {
   산업디자인: '디자인',
   커뮤니케이션디자인: '디자인',

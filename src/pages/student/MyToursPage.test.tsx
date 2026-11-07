@@ -33,7 +33,7 @@ describe('내 탐방 · 예정 (H06)', () => {
       'false',
     );
     expect(await screen.findByText('아직 신청한 탐방이 없어요.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '추천받으러 가기' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: '탐방 찾으러 가기' })).toHaveAttribute('href', '/');
   });
 
   it('승인 대기 신청은 `승인 대기` 소제목 아래 카드이고 카드 전체가 상세 링크', async () => {

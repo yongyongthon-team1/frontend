@@ -126,7 +126,7 @@ describe('useUpdateStudentProfile', () => {
 });
 
 describe('useSaveGuideProfile', () => {
-  it('새 Me를 넣고 가이드 탐방 · 신청자 · 코스 · 탐방 조회를 무효화한다 (추천 · 가이드 탐방 상세 키는 건드리지 않는다)', async () => {
+  it('새 Me를 넣고 가이드 탐방 · 신청자 · 코스 · 탐방 조회를 무효화한다 (가이드 탐방 상세 키는 건드리지 않는다)', async () => {
     loginAs('guide@demo.kr');
     const keys = {
       guideTours: qk.guideTours,

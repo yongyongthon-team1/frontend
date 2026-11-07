@@ -1,16 +1,23 @@
-import { Search } from 'lucide-react';
-import { useEffect, useId, useState, type FormEvent } from 'react';
+import { zodResolver } from '@hookform/resolvers/zod';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { useForm } from 'react-hook-form';
 import { useLocation, useNavigate } from 'react-router';
+import { toast } from 'sonner';
 import { useDemoToolsOn } from '@/demo/demoStore';
-import { EXAMPLE_QUERIES } from '@/features/tours/examples';
+import { useUniversities } from '@/features/campuses/queries';
+import { DEMO_WISH } from '@/features/tours/examples';
 import { useLastQuery } from '@/features/tours/lastQuery';
 import { campusLabel } from '@/features/tours/model';
 import { useTours } from '@/features/tours/queries';
-import { fromSearch, toSearch } from '@/features/tours/recommendationParams';
+import { fromWishSearch, toWishSearch, type WishSearch } from '@/features/tours/wishSearch';
+import { WishFields } from '@/features/wishes/components/WishFields';
+import { toWishInput, wishFormSchema, type WishFormValues } from '@/features/wishes/model';
+import { useCreateTourWish } from '@/features/wishes/queries';
 import { formatDotDateWeekday } from '@/shared/lib/date';
+import { errorMessage } from '@/shared/lib/errors';
 import { preventImeEnter } from '@/shared/lib/ime';
-import { Button } from '@/shared/ui/Button';
 import { BrandMark } from '@/shared/ui/BrandMark';
+import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { HeroCard } from '@/shared/ui/HeroCard';
@@ -19,46 +26,91 @@ import { Page } from '@/shared/ui/Page';
 import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
 
-const MIN_QUERY_LENGTH = 5;
 const MAX_TOURS = 3;
-const QUERY_ERROR = '하고 싶은 것을 한 문장 이상 적어 주세요.';
+const EMPTY: WishFormValues = { universityId: '', major: '', wish: '', date: '' };
+/** 서버 칸 오류(`fieldErrors`) 중 이 폼에 있는 칸. */
+const FORM_FIELDS = ['universityId', 'major', 'wish', 'date'] as const;
+
+function toFormValues(s: WishSearch): WishFormValues {
+  return {
+    universityId: String(s.universityId),
+    major: s.major,
+    wish: s.wish,
+    date: s.date ?? '',
+  };
+}
 
 /**
- * 고교생 홈 · AI 탐방 추천(hs-s03 · V2 H01). 추천 요청은 문장 하나(`q`)뿐이다(판정 2A-R1). 시연 도구가 켜져 있으면
- * 입력칸에 첫 예시 문장이 미리 채워진다(무대에서 한글을 치지 않게). 주소에 검색이 있으면(추천 목록에서 `다시 추천받기`로
- * 돌아온 경우) 그 문장으로 채운다.
+ * 고교생 홈 · T-01 희망 사항 등록(hs-s03 · H01을 V2 부품으로, 결정 0011). 학교 · 학과 · 탐방 희망 사항 · 희망 날짜(선택)를
+ * `POST /tour-wishes`로 한 번 저장하고 결과 화면 `/tours?{search}`로 간다(2C-R16) — AI는 쓰지 않는다. 주소에 검색이 있으면
+ * (결과 화면의 `조건 바꾸기` · 뒤로 가기) 그 값으로 칸을 채우고, 없으면 시연 도구가 켜졌을 때 `DEMO_WISH`로 미리 채운다(2C-R19).
  */
 export function HomePage() {
   const navigate = useNavigate();
   const { search } = useLocation();
   const setSearch = useLastQuery((s) => s.setSearch);
   const demoOn = useDemoToolsOn();
-  const savedQ = fromSearch(search)?.q;
-  const [q, setQ] = useState(savedQ ?? (demoOn ? EXAMPLE_QUERIES[0] : ''));
-  const [touched, setTouched] = useState(false);
-  const [error, setError] = useState<string | undefined>();
-  const inputId = useId();
-  const errorId = useId();
+  const campuses = useUniversities();
+  const create = useCreateTourWish();
   const tours = useTours({ status: 'RECRUITING' });
+  const fromAddress = useMemo(() => fromWishSearch(search), [search]);
+  const form = useForm<WishFormValues>({
+    resolver: zodResolver(wishFormSchema),
+    defaultValues: fromAddress ? toFormValues(fromAddress) : EMPTY,
+  });
+  const [touched, setTouched] = useState(false);
+  // 검사(비동기)를 통과한 제출이 둘 겹쳐도 등록은 한 번이다(연타). 실패하면 다시 풀린다.
+  const submitting = useRef(false);
 
-  // 시연 도구가 마운트 뒤에 켜져도(원클릭 링크) 손대지 않은 빈 입력칸은 예시 문장으로 채운다.
+  // 사용자가 칸을 한 번이라도 고치면 시연 미리 채움을 멈춘다(`setValue`로 채운 것은 사용자 입력이 아니다).
   useEffect(() => {
-    if (demoOn && !touched && savedQ === undefined) {
-      setQ((cur) => (cur === '' ? EXAMPLE_QUERIES[0] : cur));
-    }
-  }, [demoOn, touched, savedQ]);
+    const subscription = form.watch((_values, { type }) => {
+      if (type === 'change') setTouched(true);
+    });
+    return () => subscription.unsubscribe();
+  }, [form]);
 
-  const onSubmit = (e: FormEvent) => {
-    e.preventDefault();
-    const text = q.trim();
-    if (text.length < MIN_QUERY_LENGTH) {
-      setError(QUERY_ERROR);
-      return;
+  // 시연 미리 채움: 시연 도구가 마운트 뒤에 켜져도(원클릭 링크) 손대지 않은 빈 칸만 채운다. 학교는 캠퍼스 목록에 그 id가
+  // 있을 때만(실서버 id가 다르면 빈칸), 날짜는 채우지 않는다.
+  const campusList = campuses.data;
+  useEffect(() => {
+    if (!demoOn || touched || fromAddress !== null) return;
+    const { getValues, setValue } = form;
+    if (getValues('major') === '') setValue('major', DEMO_WISH.major);
+    if (getValues('wish') === '') setValue('wish', DEMO_WISH.wish);
+    if (
+      getValues('universityId') === '' &&
+      campusList?.some((u) => u.id === DEMO_WISH.universityId)
+    ) {
+      setValue('universityId', String(DEMO_WISH.universityId));
     }
-    const next = toSearch({ q: text });
-    setSearch(next);
-    void navigate(`/recommendations?${next}`);
-  };
+  }, [demoOn, touched, fromAddress, campusList, form]);
+
+  const onSubmit = form.handleSubmit((values) => {
+    if (submitting.current) return;
+    submitting.current = true;
+    const input = toWishInput(values);
+    create.mutate(input, {
+      onSuccess: () => {
+        const next = toWishSearch(input);
+        setSearch(next);
+        void navigate(`/tours?${next}`);
+      },
+      onError: (error) => {
+        submitting.current = false;
+        const fieldErrors = error.fieldErrors ?? {};
+        let shown = false;
+        for (const name of FORM_FIELDS) {
+          const message = fieldErrors[name];
+          if (message) {
+            form.setError(name, { message });
+            shown = true;
+          }
+        }
+        if (!shown) toast.error(errorMessage(error.code));
+      },
+    });
+  });
 
   const open = (tours.data ?? [])
     .filter((t) => t.remainingSeats > 0)
@@ -79,40 +131,14 @@ export function HomePage() {
           title={'어떤 전공이\n궁금한가요?'}
           illustration="campus"
           titleTone="brand-strong"
-          footer={
-            <>
-              <label htmlFor={inputId} className="sr-only">
-                하고 싶은 것
-              </label>
-              {/* 입력칸의 기본 윤곽선은 지우고(칸 안이 아니라 흰 상자가 둘러싸 보이게) 상자에 포커스 링을 건다. */}
-              <div className="flex h-14 items-center gap-2 rounded-lg bg-surface px-4 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-accent">
-                <Search aria-hidden className="size-4 shrink-0 text-brand" />
-                <input
-                  id={inputId}
-                  type="text"
-                  value={q}
-                  onChange={(e) => {
-                    setQ(e.target.value);
-                    setTouched(true);
-                    setError(undefined);
-                  }}
-                  placeholder="예: 제품을 만들고 디자인해보고 싶어요"
-                  aria-invalid={error ? true : undefined}
-                  aria-describedby={error ? errorId : undefined}
-                  className="min-w-0 flex-1 bg-transparent text-[15px] text-ink placeholder:text-[13px] placeholder:font-medium placeholder:text-muted focus:outline-none"
-                />
-              </div>
-              {error ? (
-                <p id={errorId} role="alert" className="mt-2 px-1 text-[13px] text-danger">
-                  {error}
-                </p>
-              ) : null}
-            </>
-          }
+          footer={<WishFields form={form} campuses={campusList} />}
         />
-        <Button type="submit" className="mt-4">
-          나에게 맞는 탐방 추천받기
+        <Button type="submit" className="mt-4" loading={create.isPending}>
+          희망 사항 남기고 탐방 찾기
         </Button>
+        <p className="mt-2 px-1 text-[13px] text-muted">
+          남긴 희망 사항은 이름 없이 대학생 가이드에게 보여요.
+        </p>
       </form>
 
       <h2 className="mt-7 mb-3 text-lg font-bold text-ink">이번 방학, 이런 탐방은 어때요?</h2>

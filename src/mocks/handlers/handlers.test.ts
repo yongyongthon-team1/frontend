@@ -29,8 +29,9 @@ import {
 import { COURSE_CRITERIA } from '@/features/courses/model';
 import { buildSpots } from '@/features/courses/spots';
 import { getMyStore } from '@/features/stores/api';
-import { getTour, listTours } from '@/features/tours/api';
-import type { RecommendationResult, TourFilter } from '@/features/tours/model';
+import { findWishTours, getTour, listTours } from '@/features/tours/api';
+import type { TourFilter } from '@/features/tours/model';
+import { postTourWish } from '@/features/wishes/api';
 import { getMockFile, putMockFile } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { configureHttp, request, upload } from '@/shared/lib/http';
@@ -74,6 +75,7 @@ import {
 } from '@/test/fixtures/backend/coupons';
 import { MY_STORE } from '@/test/fixtures/backend/stores';
 import { TOUR_DETAIL, TOURS_LIST } from '@/test/fixtures/backend/tours';
+import { WISH_CREATED } from '@/test/fixtures/backend/wishes';
 import { expectWireShape, rawFetch, wireFail } from '@/test/wire';
 import { formFile, readBody, readForm, withErrors } from './util';
 
@@ -398,25 +400,6 @@ describe('campuses', () => {
 });
 
 describe('tours', () => {
-  it('추천 → 신청 → 내 탐방', async () => {
-    await login('student@demo.kr');
-    const rec = await request<RecommendationResult>('/recommendations', {
-      method: 'POST',
-      body: { q: '산업디자인 공부' },
-    });
-    const campuses = listCampuses();
-    const app = await postApplication(rec.items[0].tour.id, '밥집이 궁금해요', campuses);
-    expect(app.status).toBe('PENDING');
-    expect((await getMyApplications(campuses))[0].id).toBe(app.id);
-  });
-
-  it('빈 추천 문장은 400 VALIDATION', async () => {
-    await login('student@demo.kr');
-    await expect(
-      request('/recommendations', { method: 'POST', body: { q: '  ' } }),
-    ).rejects.toMatchObject({ status: 400, code: 'VALIDATION' });
-  });
-
   it('탐방 목록은 모집 중만 시작 시각 순이고 학교 · 학과로 거른다', async () => {
     const campuses = await listCampuses();
     const ids = async (filter: TourFilter) => (await listTours(filter, campuses)).map((t) => t.id);
@@ -493,6 +476,112 @@ describe('tours', () => {
     const res = await rawFetch<{ code: string }>('/tours/99', { method: 'GET' });
     expect(res.status).toBe(404);
     expect(res.body.code).toBe('E404');
+  });
+});
+
+describe('wishes', () => {
+  // T-01 희망 사항 등록(`POST /tour-wishes`)은 AI 없이 저장만 하고, 탐방은 `GET /tours`의 학교 · 학과로 찾는다(2C-R16).
+  const wishInput = {
+    universityId: 2,
+    major: '산업디자인',
+    wish: '작업실을 구경하고\n학식도 먹어 보고 싶어요.',
+    date: null,
+  };
+
+  it('희망 사항 등록 → 탐방 찾기 → 신청 → 내 탐방', async () => {
+    await login('student@demo.kr');
+    const campuses = listCampuses();
+    const wish = await postTourWish(wishInput, campuses);
+    expect(wish).toMatchObject({
+      universityId: 2,
+      campusLabel: '경희대학교 국제캠퍼스',
+      major: '산업디자인',
+      wish: wishInput.wish,
+      date: null,
+    });
+    const found = await findWishTours({ ...wishInput }, campuses);
+    expect(found.fallback).toBe(false);
+    const app = await postApplication(found.tours[0].id, '밥집이 궁금해요', campuses);
+    expect(app.status).toBe('PENDING');
+    expect((await getMyApplications(campuses))[0].id).toBe(app.id);
+  });
+
+  it('POST /tour-wishes 와이어: 201 S201, 명세 T-01 예시와 같은 모양(확장 없음)이고 본문은 snake 키, 저장은 앞뒤 공백만 뺀 값', async () => {
+    const { token } = await login('student@demo.kr');
+    const raw = await rawFetch<{ code: string; data: Record<string, unknown> }>('/tour-wishes', {
+      method: 'POST',
+      token,
+      body: { campus_id: 2, major: ' 산업디자인 ', wish: '  첫 줄\n둘째 줄  ', date: '2027-01-15' },
+    });
+    expect(raw.status).toBe(201);
+    expect(raw.body.code).toBe('S201');
+    expectWireShape(raw.body.data, WISH_CREATED.data);
+    expect(raw.body.data).toMatchObject({
+      campus_id: 2,
+      major: '산업디자인',
+      wish: '첫 줄\n둘째 줄',
+      date: '2027-01-15',
+    });
+    expect(getDb().tourWishes.at(-1)).toMatchObject({
+      userId: userId('student@demo.kr'),
+      content: '첫 줄\n둘째 줄',
+      preferredDate: '2027-01-15',
+    });
+  });
+
+  it('postTourWish는 { campus_id, major, wish, date }를 보낸다(날짜가 없으면 null)', async () => {
+    await login('student@demo.kr');
+    const bodies: unknown[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST' && new URL(request.url).pathname === '/api/tour-wishes') {
+        void request
+          .clone()
+          .json()
+          .then((b: unknown) => bodies.push(b));
+      }
+    });
+    await postTourWish(wishInput, listCampuses());
+    server.events.removeAllListeners('request:start');
+    expect(bodies).toEqual([
+      { campus_id: 2, major: '산업디자인', wish: wishInput.wish, date: null },
+    ]);
+  });
+
+  it('없는 캠퍼스는 VALIDATION(E400)이고 campus_id 칸 오류가 universityId 칸으로 온다', async () => {
+    await login('student@demo.kr');
+    const error = await postTourWish({ ...wishInput, universityId: 999 }, listCampuses()).catch(
+      (e: unknown) => e,
+    );
+    expect(error).toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      backendCode: 'E400',
+      fieldErrors: { universityId: '학교를 골라 주세요.' },
+    });
+  });
+
+  it('학과 31자 · 희망 사항 101자는 그 칸 오류', async () => {
+    await login('student@demo.kr');
+    await expect(
+      postTourWish({ ...wishInput, major: '가'.repeat(31) }, listCampuses()),
+    ).rejects.toMatchObject({ fieldErrors: { major: '학과는 1~30자로 적어 주세요.' } });
+    await expect(
+      postTourWish({ ...wishInput, wish: '가'.repeat(101) }, listCampuses()),
+    ).rejects.toMatchObject({ fieldErrors: { wish: '희망 사항은 1~100자로 적어 주세요.' } });
+  });
+
+  it('가이드가 등록하면 FORBIDDEN(E403), 로그인하지 않았으면 UNAUTHORIZED', async () => {
+    await expect(postTourWish(wishInput, listCampuses())).rejects.toMatchObject({
+      status: 401,
+      code: 'UNAUTHORIZED',
+    });
+    await login('guide@demo.kr');
+    await expect(postTourWish(wishInput, listCampuses())).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+      backendCode: 'E403',
+    });
+    expect(getDb().tourWishes).toEqual([]);
   });
 });
 

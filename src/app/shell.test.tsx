@@ -153,7 +153,7 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/signup', 'PUBLIC'],
   ['/consent/abc', 'PUBLIC'],
   ['/', 'HIGH_SCHOOL'],
-  ['/recommendations', 'HIGH_SCHOOL'],
+  ['/tours', 'HIGH_SCHOOL'],
   ['/tours/1', 'ANY'],
   ['/tours/1/apply', 'HIGH_SCHOOL'],
   ['/tours/1/apply/done', 'HIGH_SCHOOL'],

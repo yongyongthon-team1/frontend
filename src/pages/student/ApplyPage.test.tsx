@@ -118,10 +118,10 @@ describe('탐방 신청서 (hs-a04)', () => {
     );
   });
 
-  it('마감 탐방: 신청서에서도 잠기고 다른 추천 보기', async () => {
+  it('마감 탐방: 신청서에서도 잠기고 다른 탐방 보기', async () => {
     await renderApp('/tours/2/apply', { as: 'student' });
     expect(await screen.findByRole('button', { name: '신청 완료하기' })).toBeDisabled();
     expect(screen.getByText('남은 자리가 없어요.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '다른 추천 보기' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '다른 탐방 보기' })).toHaveAttribute('href', '/');
   });
 });

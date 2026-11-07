@@ -12,7 +12,7 @@ export const TABS: Record<Role, TabItem[]> = {
       label: '탐색',
       icon: Search,
       end: true,
-      match: ['/', '/recommendations', '/tours'],
+      match: ['/', '/tours'],
     },
     { to: '/my-tours', label: '내 탐방', icon: List, match: ['/my-tours', '/coupons', '/reviews'] },
     { to: '/me', label: 'MY', icon: CircleUser, match: ['/verify'] },

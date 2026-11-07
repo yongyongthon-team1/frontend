@@ -8,7 +8,7 @@ import { configureHttp } from '@/shared/lib/http';
 import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
 import { TOUR_DETAIL, TOURS_LIST } from '@/test/fixtures/backend/tours';
 import { wireOk } from '@/test/wire';
-import { useTour, useTours } from './queries';
+import { useTour, useTours, useWishTours } from './queries';
 
 // errata G13: 캠퍼스 요청과 탐방 요청은 서로 기다리지 않고 동시에 나간다(캠퍼스 캐시가 비는 로그인 · 역할 전환 뒤 첫 화면).
 
@@ -64,5 +64,23 @@ describe('탐방 훅은 캠퍼스와 병렬로 부른다', () => {
     expect(order).not.toContain('campuses:end');
     release();
     await waitFor(() => expect(result.current.data?.map((t) => t.id)).toEqual([31]));
+  });
+
+  it('useWishTours: 캠퍼스 응답이 오기 전에 탐방 찾기 요청이 나가고, 검색이 없으면 부르지 않는다', async () => {
+    const { order, release } = holdCampuses('/api/tours');
+    const search = { universityId: 1, major: '컴퓨터', wish: '동아리', date: null };
+    const { result, rerender } = renderHook(({ s }) => useWishTours(s), {
+      wrapper: wrapper(),
+      initialProps: { s: null as typeof search | null },
+    });
+    expect(result.current.fetchStatus).toBe('idle');
+    expect(order).toEqual([]);
+    rerender({ s: search });
+    await waitFor(() => expect(order).toContain('tours:start'));
+    expect(order).not.toContain('campuses:end');
+    release();
+    await waitFor(() =>
+      expect(result.current.data).toMatchObject({ tours: [{ id: 31 }], fallback: false }),
+    );
   });
 });

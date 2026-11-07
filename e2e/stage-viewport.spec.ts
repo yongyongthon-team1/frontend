@@ -1,10 +1,10 @@
 import path from 'node:path';
 import type { Locator, Page } from '@playwright/test';
-import { EXAMPLE_QUERIES } from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
+import { DEMO_WISH } from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
 import { expect, test } from './fixtures';
 
-// 무대 노트북 화면 점검(Review Focus 3 · 판정 28 · 30). 골든 패스 핵심 정보 — 관심 키워드 · 첫 추천 이유, 코스 완성
-// 지점, 쿠폰 코드 — 가 스크롤 없이, 다른 요소에 덮이지 않고 보여야 한다. 뷰포트는 브라우저 UI를 뺀 실제 페이지
+// 무대 노트북 화면 점검(Review Focus 3 · 판정 28 · 30). 골든 패스 핵심 정보 — 탐방 찾기 결과의 희망 원문 카드 · 첫 탐방 행,
+// 코스 완성 지점, 쿠폰 코드 — 가 스크롤 없이, 다른 요소에 덮이지 않고 보여야 한다. 뷰포트는 브라우저 UI를 뺀 실제 페이지
 // 영역이다. 폰 프레임 높이가 min(844px, 뷰포트 높이 − 32px)이라 TopBar 하단(프레임 위 16 + 56 = 뷰포트 y 72px)과
 // 하단 탭(80px) 사이 본문은 452 · 432 · 422px뿐이다(Task 10 실측, 설계 5.7의 무대 400px 예산). 실패하면 단언을
 // 느슨하게 하지 말고 화면 배치를 고친다.
@@ -39,7 +39,7 @@ async function expectVisibleWithoutScroll(page: Page, targets: Locator[], name: 
   const tabBar = page.getByRole('navigation', { name: '주요 메뉴' });
   await expect(tabBar).toBeVisible();
   const tabBarTop = (await boxOf(tabBar)).y;
-  // 기준점은 main 상단 + 56. 코스 · 쿠폰 화면은 TopBar(56)가 있고, 무대 ①(H02)은 TopBar 없이 자기 뒤로 가기 줄
+  // 기준점은 main 상단 + 56. 코스 · 쿠폰 화면은 TopBar(56)가 있고, 무대 ①(탐방 찾기 결과)은 TopBar 없이 자기 뒤로 가기 줄
   // (`pt-2` + `h-12` = 56)이 같은 기준선을 만든다. 가용 높이가 머리 주석의 452 · 432 · 422다.
   const bodyTop = (await boxOf(page.getByRole('main'))).y + TOPBAR_HEIGHT;
   let lowest = 0;
@@ -91,20 +91,24 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
   test.describe(`무대 ${stage}`, () => {
     test.use({ viewport: { width, height }, deviceScaleFactor });
 
-    test('① 추천: 첫 관심 키워드 칩과 첫 행의 추천 이유', async ({ page }) => {
+    test('① 탐방 찾기: 희망 원문 카드와 첫 탐방 행', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&as=student');
-      await page.getByLabel('하고 싶은 것').fill(EXAMPLE_QUERIES[0]);
-      await page.getByRole('button', { name: '나에게 맞는 탐방 추천받기' }).click();
-      await expect(page.getByText('디자인 분야에 관심이 많군요!')).toBeVisible();
+      // 시연 도구가 켜져 있어 칸이 미리 채워진다 — 학교는 캠퍼스 목록이 온 뒤라 그것을 기다렸다가 낸다.
+      await expect(page.getByLabel('학교', { exact: true })).toHaveValue(
+        String(DEMO_WISH.universityId),
+      );
+      await page.getByRole('button', { name: '희망 사항 남기고 탐방 찾기' }).click();
 
-      // 첫 키워드 칩 = 필터 칩 줄의 `전체` 다음 칩(학과에 든 키워드 칩, 없으면 학교 칩)이고, 추천 이유는 첫 행의 셋째 줄이다.
       const main = page.getByRole('main');
-      const firstKeyword = main
-        .getByRole('radiogroup', { name: '추천 필터' })
-        .getByRole('radio')
-        .nth(1);
-      const firstReason = main.getByTestId('recommendation-reason-line').first();
-      await expectVisibleWithoutScroll(page, [firstKeyword, firstReason], '① 추천');
+      const wishCard = main.getByRole('region', { name: '내가 남긴 희망 사항' });
+      await expect(wishCard).toBeVisible();
+      const firstTour = main
+        .getByRole('list', { name: '모집 중 탐방' })
+        .getByRole('listitem')
+        .first();
+      // 목록이 와야 제목(Skeleton → 결과 문구) 높이가 정해진다 — 그 뒤에 잰다.
+      await expect(firstTour).toBeVisible();
+      await expectVisibleWithoutScroll(page, [wishCard, firstTour], '① 탐방 찾기');
       await screenshot(page, 1);
     });
 

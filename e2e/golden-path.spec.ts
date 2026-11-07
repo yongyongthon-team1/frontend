@@ -1,5 +1,5 @@
 import type { Page } from '@playwright/test';
-import { EXAMPLE_QUERIES } from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
+import { DEMO_WISH } from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
 import { expect, test } from './fixtures';
 
 // 시연 골든 패스(설계 6.1)를 배포 빌드 · 목업(AI 속도 보통)으로 끝까지 돈다. 무대에서처럼 원클릭 시연 링크로 시작하고
@@ -63,16 +63,21 @@ for (const { title, link, present } of VARIANTS) {
       if (present) await expectRoleBadgeBesideTitle(page, label);
     };
 
-    // 고교생: 문장 입력(시연 도구가 켜져 있어 미리 채워져 있다 — 다시 채워도 같다) → AI 추천 → 탐방 상세 →
-    // 신청서(시연 모드라 미리 채움) → 신청 완료
+    // 고교생: 희망 사항(시연 도구가 켜져 있어 학교 · 학과 · 희망 사항이 미리 채워져 있다) → 탐방 찾기 결과(원문 카드 ·
+    // 모집 중 탐방) → 탐방 상세 → 신청서(시연 모드라 미리 채움) → 신청 완료
     await page.goto(link);
-    const wish = page.getByLabel('하고 싶은 것');
-    await expect(wish).toBeVisible();
+    await expect(page.getByLabel('탐방 희망 사항', { exact: true })).toHaveValue(DEMO_WISH.wish);
+    await expect(page.getByLabel('학교', { exact: true })).toHaveValue(
+      String(DEMO_WISH.universityId),
+    );
+    await expect(page.getByLabel('학과', { exact: true })).toHaveValue(DEMO_WISH.major);
     await checkRoleBadge('고교생 화면');
-    await wish.fill(EXAMPLE_QUERIES[0]);
-    await page.getByRole('button', { name: '나에게 맞는 탐방 추천받기' }).click();
-    await expect(page.getByText('디자인 분야에 관심이 많군요!')).toBeVisible();
-    await page.getByText('경희대학교 국제캠퍼스').first().click();
+    await page.getByRole('button', { name: '희망 사항 남기고 탐방 찾기' }).click();
+    await expect(page.getByRole('region', { name: '내가 남긴 희망 사항' })).toContainText(
+      DEMO_WISH.wish,
+    );
+    // 원문 카드 아래 줄에도 `경희대학교 국제캠퍼스`가 있어 글자로 찾지 않고 목록의 첫 행을 누른다.
+    await page.getByRole('list', { name: '모집 중 탐방' }).getByRole('link').first().click();
     await page.getByRole('button', { name: '이 탐방 신청하기' }).click();
     await page.getByRole('button', { name: '신청 완료하기' }).click();
     await expect(page.getByText('신청이 접수됐어요!')).toBeVisible();

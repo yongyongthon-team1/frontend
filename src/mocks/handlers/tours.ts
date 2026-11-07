@@ -1,28 +1,16 @@
-import { http, HttpResponse } from 'msw';
-import type { RecommendationQuery } from '@/features/tours/model';
-import { recommendTours } from '@/mocks/ai/recommend';
-import { mockNow } from '@/mocks/clock';
+import { http } from 'msw';
 import type { TourRow } from '@/mocks/db/schema';
 import { getDb } from '@/mocks/db/store';
-import { delayAi, delayBase } from '@/mocks/latency';
+import { delayBase } from '@/mocks/latency';
 import { MockApiError } from '@/mocks/rules/errors';
 import { ok, okPage, withWire } from '@/mocks/wire/envelope';
 import { toWireTourDetail, toWireTourItem } from '@/mocks/wire/tours';
 import { seoulDateKey } from '@/shared/lib/date';
-import { api, byStartsAt, currentUser, readBody, withErrors } from './util';
+import { api, byStartsAt, currentUser } from './util';
 
-// 추천 · 탐방 목록 · 탐방 상세는 로그인 없이도 된다(2C-R10, 토큰은 있으면 쓴다).
+// 탐방 목록 · 탐방 상세는 로그인 없이도 된다(2C-R10, 토큰은 있으면 쓴다).
 
 export const tourHandlers = [
-  http.post(
-    api('/recommendations'),
-    withErrors(async ({ request }) => {
-      await delayAi();
-      const query = (await readBody(request)) as unknown as RecommendationQuery;
-      return HttpResponse.json(recommendTours(getDb(), query, mockNow()));
-    }),
-  ),
-
   // T-01 보완. 기본은 모집 중이고 시작 순이다. `major`는 가이드 프로필 학과의 부분 일치, 날짜는 서울 날짜다.
   http.get(
     api('/tours'),

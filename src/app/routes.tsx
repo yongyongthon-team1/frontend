@@ -18,8 +18,8 @@ import { CourseMapPage } from '@/pages/student/CourseMapPage';
 import { HomePage } from '@/pages/student/HomePage';
 import { MyTourDetailPage } from '@/pages/student/MyTourDetailPage';
 import { MyToursPage } from '@/pages/student/MyToursPage';
-import { RecommendationsPage } from '@/pages/student/RecommendationsPage';
 import { TourDetailPage } from '@/pages/student/TourDetailPage';
+import { TourResultsPage } from '@/pages/student/TourResultsPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
 import { ErrorPage, RouteErrorPage } from './ErrorPage';
 import { RequireAuth } from './guards/RequireAuth';
@@ -80,8 +80,8 @@ export const routes: RouteObject[] = [
                     element: <HomePage />,
                   },
                   {
-                    path: '/recommendations',
-                    element: <RecommendationsPage />,
+                    path: '/tours',
+                    element: <TourResultsPage />, // T-01 탐방 찾기 결과(2C-R18)
                   },
                   {
                     path: '/tours/:tourId/apply',

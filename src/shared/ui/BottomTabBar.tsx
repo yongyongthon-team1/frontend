@@ -10,7 +10,7 @@ export interface TabItem {
   /** true면 `to`와 정확히 같은 경로에서만 활성(하위 경로 제외). */
   end?: boolean;
   /**
-   * 이 경로 아래 화면에서도 활성으로 친다. 문자열은 접두사(예: 탐색 탭 → `/recommendations`, `'/'`는 `/`만),
+   * 이 경로 아래 화면에서도 활성으로 친다. 문자열은 접두사(예: 탐색 탭 → `/tours`, `'/'`는 `/`만),
    * RegExp는 경로 전체에 `test`한다(예: 가이드 코스 화면 `/guide/tours/3/course/edit`).
    */
   match?: (string | RegExp)[];

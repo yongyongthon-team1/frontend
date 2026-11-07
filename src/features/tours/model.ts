@@ -38,23 +38,13 @@ export interface TourFilter {
   dateTo?: string;
 }
 
-export interface RecommendationQuery {
-  q: string;
-  major?: string;
-  universityId?: number;
-  date?: string;
-}
-
-export interface Recommendation {
-  tour: TourSummary;
-  reason: string;
-}
-
-export interface RecommendationResult {
-  headline: string;
-  keywords: string[];
-  items: Recommendation[];
-  fallback: null | 'SCHOOL' | 'ALL';
+/**
+ * T-01 탐방 찾기 결과(2C-R16). `fallback`이면 학교 · 학과 · 날짜 조건에 맞는 탐방이 없어 같은 학교의 모집 중 탐방을 대신
+ * 보여 준다(`tours`가 비면 그것도 없다).
+ */
+export interface WishToursResult {
+  tours: TourSummary[];
+  fallback: boolean;
 }
 
 export const TOUR_STATUS_LABEL: Record<TourStatus, string> = {
@@ -103,11 +93,14 @@ export interface ApplyButtonState {
   action: ActionLink | null;
 }
 
-/** 탐방 상세의 신청 버튼. 위에서부터 차례로 검사하고 처음 걸린 사유를 돌려준다. */
+/**
+ * 탐방 상세의 신청 버튼. 위에서부터 차례로 검사하고 처음 걸린 사유를 돌려준다. 신청할 수 없을 때의 대체 행동
+ * `다른 탐방 보기`는 `resultsPath`(마지막 탐방 찾기 결과 화면, 없으면 홈 — `tourResultsPath()`)로 간다.
+ */
 export function applyButtonState(
   me: Me | null,
   tour: TourDetail,
-  recommendationsPath: string,
+  resultsPath: string,
 ): ApplyButtonState {
   if (me === null) {
     return {
@@ -137,7 +130,7 @@ export function applyButtonState(
       action: { label: '내 탐방에서 상태 확인', to: '/my-tours' },
     };
   }
-  const otherTours: ActionLink = { label: '다른 추천 보기', to: recommendationsPath };
+  const otherTours: ActionLink = { label: '다른 탐방 보기', to: resultsPath };
   if (mine === 'REJECTED') {
     return {
       kind: 'REJECTED',

@@ -20,11 +20,9 @@ import { ConfirmDialog } from './ConfirmDialog';
 import { EmptyState } from './EmptyState';
 import { ErrorState } from './ErrorState';
 import { FileField } from './FileField';
-import { FilterChips } from './FilterChips';
 import { HeroCard } from './HeroCard';
 import { Illustration } from './Illustration';
 import { InfoCard } from './InfoCard';
-import { KeywordChips } from './KeywordChips';
 import { ListRow } from './ListRow';
 import { NumberedList } from './NumberedList';
 import { Page } from './Page';
@@ -254,7 +252,7 @@ describe('BottomTabBar', () => {
         label: '탐색',
         icon: Compass,
         end: true,
-        match: ['/', '/recommendations', '/tours'],
+        match: ['/', '/tours'],
       },
       { to: '/my-tours', label: '내 탐방', icon: ListChecks, match: ['/my-tours', '/coupons'] },
     ];
@@ -284,9 +282,9 @@ describe('isTabActive', () => {
   });
 
   it('match 접두사: 같거나 접두사 + /로 시작하면 활성', () => {
-    const t = tab('/', ['/', '/recommendations', '/tours'], true);
+    const t = tab('/', ['/', '/tours'], true);
     expect(isTabActive('/', t)).toBe(true);
-    expect(isTabActive('/recommendations', t)).toBe(true);
+    expect(isTabActive('/tours', t)).toBe(true);
     expect(isTabActive('/tours/3/apply', t)).toBe(true);
     expect(isTabActive('/tourists', t)).toBe(false);
     expect(isTabActive('/my-tours', t)).toBe(false);
@@ -344,7 +342,7 @@ describe('isTabActive: RegExp · exclude · 가이드/사장님 탭', () => {
   });
 });
 
-describe('StatusChip · InfoCard · Badge · AiBadge · KeywordChips', () => {
+describe('StatusChip · InfoCard · Badge · AiBadge', () => {
   it('StatusChip은 아이콘과 내용을 보여 준다', () => {
     render(<StatusChip icon={<span data-testid="ic" />}>모집 중 · 남은 자리 3명</StatusChip>);
     expect(screen.getByText('모집 중 · 남은 자리 3명')).toBeInTheDocument();
@@ -378,13 +376,6 @@ describe('StatusChip · InfoCard · Badge · AiBadge · KeywordChips', () => {
   it('AiBadge는 children 없이도 그려진다', () => {
     render(<AiBadge />);
     expect(screen.getByLabelText('AI 결과')).toHaveTextContent('✦');
-  });
-
-  it('KeywordChips는 키워드마다 칩을 그린다', () => {
-    render(<KeywordChips keywords={['산업디자인', '캠퍼스 생활']} />);
-    expect(screen.getByText('산업디자인')).toBeInTheDocument();
-    expect(screen.getByText('캠퍼스 생활')).toBeInTheDocument();
-    expect(screen.getAllByRole('listitem')).toHaveLength(2);
   });
 });
 
@@ -881,25 +872,6 @@ function StatefulTabs({ onChange }: { onChange(value: string): void }) {
   );
 }
 
-function StatefulChips({ onChange }: { onChange(value: string): void }) {
-  const [value, setValue] = useState('all');
-  return (
-    <FilterChips
-      label="추천 필터"
-      chips={[
-        { value: 'all', label: '전체' },
-        { value: 'design', label: '디자인' },
-        { value: 'khu', label: '경희대', kind: 'school' },
-      ]}
-      value={value}
-      onChange={(v) => {
-        onChange(v);
-        setValue(v);
-      }}
-    />
-  );
-}
-
 describe('SegmentedTabs', () => {
   const tabs = [
     { value: 'upcoming', label: '예정된 탐방' },
@@ -978,51 +950,6 @@ describe('SegmentedTabs', () => {
     const tab = screen.getByRole('tab', { name: '예정된 탐방' });
     expect(tab.querySelector('span > span')).toHaveClass('truncate');
     expect(tab.querySelector('span')).not.toHaveClass('truncate');
-  });
-});
-
-describe('FilterChips', () => {
-  const chips = [
-    { value: 'all', label: '전체' },
-    { value: 'design', label: '디자인' },
-    { value: 'khu', label: '경희대', kind: 'school' as const },
-  ];
-
-  it('radiogroup · radio, 선택된 칩은 aria-checked', () => {
-    render(<FilterChips label="추천 필터" chips={chips} value="all" onChange={() => {}} />);
-    expect(screen.getByRole('radiogroup', { name: '추천 필터' })).toBeInTheDocument();
-    expect(screen.getAllByRole('radio')).toHaveLength(3);
-    expect(screen.getByRole('radio', { name: '전체' })).toBeChecked();
-    expect(screen.getByRole('radio', { name: '디자인' })).not.toBeChecked();
-  });
-
-  it('칩을 누르면 onChange(value)', async () => {
-    const onChange = vi.fn();
-    render(<FilterChips label="추천 필터" chips={chips} value="all" onChange={onChange} />);
-    await userEvent.click(screen.getByRole('radio', { name: '경희대' }));
-    expect(onChange).toHaveBeenCalledWith('khu');
-  });
-
-  it('방향키로 이웃 칩을 고르고 초점을 옮긴다(양 끝에서 감긴다)', async () => {
-    const onChange = vi.fn();
-    render(<StatefulChips onChange={onChange} />);
-    screen.getByRole('radio', { name: '전체' }).focus();
-    await userEvent.keyboard('{ArrowRight}');
-    expect(onChange).toHaveBeenLastCalledWith('design');
-    expect(screen.getByRole('radio', { name: '디자인' })).toHaveFocus();
-    onChange.mockClear();
-    await userEvent.keyboard('{ArrowLeft}');
-    expect(onChange).toHaveBeenLastCalledWith('all');
-    onChange.mockClear();
-    await userEvent.keyboard('{ArrowLeft}');
-    expect(onChange).toHaveBeenLastCalledWith('khu');
-    expect(screen.getByRole('radio', { name: '경희대' })).toHaveFocus();
-  });
-
-  it('value가 어느 칩에도 없으면 첫 칩이 Tab 정지점이다', () => {
-    render(<FilterChips label="추천 필터" chips={chips} value="none" onChange={() => {}} />);
-    expect(screen.getByRole('radio', { name: '전체' })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('radio', { name: '경희대' })).toHaveAttribute('tabindex', '-1');
   });
 });
 
@@ -1124,7 +1051,7 @@ describe('HeroCard · PageHeading', () => {
   });
 
   it('PageHeading: 줄바꿈 문자를 보존하고 설명은 선택', () => {
-    render(<PageHeading title={'3개의 탐방을\n추천해요.'} />);
+    render(<PageHeading title={'조건에 맞는 탐방\n2개를 찾았어요.'} />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveClass('whitespace-pre-line');
   });
 
