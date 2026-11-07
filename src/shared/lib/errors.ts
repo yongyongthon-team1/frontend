@@ -44,6 +44,9 @@ export const ERROR_CODES = {
   FILE_TOO_LARGE: 'FILE_TOO_LARGE',
   CONSENT_LINK_EXPIRED: 'CONSENT_LINK_EXPIRED',
   CONSENT_LINK_INVALID: 'CONSENT_LINK_INVALID',
+  COURSE_PARTNER_REQUIRED: 'COURSE_PARTNER_REQUIRED',
+  COUPON_DAILY_LIMIT: 'COUPON_DAILY_LIMIT',
+  AI_FAILED: 'AI_FAILED',
   TIMEOUT: 'TIMEOUT',
   NETWORK: 'NETWORK',
   UNKNOWN: 'UNKNOWN',
@@ -96,16 +99,70 @@ export const ERROR_MESSAGES: Record<ErrorCode, string> = {
   FILE_TOO_LARGE: '10MB 이하 이미지만 올릴 수 있어요.',
   CONSENT_LINK_EXPIRED: '동의 링크가 만료됐어요. 학생에게 다시 요청해 달라고 해 주세요.',
   CONSENT_LINK_INVALID: '잘못된 동의 링크예요.',
+  COURSE_PARTNER_REQUIRED: '제휴 상점을 1곳 이상 넣어 주세요.',
+  COUPON_DAILY_LIMIT: '오늘 이 가게에서는 이미 쿠폰을 사용했어요.',
+  AI_FAILED: 'AI가 코스를 만들지 못했어요. 잠시 후 다시 시도해 주세요.',
   TIMEOUT: '응답이 늦어지고 있어요. 다시 시도해 주세요.',
   NETWORK: '네트워크 연결을 확인해 주세요.',
   UNKNOWN: '문제가 생겼어요. 잠시 후 다시 시도해 주세요.',
 };
 
-function isErrorCode(code: string): code is ErrorCode {
+export function isErrorCode(code: string): code is ErrorCode {
   return Object.hasOwn(ERROR_MESSAGES, code);
 }
 
 export function errorMessage(code: string | undefined | null, fallback?: string): string {
   if (code != null && isErrorCode(code)) return ERROR_MESSAGES[code];
   return fallback ?? ERROR_MESSAGES.UNKNOWN;
+}
+
+/** 백엔드 오류 코드 → `ErrorCode`의 기본 표(2C-R4 ③). 표에 없는 `E###_이름`은 `resolveErrorCode`의 접미사 규칙이 되찾는다. */
+export const BACKEND_ERROR_MAP: Readonly<Record<string, ErrorCode>> = {
+  E400: 'VALIDATION',
+  E401: 'UNAUTHORIZED',
+  E401_INVALID_CREDENTIALS: 'INVALID_CREDENTIALS',
+  E403: 'FORBIDDEN',
+  E403_VERIFICATION_REQUIRED: 'NOT_VERIFIED',
+  E403_OTHER_STORE: 'COUPON_OTHER_STORE',
+  E403_COUPON_NOT_USED: 'REVIEW_NOT_ALLOWED',
+  E404: 'NOT_FOUND',
+  E409: 'ALREADY_PROCESSED',
+  E409_TOUR_FULL: 'TOUR_CLOSED',
+  E409_ALREADY_APPLIED: 'DUPLICATE_APPLICATION',
+  E409_ALREADY_PROCESSED: 'ALREADY_PROCESSED',
+  E409_INVALID_APPLICATION_STATUS: 'ALREADY_PROCESSED',
+  E409_INVALID_TOUR_STATUS: 'ALREADY_PROCESSED',
+  E409_GUIDE_PROFILE_REQUIRED: 'GUIDE_PROFILE_REQUIRED',
+  E409_COURSE_CONFIRMED: 'COURSE_NOT_DRAFT',
+  E409_COURSE_NOT_READY: 'COURSE_NOT_READY',
+  E409_ALREADY_USED: 'COUPON_ALREADY_USED',
+  E409_DAILY_LIMIT: 'COUPON_DAILY_LIMIT',
+  E409_ALREADY_SUBMITTED: 'ALREADY_PROCESSED',
+  E409_CONSENT_EXISTS: 'ALREADY_PROCESSED',
+  E409_ALREADY_REVIEWED: 'ALREADY_PROCESSED',
+  E409_STORE_UNAVAILABLE: 'STORE_ALREADY_LINKED',
+  E409_NO_APPROVED_APPLICANT: 'NO_APPROVED_APPLICANTS',
+  E410_EXPIRED: 'COUPON_EXPIRED',
+  E422_BUSINESS_INVALID: 'BIZ_MISMATCH',
+  E422_PARTNER_REQUIRED: 'COURSE_PARTNER_REQUIRED',
+  E502_AI_FAILED: 'AI_FAILED',
+  E500: 'UNKNOWN',
+};
+
+/**
+ * 받은 백엔드 코드를 `ErrorCode`로(2C-R4). 순서: 호출별 `errorMap` → (전환 기간) 이미 `ErrorCode` 이름 →
+ * 기본 표 → `E###_<이름>`의 `<이름>`이 `ErrorCode`면 그것(목업 확장 코드) → `UNKNOWN`.
+ */
+export function resolveErrorCode(
+  backendCode: string,
+  errorMap?: Partial<Record<string, ErrorCode>>,
+): ErrorCode {
+  const mapped =
+    errorMap && Object.hasOwn(errorMap, backendCode) ? errorMap[backendCode] : undefined;
+  if (mapped) return mapped;
+  if (isErrorCode(backendCode)) return backendCode;
+  if (Object.hasOwn(BACKEND_ERROR_MAP, backendCode)) return BACKEND_ERROR_MAP[backendCode];
+  const suffix = /^E\d{3}_(.+)$/.exec(backendCode)?.[1];
+  if (suffix !== undefined && isErrorCode(suffix)) return suffix;
+  return 'UNKNOWN';
 }

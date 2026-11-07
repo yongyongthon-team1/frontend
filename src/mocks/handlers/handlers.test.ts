@@ -18,7 +18,8 @@ import { configureHttp, request, upload } from '@/shared/lib/http';
 import { MockApiError } from '@/mocks/rules/errors';
 import { server } from '@/mocks/node';
 import { testImage } from '@/test/files';
-import { fieldError, formFile, readForm, withErrors } from './util';
+import { rawFetch } from '@/test/wire';
+import { fieldError, formFile, readBody, readForm, withErrors } from './util';
 
 // 핸들러를 실제 HTTP 클라이언트로 부른다. 테스트 setup이 전체 핸들러를 건 MSW 서버를 켜고,
 // 지연을 0으로 두고, 매 테스트 전에 오늘 기준 시드(START)로 DB를 되돌린다.
@@ -32,18 +33,6 @@ async function login(email: string) {
   });
   configureHttp({ getToken: () => r.token });
   return r;
-}
-
-/** 상태 코드(201 · 204)를 직접 볼 때 쓰는 fetch. */
-function rawFetch(path: string, init: { method: string; token?: string; body?: unknown }) {
-  return fetch(new URL(`/api${path}`, window.location.origin), {
-    method: init.method,
-    headers: {
-      'Content-Type': 'application/json',
-      ...(init.token ? { Authorization: `Bearer ${init.token}` } : {}),
-    },
-    body: init.body === undefined ? undefined : JSON.stringify(init.body),
-  });
 }
 
 const userId = (email: string) => getDb().users.find((u) => u.email === email)!.id;
@@ -295,7 +284,7 @@ describe('applications', () => {
       body: { motivation: '밥집이 궁금해요' },
     });
     expect(res.status).toBe(201);
-    expect(await res.json()).toMatchObject({
+    expect(res.body).toMatchObject({
       status: 'PENDING',
       motivation: '밥집이 궁금해요',
       tour: { id: 1, title: DEMO_TOUR_TITLE },
@@ -829,7 +818,7 @@ describe('가입 · 프로필 (POST /auth/signup · PUT /me/student-profile · P
   it('가입은 로그인 없이 201과 토큰 + Me를 주고, 그 토큰으로 /me를 읽는다', async () => {
     const res = await rawFetch('/auth/signup', { method: 'POST', body: signupBody });
     expect(res.status).toBe(201);
-    const { token, me } = (await res.json()) as LoginResponse;
+    const { token, me } = res.body as LoginResponse;
     expect(token).toEqual(expect.any(String));
     expect(me).toMatchObject({
       email: 'fresh@demo.kr',
@@ -937,6 +926,18 @@ describe('가입 · 프로필 (POST /auth/signup · PUT /me/student-profile · P
 });
 
 describe('P1 목업 도구 (fieldError · readForm · formFile)', () => {
+  it('readBody는 snake 본문을 camelCase로 읽는다', async () => {
+    server.use(
+      http.post('/api/_body', async ({ request }) => HttpResponse.json(await readBody(request))),
+    );
+    // rawFetch는 본문을 변환하지 않는다 — 보낸 snake 키와 돌려받은 camel 키는 readBody만이 이어 준다.
+    const res = await rawFetch('/_body', {
+      method: 'POST',
+      body: { interest_major: 'a', spots: [{ store_id: 2 }] },
+    });
+    expect(res.body).toEqual({ interestMajor: 'a', spots: [{ storeId: 2 }] });
+  });
+
   it('fieldError: 400 VALIDATION에 코드 표 문구와 fieldErrors 본문', async () => {
     server.use(
       http.post(

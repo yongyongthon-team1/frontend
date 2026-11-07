@@ -4,6 +4,7 @@ import type { DB, TourRow, UserRow } from '@/mocks/db/schema';
 import { userIdFromToken } from '@/mocks/db/store';
 import { MockApiError } from '@/mocks/rules/errors';
 import { env } from '@/shared/config/env';
+import { toCamel } from '@/shared/lib/caseKeys';
 import type { ErrorCode } from '@/shared/lib/errors';
 
 // 핸들러 공통 도구. 핸들러는 얇게 둔다: 인증 → `mutate(db => 규칙(...))` → views로 DTO.
@@ -39,7 +40,7 @@ export function requireOwnTour(db: DB, guideId: number, tourId: number): TourRow
   return tour;
 }
 
-/** JSON 본문(객체). 본문이 없으면 `{}`, JSON 객체가 아니면 400 VALIDATION. 필드 검사는 규칙이 한다. */
+/** JSON 본문(객체, 키는 camelCase로 되돌린다 — 클라이언트가 snake로 보낸다). 본문이 없으면 `{}`, JSON 객체가 아니면 400 VALIDATION. 필드 검사는 규칙이 한다. */
 export async function readBody(request: Request): Promise<Record<string, unknown>> {
   const text = await request.text();
   if (text.trim() === '') return {};
@@ -52,7 +53,7 @@ export async function readBody(request: Request): Promise<Record<string, unknown
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     throw new MockApiError(400, 'VALIDATION');
   }
-  return parsed as Record<string, unknown>;
+  return toCamel<Record<string, unknown>>(parsed);
 }
 
 /**

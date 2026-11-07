@@ -32,6 +32,8 @@ export default defineConfig(({ mode }) => {
         '/api': {
           target: env.DEV_API_TARGET ?? 'http://localhost:8080',
           changeOrigin: true,
+          // 11/7 백엔드 경로에는 접두사가 없다 — 프록시가 `/api`를 뗀다(2C-R1).
+          rewrite: (path: string) => path.replace(/^\/api(?=\/|$)/, ''),
         },
       },
     },

@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { errorMessage, ERROR_CODES } from './errors';
+import {
+  BACKEND_ERROR_MAP,
+  errorMessage,
+  ERROR_CODES,
+  isErrorCode,
+  resolveErrorCode,
+} from './errors';
 
 describe('errorMessage', () => {
   it('알려진 코드는 표의 문구', () =>
@@ -28,4 +34,48 @@ describe('P1에서 새로 쓰는 에러 코드', () => {
     expect(errorMessage('BIZ_CLOSED')).toBe(
       '휴업 또는 폐업한 사업자예요. 계속사업자 정보로 다시 입력해 주세요.',
     ));
+});
+
+describe('2C에서 새로 쓰는 에러 코드', () => {
+  it.each([
+    ['COURSE_PARTNER_REQUIRED', '제휴 상점을 1곳 이상 넣어 주세요.'],
+    ['COUPON_DAILY_LIMIT', '오늘 이 가게에서는 이미 쿠폰을 사용했어요.'],
+    ['AI_FAILED', 'AI가 코스를 만들지 못했어요. 잠시 후 다시 시도해 주세요.'],
+  ])('%s는 표의 문구', (code, message) => {
+    expect(Object.hasOwn(ERROR_CODES, code)).toBe(true);
+    expect(errorMessage(code)).toBe(message);
+  });
+});
+
+describe('isErrorCode', () => {
+  it('표에 있는 이름만 true', () => {
+    expect(isErrorCode('TOUR_CLOSED')).toBe(true);
+    expect(isErrorCode('E409_TOUR_FULL')).toBe(false);
+    expect(isErrorCode('toString')).toBe(false);
+  });
+});
+
+describe('BACKEND_ERROR_MAP', () => {
+  it('값은 모두 ErrorCode', () => {
+    for (const code of Object.values(BACKEND_ERROR_MAP)) expect(isErrorCode(code)).toBe(true);
+  });
+});
+
+describe('resolveErrorCode', () => {
+  it('호출별 errorMap이 가장 앞선다', () =>
+    expect(resolveErrorCode('E409_TOUR_FULL', { E409_TOUR_FULL: 'CAPACITY_EXCEEDED' })).toBe(
+      'CAPACITY_EXCEEDED',
+    ));
+  it('이미 ErrorCode 이름이면 그대로(전환 기간)', () =>
+    expect(resolveErrorCode('TOUR_CLOSED')).toBe('TOUR_CLOSED'));
+  it('기본 표', () => {
+    expect(resolveErrorCode('E409_TOUR_FULL')).toBe('TOUR_CLOSED');
+    expect(resolveErrorCode('E422_PARTNER_REQUIRED')).toBe('COURSE_PARTNER_REQUIRED');
+  });
+  it('표에 없으면 E###_ 뒤의 이름이 ErrorCode일 때 그것(접미사)', () =>
+    expect(resolveErrorCode('E409_COUPON_NOT_YET')).toBe('COUPON_NOT_YET'));
+  it('아무것도 아니면 UNKNOWN', () => {
+    expect(resolveErrorCode('E418_TEAPOT')).toBe('UNKNOWN');
+    expect(resolveErrorCode('whatever')).toBe('UNKNOWN');
+  });
 });
