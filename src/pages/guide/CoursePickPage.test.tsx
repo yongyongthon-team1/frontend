@@ -108,6 +108,15 @@ function countSpotPuts() {
   return counter;
 }
 
+/** 캠퍼스 장소 목록(`GET /campuses/{id}/places`) 요청 수를 센다. */
+function countCampusPlaceGets() {
+  const counter = { gets: 0 };
+  server.events.on('request:start', ({ request }) => {
+    if (/^\/api\/campuses\/[^/]+\/places$/.test(new URL(request.url).pathname)) counter.gets++;
+  });
+  return counter;
+}
+
 describe('코스 장소 고르기 G07 (guide-a03) — 교체', () => {
   it('상점 지점 교체: 탭 없이 가까운 주변 상점, 지금 지점 · 코스에 있음은 고를 수 없고, 고른 상점이 같은 자리 · 같은 시각에 들어간다', async () => {
     const { user, router } = await openReplace('서천 밥상');
@@ -210,6 +219,40 @@ describe('코스 장소 고르기 G07 (guide-a03) — 교체', () => {
     expect(stopRows()).toEqual(['14:00 학생회관', '15:10 서천 밥상', '16:00 카페 모래시계']);
   });
 
+  it('교체를 연타해도 스팟 PUT은 한 번이고, 적용 중에는 카드 · 버튼이 잠긴다', async () => {
+    const { user, router } = await openReplace('서천 밥상');
+    await screen.findByRole('list', { name: '후보 상점' });
+    setMockLatency({ base: 150, ai: 0 });
+    const counter = countSpotPuts();
+    await user.click(card('영통 분식집'));
+    await user.dblClick(screen.getByRole('button', { name: '이 장소로 교체' }));
+    expect(screen.getByRole('button', { name: '이 장소로 교체' })).toBeDisabled();
+    expect(card('보드게임 카페 다이스')).toBeDisabled();
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe(EDIT);
+    expect(counter.puts).toBe(1);
+    expect(stopRows()).toEqual([
+      '14:00 예술·디자인대학',
+      '15:10 영통 분식집',
+      '16:00 카페 모래시계',
+    ]);
+  });
+
+  it('교체가 실패하면 오류 토스트, 선택은 남고 화면에 머문다', async () => {
+    const { user, router } = await openReplace('서천 밥상');
+    await screen.findByRole('list', { name: '후보 상점' });
+    const url = router.state.location.pathname + router.state.location.search;
+    server.use(http.put('/api/tours/:tourId/course/spots', () => wireFail('E500'), { once: true }));
+    await user.click(card('영통 분식집'));
+    await user.click(screen.getByRole('button', { name: '이 장소로 교체' }));
+    expect(await screen.findByText(errorMessage('UNKNOWN'))).toBeInTheDocument();
+    expect(router.state.location.pathname + router.state.location.search).toBe(url);
+    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'true');
+    await waitFor(() =>
+      expect(screen.getByRole('button', { name: '이 장소로 교체' })).toBeEnabled(),
+    );
+  });
+
   it('코스에 없는 지점 id · stopId 없는 교체 주소는 안내와 코스 편집으로', async () => {
     const { router } = await openPick('mode=replace&stopId=999');
     expect(await screen.findByText('바꿀 지점을 찾을 수 없어요')).toBeVisible();
@@ -271,9 +314,32 @@ describe('코스 장소 고르기 G07 — 추가', () => {
     ]);
   });
 
+  it('탭을 바꾸면 고른 후보가 지워져 보이지 않는 장소를 추가하지 못하고, 돌아와도 눌린 카드가 없다', async () => {
+    const { user } = await openPick('mode=add');
+    await screen.findByRole('list', { name: '후보 상점' });
+    await user.click(card('영통 분식집'));
+    expect(screen.getByRole('button', { name: '이 장소 추가' })).toBeEnabled();
+
+    await user.click(screen.getByRole('tab', { name: '캠퍼스 장소' }));
+    const campusList = await screen.findByRole('list', { name: '후보 캠퍼스 장소' });
+    expect(within(campusList).queryAllByRole('button', { pressed: true })).toHaveLength(0);
+    const add = screen.getByRole('button', { name: '이 장소 추가' });
+    expect(add).toBeDisabled();
+    expect(add).toHaveAccessibleDescription('후보를 하나 고르면 적용할 수 있어요.');
+
+    await user.click(screen.getByRole('tab', { name: '주변 상점' }));
+    const storeList = await screen.findByRole('list', { name: '후보 상점' });
+    expect(within(storeList).queryAllByRole('button', { pressed: true })).toHaveLength(0);
+    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'false');
+    expect(screen.getByRole('button', { name: '이 장소 추가' })).toBeDisabled();
+  });
+
   it('`?tab=campus`로 들어오면 캠퍼스 장소 탭, 모르는 탭 값은 주변 상점', async () => {
+    const counter = countCampusPlaceGets();
     const { router } = await openPick('mode=add&tab=campus');
     expect(await screen.findByRole('list', { name: '후보 캠퍼스 장소' })).toBeVisible();
+    // 양성 대조: 학교를 알면 캠퍼스 장소를 한 번 부른다(아래 universityId 0 테스트의 0번과 짝)
+    expect(counter.gets).toBe(1);
     expect(screen.getByRole('tab', { name: '캠퍼스 장소' })).toHaveAttribute(
       'aria-selected',
       'true',
@@ -426,6 +492,50 @@ describe('코스 장소 고르기 G07 — 상태 · 이동', () => {
     // 안내가 뜬 직후에는 요청이 아직 안 나간 것과 구별되지 않는다 — 잠시 기다린 뒤 센다(errata PM4).
     await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
     expect(nearbyGets).toBe(0);
+  });
+
+  describe('탐방 학교를 모르면(universityId 0) 캠퍼스 경로도 목록 대신 안내 상태, 캠퍼스 장소 요청은 0번', () => {
+    /** 시드에 없는 캠퍼스 이름으로 바꿔 학교 조인을 실패시키고(D14), 코스를 다시 읽게 한다. */
+    function forgetCampus(queryClient: Awaited<ReturnType<typeof openCourse>>['queryClient']) {
+      server.use(
+        http.get('/api/tours/:tourId', ({ params }) =>
+          wireOk({
+            ...TOUR_DETAIL.data,
+            tour_id: Number(params.tourId),
+            campus_name: '없는대학교 본캠퍼스',
+          }),
+        ),
+      );
+      queryClient.removeQueries({ queryKey: qk.guideCourse(1) });
+    }
+
+    async function expectGuide() {
+      expect(
+        await screen.findByText('학교 정보를 찾지 못해 주변 장소를 불러올 수 없어요'),
+      ).toBeVisible();
+      expect(screen.queryByRole('list', { name: '후보 캠퍼스 장소' })).toBeNull();
+      // 안내가 뜬 직후에는 요청이 아직 안 나간 것과 구별되지 않는다 — 잠시 기다린 뒤 센다(errata PM4).
+      await act(() => new Promise((resolve) => setTimeout(resolve, 50)));
+    }
+
+    it('추가 `?mode=add&tab=campus`', async () => {
+      const { queryClient, router } = await openCourse();
+      const counter = countCampusPlaceGets();
+      forgetCampus(queryClient);
+      await router.navigate(`${PICK}?mode=add&tab=campus`);
+      await expectGuide();
+      expect(counter.gets).toBe(0);
+    });
+
+    it('캠퍼스 지점 교체', async () => {
+      const { queryClient, router } = await openCourse();
+      const id = stopIdOf('예술·디자인대학');
+      const counter = countCampusPlaceGets();
+      forgetCampus(queryClient);
+      await router.navigate(`${PICK}?mode=replace&stopId=${id}`);
+      await expectGuide();
+      expect(counter.gets).toBe(0);
+    });
   });
 
   it('후보를 못 불러오면 목록 자리에만 오류와 다시 시도', async () => {

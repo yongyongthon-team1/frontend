@@ -289,6 +289,7 @@ function PickBody({
 
   function onTab(next: string) {
     setQuery('');
+    setSelected(null); // 보이지 않는 장소를 한 번 눌러 추가하지 않게(검색으로 가려지는 것과 달리 탭은 목록이 통째로 바뀐다)
     setParams(next === 'campus' ? { mode: 'add', tab: 'campus' } : { mode: 'add' }, {
       replace: true,
     });
