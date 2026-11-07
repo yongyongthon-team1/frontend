@@ -23,7 +23,7 @@ describe('코스 편집 탭 → GuideCourseRedirect', () => {
   });
 
   it('승인 0명 → 신청자 보기', async () => {
-    const { router } = await renderApp('/guide/me', { as: 'guide' });
+    const { router } = await renderApp('/explore', { as: 'guide' });
     mutate((db) => {
       db.applications.forEach((a) => {
         if (a.status === 'APPROVED') a.status = 'PENDING';
@@ -40,7 +40,7 @@ describe('코스 편집 탭 → GuideCourseRedirect', () => {
   });
 
   it('다가오는 탐방이 없으면 /guide/tours', async () => {
-    const { router } = await renderApp('/guide/me', { as: 'guide' });
+    const { router } = await renderApp('/explore', { as: 'guide' });
     mutate((db) => {
       db.tours.forEach((t) => (t.status = 'COMPLETED'));
     });
@@ -49,7 +49,7 @@ describe('코스 편집 탭 → GuideCourseRedirect', () => {
   });
 
   it('캐시에 옛 목록이 신선하게 남아 있어도 새로 받은 목록으로 이동한다', async () => {
-    const { router, queryClient } = await renderApp('/guide/me', {
+    const { router, queryClient } = await renderApp('/explore', {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });

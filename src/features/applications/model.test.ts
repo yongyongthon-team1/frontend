@@ -4,6 +4,7 @@ import {
   cancelActionState,
   completeActionState,
   computeCancellable,
+  completedTourCount,
   computeTourActions,
   coursePathFor,
   guideCoursePath,
@@ -53,6 +54,23 @@ const mk = (
   tourStatus: TourSummary['status'],
   startsAt: string,
 ): MyApplication => ({ ...app, id, status, tour: { ...tour, id, status: tourStatus, startsAt } });
+
+describe('completedTourCount', () => {
+  it('신청이 승인이고 탐방이 끝난 것만 센다', () => {
+    expect(completedTourCount([])).toBe(0);
+    expect(
+      completedTourCount([
+        mk(1, 'APPROVED', 'COMPLETED', '2026-08-01T14:00:00+09:00'),
+        mk(2, 'APPROVED', 'COMPLETED', '2026-08-08T14:00:00+09:00'),
+        mk(3, 'APPROVED', 'RECRUITING', '2026-12-01T14:00:00+09:00'),
+        mk(4, 'APPROVED', 'CANCELED', '2026-09-01T14:00:00+09:00'),
+        mk(5, 'PENDING', 'COMPLETED', '2026-08-15T14:00:00+09:00'),
+        mk(6, 'REJECTED', 'COMPLETED', '2026-08-22T14:00:00+09:00'),
+        mk(7, 'CANCELED', 'COMPLETED', '2026-08-29T14:00:00+09:00'),
+      ]),
+    ).toBe(2);
+  });
+});
 
 describe('groupMyApplications', () => {
   const ids = (apps: MyApplication[]) => apps.map((a) => a.id);

@@ -141,6 +141,11 @@ export function groupMyApplications(apps: MyApplication[]): MyApplicationGroups 
   return { upcoming, pending, past };
 }
 
+/** 참여한 탐방 수(H16): 신청이 승인이고 탐방이 끝난(COMPLETED) 것. */
+export function completedTourCount(apps: MyApplication[]): number {
+  return apps.filter((a) => a.status === 'APPROVED' && a.tour.status === 'COMPLETED').length;
+}
+
 /** 탐방 개설(T-03) 입력. 제목 칸은 없다 — 카드 제목은 파생 제목이다(명세에 제목이 없다, 9절 11번). */
 export interface CreateTourInput {
   /** 서울 날짜 `yyyy-MM-dd`. */

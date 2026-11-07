@@ -37,9 +37,11 @@
 | `hs-s08` | 탐방 코스 · V2(H04 단계 막대 · 시간표, 지도는 아래 `지도로 보기` 펼침 · H14 코스 준비 중 · 상점 시트 R-02(요약 · 별점 · 최근 리뷰) ✅ · 리뷰 진입 ✅) | `/my-tours/:applicationId/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s09` | 상점 쿠폰 · 사용 · V2(H05 내 쿠폰 · 코드 3자리씩, H15 사용 완료는 같은 주소의 USED 모습) · 리뷰 진입 ✅ | `/my-tours/:applicationId/coupons` · `/coupons/:couponId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s10` | 방문 리뷰 작성 ✅(H12, R-01 — 별점 + 한 줄 평, 저장하면 상점 시트를 연 코스 지도로) | `/reviews/new` | P1 | ✅ | ✅ | ⬜ | V2 부품(H12 노드 `2:475`) | ⬜ |
-| `hs-a01` | 회원가입 · 역할 선택 | `/signup` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-a01` | 회원가입 · 역할 선택 ✅(U-01 — 이메일 · 비밀번호 · 이름 + 역할 카드, 역할별 첫 화면으로) | `/signup` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
 | `hs-a02` | 보호자 동의 페이지 ✅(U-06 공개 링크 — 동의하기 · 동의하지 않기, 만료 · 처리됨 · 잘못된 링크 카드) | `/consent/:token` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
-| `hs-a03` | 내 정보 · 인증 상태 | `/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-a03` | MY 홈 · 고교생 ✅(H16 — 프로필 · 참여한 탐방 · 관심 전공 · `나의 활동` 행 넷 + 로그아웃 행, 알림 및 설정 없음) | `/me` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `H17` | 내 정보 수정 ✅(이름 · 학교 · 관심 전공, U-03 — 학년은 지금 값을 함께 보낸다) | `/me/edit` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `H18` | 알림 및 설정 — 빠짐(2B′, 알림 토글은 명세에 없다. `인증 상태 확인` · `로그아웃`은 H16으로) | `/me/settings` | OUT | ➖ | ➖ | ➖ | 빠짐(2B′) | ➖ |
 | `T-07` | 내 희망 사항 · 고치기(V2 부품, 시안 없음) | `/me/wishes` · `/me/wishes/:wishId/edit` | P1 | ✅ | ✅ | ⬜ | V2 부품(시안 없음) | ⬜ |
 | `T-08` | 고교생 희망 사항(가이드, V2 부품, 시안 없음) | `/guide/wishes` | P1 | ✅ | ✅ | ⬜ | V2 부품(시안 없음) | ⬜ |
 | `hs-a04` | 탐방 신청서 · V2(H07) | `/tours/:tourId/apply` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -49,7 +51,9 @@
 | `hs-a06` | 탐방 찾기 · 신청 예외 상태 · V2(H13 — `/tours` 0건 · 같은 학교 대체, 탐방 상세의 마감 · 중복 신청 카드) | `/tours` · `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `G01` | 가이드 홈 (V2, 신청자 없음 G11 포함) | `/guide` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | — | 코스 편집 탭 (다가오는 탐방의 코스로 이동) | `/guide/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `guide-s01` | 가이드 프로필 등록 · 수정 ✅(G05 — 전공 · 소개 한마디 · 읽기 전용 학교 칸, U-04. 학과가 없는 가이드의 첫 화면 `/guide/me/profile`, 2B-R5) · MY 홈 G12는 `/guide/me` 자리(MVP 2B′ Task 15) | `/guide/me/profile` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `guide-s01` | 가이드 프로필 등록 · 수정 ✅(G05 — 전공 · 소개 한마디 · 읽기 전용 학교 칸, U-04. 학과가 없는 가이드의 첫 화면 `/guide/me/profile`, 2B-R5) | `/guide/me/profile` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `G12` | MY 홈 · 가이드 ✅(프로필 · 개설한 탐방 · 진행 예정 + `가이드 관리` 행 넷 + 로그아웃 행, 알림 및 설정 없음) | `/guide/me` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `G13` | 가이드 알림 및 설정 — 빠짐(2B′, `내 정보·인증 상태` · `로그아웃`은 G12로) | `/guide/me/settings` | OUT | ➖ | ➖ | ➖ | 빠짐(2B′) | ➖ |
 | `guide-s02` | 탐방 개설 · V2(G04 — 탐방 이름 칸 없음, 방학 안내 · 차단) | `/guide/tours/new` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s03` | 신청자 관리 · V2(G02 신청자 승인) | `/guide/tours/:tourId/applicants` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s04` | AI 추천 코스 생성 · V2(생성 중 로딩 뒤 G03 코스 완성 `edit`로 replace) | `/guide/tours/:tourId/course/draft` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -89,11 +93,11 @@
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
-| auth | `POST /api/auth/signup` | hs-a01 회원가입 (U-01, 토큰 없음 → 이어서 로그인) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | `POST /api/auth/signup` | hs-a01 회원가입 ✅ 화면 연결 (U-01, 토큰 없음 → 이어서 로그인) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `POST /api/auth/login` | hs-s01 로그인 · 빠른 로그인 · 원클릭 링크 · 401 재로그인 (U-02, 이어서 `GET /users/me`로 합성) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `POST /api/auth/logout` | hs-a03 · guide-s01 · `/owner/me` 로그아웃 (U-02) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `GET /api/users/me` | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 (U-03, 사장님은 `GET /users/me/store`로 가게 id 합성. 목업 확장 `campus_id`) | ⬜ | ✅ | ⬜ | ⬜ |
-| auth | `PATCH /api/users/me` | hs-a03 내 정보 수정 `/me/edit` (U-03) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | `PATCH /api/users/me` | hs-a03 내 정보 수정 `/me/edit` ✅ 화면 연결 (U-03) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `PUT /api/users/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` ✅ 화면 연결 (U-04) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses` | hs-s03, guide-s02 (D-01) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses/:campusId/places` | guide-a03 캠퍼스 장소 탭(코스에 캠퍼스 지점 추가 · 캠퍼스 지점 교체, C-02 보완. 로그인한 누구나, 목업은 건물 id 순. 화면 G07 — MVP 2B′ Task 8) | ⬜ | ✅ | ⬜ | ⬜ |

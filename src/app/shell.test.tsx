@@ -57,7 +57,7 @@ describe('가드', () => {
 describe('로그아웃', () => {
   it('로그아웃하면 세션·캐시를 비우고 /login', async () => {
     const { user, router, queryClient } = await renderApp('/me', { as: 'student' });
-    await user.click(await screen.findByRole('button', { name: '로그아웃' }));
+    await user.click(await screen.findByRole('button', { name: /^로그아웃/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(router.state.location.search).toBe('');
     expect(useSession.getState().token).toBeNull();
@@ -169,6 +169,7 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/reviews/new', 'HIGH_SCHOOL'],
   ['/verify', 'HIGH_SCHOOL'],
   ['/me', 'HIGH_SCHOOL'],
+  ['/me/edit', 'HIGH_SCHOOL'],
   ['/me/wishes', 'HIGH_SCHOOL'],
   ['/me/wishes/1/edit', 'HIGH_SCHOOL'],
   ['/guide', 'UNIVERSITY'],

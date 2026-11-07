@@ -526,7 +526,7 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
   });
 
   it('제휴 지점이 0이면 미충족 · 확정 비활성 + 사유 · 코스 편집으로', async () => {
-    const { user, router } = await renderApp('/guide/me', { as: 'guide', checkpoint: 'APPROVED' });
+    const { user, router } = await renderApp('/explore', { as: 'guide', checkpoint: 'APPROVED' });
     // 탐방 날짜에 유효한 제휴가 하나도 없으면 AI 초안에 제휴 지점이 없다.
     mutate((db) => {
       db.partnerships.length = 0;
@@ -604,7 +604,7 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
   });
 
   it('쿠폰이 0장이면 완료 카드에 1단계 안내 문구', async () => {
-    const { router } = await renderApp('/guide/me', { as: 'guide', checkpoint: 'CONFIRMED' });
+    const { router } = await renderApp('/explore', { as: 'guide', checkpoint: 'CONFIRMED' });
     mutate((db) => {
       db.coupons.length = 0;
     });

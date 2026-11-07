@@ -48,7 +48,7 @@ describe('내 희망 사항 목록 (T-07)', () => {
     const { user, router } = await renderApp('/me', { as: 'student' });
     const row = await screen.findByRole('link', { name: /^내 희망 사항/ });
     expect(row).toHaveTextContent('남긴 희망 사항을 보고 고쳐요.');
-    expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: /^로그아웃/ })).toBeInTheDocument();
     await user.click(row);
     await waitFor(() => expect(router.state.location.pathname).toBe('/me/wishes'));
     expect(await screen.findByRole('heading', { level: 1, name: '내 희망 사항' })).toBeVisible();

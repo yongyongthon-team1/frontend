@@ -312,8 +312,8 @@ describe('시연 패널', () => {
       }),
     );
     useDemoStore.setState({ enabled: true });
-    // 홈은 탐방 목록의 캠퍼스 조인으로 `GET /campuses`를 직접 부른다. 헬스의 대체 호출만 세려고 캠퍼스를 쓰지 않는 화면에서 연다.
-    await renderApp('/me', { as: 'student' });
+    // 홈 · MY는 캠퍼스 조인으로 `GET /campuses`를 직접 부른다. 헬스의 대체 호출만 세려고 캠퍼스를 쓰지 않는 화면(`/explore` 자리)에서 연다.
+    await renderApp('/explore', { as: 'student' });
     expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
     expect(campusCalls).toBe(0);
   });
@@ -486,7 +486,7 @@ describe('발표 모드', () => {
     useDemoStore.setState({ enabled: true, presentMode: true });
     const { user, router } = await renderApp('/me', { as: 'student' });
     expect(await screen.findByText('고교생 화면')).toBeInTheDocument();
-    await user.click(screen.getByRole('button', { name: '로그아웃' }));
+    await user.click(await screen.findByRole('button', { name: /^로그아웃/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(screen.queryByText('고교생 화면')).toBeNull();
   });
@@ -571,7 +571,7 @@ describe('시연 계정 자동 재로그인', () => {
   it('토큰이 비면(로그아웃) 시연 계정 기록도 지운다', async () => {
     const { user, router } = await renderApp('/me', { as: 'student' });
     act(() => useDemoStore.setState({ activeDemoEmail: STUDENT }));
-    await user.click(await screen.findByRole('button', { name: '로그아웃' }));
+    await user.click(await screen.findByRole('button', { name: /^로그아웃/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
     expect(useDemoStore.getState().activeDemoEmail).toBeNull();
   });

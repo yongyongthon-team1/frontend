@@ -15,7 +15,7 @@ test.describe('/verify', () => {
   /**
    * 시연 패널 `P1 계정`에서 이 계정으로 전환하고 `/verify` 화면이 뜰 때까지 기다린다. 전환이 끝났는지는 패널이 기록하는
    * 빠른 로그인 계정(`ytt.demo`)으로 안다 — 그 기록과 이동은 한 동기 구간이라 기록이 보이면 이동도 끝나 있다.
-   * 인증이 끝나 가는 계정(`waiting`)의 첫 화면은 `/`라서, 그때는 새로고침 없이 앱 안에서 `/verify`로 옮긴다.
+   * 인증이 끝나 가는 계정(`waiting`)의 첫 화면은 `/`라서, 그때는 `MY` 탭의 `인증 상태 확인` 행으로 `/verify`에 들어간다.
    */
   async function switchTo(page: Page, email: string) {
     const panel = page.getByRole('region', { name: '시연 패널' });
@@ -29,9 +29,8 @@ test.describe('/verify', () => {
       )
       .toBe(email);
     if (new URL(page.url()).pathname !== '/verify') {
-      await page.evaluate(
-        "history.pushState(null, '', '/verify'); dispatchEvent(new PopStateEvent('popstate'));",
-      );
+      await page.getByRole('link', { name: 'MY', exact: true }).click();
+      await page.getByRole('link', { name: /^인증 상태 확인/ }).click();
     }
     await expect(page).toHaveURL(/\/verify$/);
     await expect(

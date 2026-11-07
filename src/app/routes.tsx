@@ -9,6 +9,7 @@ import { CourseEditPage } from '@/pages/guide/CourseEditPage';
 import { CoursePickPage } from '@/pages/guide/CoursePickPage';
 import { GuideCourseMapPage } from '@/pages/guide/GuideCourseMapPage';
 import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
+import { GuideMyPage } from '@/pages/guide/GuideMyPage';
 import { GuideProfilePage } from '@/pages/guide/GuideProfilePage';
 import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
@@ -18,6 +19,7 @@ import { TourCancelPage } from '@/pages/guide/TourCancelPage';
 import { TourCompletePage } from '@/pages/guide/TourCompletePage';
 import { TourCreatePage } from '@/pages/guide/TourCreatePage';
 import { LoginPage } from '@/pages/auth/LoginPage';
+import { SignupPage } from '@/pages/auth/SignupPage';
 import { ConsentPage } from '@/pages/public/ConsentPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
 import { MyStorePage } from '@/pages/owner/MyStorePage';
@@ -30,6 +32,8 @@ import { CouponListPage } from '@/pages/student/CouponListPage';
 import { CourseMapPage } from '@/pages/student/CourseMapPage';
 import { EditWishPage } from '@/pages/student/EditWishPage';
 import { HomePage } from '@/pages/student/HomePage';
+import { MeEditPage } from '@/pages/student/MeEditPage';
+import { MePage } from '@/pages/student/MePage';
 import { MyTourDetailPage } from '@/pages/student/MyTourDetailPage';
 import { MyToursPage } from '@/pages/student/MyToursPage';
 import { MyWishesPage } from '@/pages/student/MyWishesPage';
@@ -38,7 +42,6 @@ import { TourDetailPage } from '@/pages/student/TourDetailPage';
 import { TourResultsPage } from '@/pages/student/TourResultsPage';
 import { VerifyPage } from '@/pages/student/VerifyPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
-import { ListRow } from '@/shared/ui/ListRow';
 import { ErrorPage, RouteErrorPage } from './ErrorPage';
 import { RequireAuth } from './guards/RequireAuth';
 import { RequireRole } from './guards/RequireRole';
@@ -60,10 +63,7 @@ export const routes: RouteObject[] = [
     children: [
       // ── 공통 · 공개 ────────────────────────────────────────────────
       { path: '/login', element: <LoginPage /> },
-      {
-        path: '/signup',
-        element: <PlaceholderPage title="회원가입 · 역할 선택" wireframe="hs-a01" />,
-      },
+      { path: '/signup', element: <SignupPage /> }, // U-01 hs-a01
       { path: '/consent/:token', element: <ConsentPage /> },
       {
         element: <RequireAuth />,
@@ -140,15 +140,11 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/me',
-                    element: (
-                      <PlaceholderPage title="내 정보 · 인증 상태" wireframe="hs-a03" showLogout>
-                        <ListRow
-                          to="/me/wishes"
-                          title="내 희망 사항"
-                          meta="남긴 희망 사항을 보고 고쳐요."
-                        />
-                      </PlaceholderPage>
-                    ),
+                    element: <MePage />, // H16 hs-a03
+                  },
+                  {
+                    path: '/me/edit',
+                    element: <MeEditPage />, // H17
                   },
                   {
                     path: '/me/wishes',
@@ -224,9 +220,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/me',
-                    element: (
-                      <PlaceholderPage title="가이드 프로필" wireframe="guide-s01" showLogout />
-                    ),
+                    element: <GuideMyPage />, // G12 guide-s01
                   },
                   {
                     path: '/guide/me/profile',
