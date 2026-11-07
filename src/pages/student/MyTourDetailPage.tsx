@@ -74,8 +74,10 @@ export function MyTourDetailPage() {
   const active = live && isUpcomingTour(tour);
   // 코스는 승인된 신청자에게만 열린다(서버도 승인 대기 신청에는 코스를 주지 않는다).
   const courseOpen = app.status === 'APPROVED' && app.courseStatus === 'CONFIRMED';
-  // 다녀온 뒤(승인된 신청 + 완료된 탐방)에는 쿠폰 목록에서 상점별로 리뷰를 남긴다(R-01 진입).
-  const reviewOpen = app.status === 'APPROVED' && tour.status === 'COMPLETED';
+  // 다녀온 뒤(승인된 신청 + 완료된 탐방)에는 쿠폰 목록에서 상점별로 리뷰를 남긴다(R-01 진입). 쿠폰이 없으면 빈 목록으로 보내지
+  // 않는다 — H09(`MyToursPage`)의 같은 링크와 같은 조건.
+  const reviewOpen =
+    app.status === 'APPROVED' && tour.status === 'COMPLETED' && app.couponCount > 0;
 
   return (
     <>

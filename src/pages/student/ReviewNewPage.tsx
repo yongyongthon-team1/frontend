@@ -64,10 +64,14 @@ function ReviewLoader({ couponId }: { couponId: number }) {
   const query = useMyCoupon(couponId);
   const back = useBack(couponId);
   const { data: coupon } = query;
+  // 저장이 "없는 쿠폰"이라고 답한 경우도 받아 둔 쿠폰이 있어도 같은 상태로 끝낸다.
+  const [gone, setGone] = useState(false);
 
-  // 다시 불러오다 실패해도 이미 받은 쿠폰은 그대로 보인다 — 오류 화면은 받은 데이터가 없을 때만.
+  // 쿠폰을 다시 읽다가 없어졌다고 하면(받아 둔 값이 있어도) 폼을 닫는다.
+  if (gone || (query.isError && GONE_CODES.has(query.error.code))) return <NotFound />;
+
+  // 그 밖의 오류는 다시 불러오다 실패해도 이미 받은 쿠폰이 그대로 보인다 — 오류 화면은 받은 데이터가 없을 때만.
   if (coupon === undefined && query.isError) {
-    if (GONE_CODES.has(query.error.code)) return <NotFound />;
     return (
       <>
         <TopBar title={TITLE} back={back} />
@@ -90,7 +94,7 @@ function ReviewLoader({ couponId }: { couponId: number }) {
       </>
     );
   }
-  return <ReviewForm coupon={coupon} back={back} />;
+  return <ReviewForm coupon={coupon} back={back} onGone={() => setGone(true)} />;
 }
 
 interface FormErrors {
@@ -106,7 +110,15 @@ function validate(rating: number | null, content: string): FormErrors {
   return errors;
 }
 
-function ReviewForm({ coupon, back }: { coupon: Coupon; back: boolean | string }) {
+function ReviewForm({
+  coupon,
+  back,
+  onGone,
+}: {
+  coupon: Coupon;
+  back: boolean | string;
+  onGone(): void;
+}) {
   const navigate = useNavigate();
   const create = useCreateReview();
   const applicationQuery = useMyApplication(coupon.applicationId);
@@ -126,7 +138,8 @@ function ReviewForm({ coupon, back }: { coupon: Coupon; back: boolean | string }
   }
 
   const block = reviewBlock(coupon, applicationQuery.data?.status ?? null);
-  const locked = block !== null || create.isPending;
+  // 저장이 성공한 뒤에도 이동할 때까지 잠근다 — 그 틈에 다시 눌러 같은 리뷰를 또 보내지 않게.
+  const locked = block !== null || create.isPending || create.isSuccess;
   const tour = tourQuery.data;
 
   function onSubmit(event: FormEvent) {
@@ -145,15 +158,17 @@ function ReviewForm({ coupon, back }: { coupon: Coupon; back: boolean | string }
           void land();
         },
         onError: (error) => {
+          sending.current = false;
+          if (GONE_CODES.has(error.code)) {
+            onGone();
+            return;
+          }
           const fieldErrors = error.fieldErrors ?? {};
           if (fieldErrors.rating || fieldErrors.content) {
             setErrors({ rating: fieldErrors.rating, content: fieldErrors.content });
           } else {
             toast.error(errorMessage(error.code));
           }
-        },
-        onSettled: () => {
-          sending.current = false;
         },
       },
     );
@@ -227,7 +242,7 @@ function ReviewForm({ coupon, back }: { coupon: Coupon; back: boolean | string }
             <Button
               type="submit"
               loading={create.isPending}
-              disabled={block !== null}
+              disabled={block !== null || create.isSuccess}
               hint={block ?? undefined}
             >
               리뷰 등록하기

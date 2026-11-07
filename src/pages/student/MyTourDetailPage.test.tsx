@@ -1,4 +1,4 @@
-import { screen, within } from '@testing-library/react';
+import { screen, waitFor, within } from '@testing-library/react';
 import { describe, expect, it } from 'vitest';
 import { mutate } from '@/mocks/db/store';
 import { applyToTour as applyToTourRule } from '@/mocks/rules/applications';
@@ -165,5 +165,20 @@ describe('신청 내역 상세 (H10)', () => {
     await router.navigate(`/my-tours/${findApplicationId(STUDENT, 1)}`);
     await screen.findByText('가이드 승인 상태');
     expect(screen.queryByRole('link', { name: /리뷰 남기기/ })).not.toBeInTheDocument();
+  });
+
+  it('쿠폰이 하나도 없는 완료 탐방에는 리뷰 남기기 행이 없다 (막다른 목록으로 보내지 않는다)', async () => {
+    const { router, queryClient } = await renderApp('/', { as: 'seojun@demo.kr' });
+    const id = findApplicationId('seojun@demo.kr', 7);
+    // 양성 대조: 쿠폰이 있을 때는 행이 있다.
+    await router.navigate(`/my-tours/${id}`);
+    expect(await screen.findByRole('link', { name: /리뷰 남기기/ })).toBeInTheDocument();
+
+    mutate((db) => {
+      db.coupons = db.coupons.filter((c) => c.applicationId !== id);
+    });
+    await queryClient.invalidateQueries();
+    await waitFor(() => expect(screen.queryByRole('link', { name: /리뷰 남기기/ })).toBeNull());
+    expect(screen.getByText('가이드 승인 상태')).toBeInTheDocument();
   });
 });

@@ -1,9 +1,11 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
+import { http } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
-import { getDb } from '@/mocks/db/store';
+import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
 import { findApplicationId, redeemDemoCoupon, renderApp } from '@/test/renderApp';
+import { wireFail } from '@/test/wire';
 
 const STUDENT = 'student@demo.kr';
 
@@ -203,5 +205,147 @@ describe('H12 방문 리뷰 쓰기', () => {
     await router.navigate(`/reviews/new?couponId=${others.id}`);
     expect(await screen.findByText('리뷰를 쓸 쿠폰을 찾을 수 없어요.')).toBeVisible();
     expect(screen.queryByRole('button', { name: '리뷰 등록하기' })).not.toBeInTheDocument();
+  });
+
+  it('성공한 저장 뒤 이동하기 전에는 폼이 잠겨 있어 다시 눌러도 요청이 늘지 않는다', async () => {
+    const posts = captureReviewPosts();
+    const { user, router, queryClient } = await openReviewForm();
+    await user.click(screen.getByRole('radio', { name: '별점 4점' }));
+    await user.type(screen.getByLabelText('좋았던 점과 아쉬웠던 점'), '양이 많아요');
+
+    // 신청을 다시 받아 오는 응답을 붙들어, 저장은 끝났지만 아직 이동하지 못한 틈을 만든다.
+    let release!: () => void;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    server.use(
+      http.get('/api/users/me/tours', async () => {
+        await gate; // 값을 돌려주지 않으면 다음(기본) 핸들러가 답한다
+      }),
+    );
+    await act(async () => {
+      void queryClient.resetQueries({ queryKey: ['myApplications'] }); // 붙들린 응답을 기다리지 않는다
+      await new Promise((resolve) => setTimeout(resolve, 20));
+    });
+
+    await user.click(submit());
+    await screen.findByText('리뷰를 등록했어요.');
+    expect(router.state.location.pathname).toBe('/reviews/new'); // 아직 이동하지 못했다
+    expect(submit()).toBeDisabled();
+    expect(screen.getByLabelText('좋았던 점과 아쉬웠던 점')).toBeDisabled();
+    await user.click(submit());
+    expect(posts).toHaveLength(1);
+
+    release();
+    await waitFor(() => expect(router.state.location.pathname).toMatch(/\/course$/));
+    expect(posts).toHaveLength(1);
+  });
+});
+
+describe('H12 저장 때 서버 오류', () => {
+  /** 사유 줄(`hint`)에도 같은 글이 있어 토스트 안에서 찾는다. */
+  async function expectToast(message: string) {
+    await waitFor(() =>
+      expect(document.querySelector('[data-sonner-toast]')).toHaveTextContent(message),
+    );
+  }
+
+  async function fillAndSubmit(user: Awaited<ReturnType<typeof openReviewForm>>['user']) {
+    await user.click(screen.getByRole('radio', { name: '별점 4점' }));
+    await user.type(screen.getByLabelText('좋았던 점과 아쉬웠던 점'), '양이 많아요');
+    await user.click(submit());
+  }
+
+  it('REVIEW_NOT_ALLOWED: 토스트 뒤 쿠폰을 다시 읽으면 폼이 사유와 함께 잠긴다', async () => {
+    const { user, couponId } = await openReviewForm();
+    server.use(
+      http.post('/api/stores/:storeId/reviews', () => {
+        // 서버가 쿠폰이 더는 쓸 수 없는 상태라고 판단한 때: 만료된 것으로 바꾼다.
+        mutate((db) => {
+          db.coupons.find((c) => c.id === couponId)!.status = 'EXPIRED';
+        });
+        return wireFail('E403_COUPON_NOT_USED');
+      }),
+    );
+    await fillAndSubmit(user);
+    await expectToast('쿠폰을 사용한 상점에만 리뷰를 쓸 수 있어요.');
+    await waitFor(() => expect(submit()).toBeDisabled());
+    expect(submit()).toHaveAccessibleDescription('쿠폰을 사용한 상점에만 리뷰를 쓸 수 있어요.');
+    expect(screen.getByLabelText('좋았던 점과 아쉬웠던 점')).toBeDisabled();
+    expect(screen.getByRole('link', { name: '쿠폰 보기' })).toHaveAttribute(
+      'href',
+      `/coupons/${couponId}`,
+    );
+  });
+
+  it('REVIEW_DUPLICATE: 토스트 뒤 쿠폰을 다시 읽으면 폼이 사유 + 코스 지도 보기로 잠긴다', async () => {
+    const { user, couponId } = await openReviewForm();
+    server.use(
+      http.post('/api/stores/:storeId/reviews', () => {
+        // 다른 기기에서 먼저 쓴 것처럼 리뷰 행을 더한다.
+        mutate((db) => {
+          const coupon = db.coupons.find((c) => c.id === couponId)!;
+          db.reviews.push({
+            id: 9999,
+            userId: db.users.find((u) => u.email === STUDENT)!.id,
+            tourId: 1,
+            storeId: coupon.storeId,
+            couponId,
+            rating: 5,
+            content: '먼저 쓴 리뷰',
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString(),
+          });
+        });
+        return wireFail('E409_ALREADY_REVIEWED');
+      }),
+    );
+    await fillAndSubmit(user);
+    await expectToast('이미 리뷰를 작성했어요.');
+    await waitFor(() => expect(submit()).toBeDisabled());
+    expect(submit()).toHaveAccessibleDescription('이미 리뷰를 작성했어요.');
+    expect(screen.getByLabelText('좋았던 점과 아쉬웠던 점')).toBeDisabled();
+    expect(screen.getByRole('link', { name: '코스 지도 보기' })).toHaveAttribute(
+      'href',
+      `/my-tours/${findApplicationId(STUDENT, 1)}/course?storeId=1`,
+    );
+  });
+
+  it('NOT_FOUND: 받아 둔 쿠폰이 있어도 쿠폰을 찾을 수 없다는 EmptyState로 끝난다', async () => {
+    const { user } = await openReviewForm();
+    server.use(http.post('/api/stores/:storeId/reviews', () => wireFail('E404')));
+    await fillAndSubmit(user);
+    expect(await screen.findByText('리뷰를 쓸 쿠폰을 찾을 수 없어요.')).toBeVisible();
+    expect(screen.getByRole('link', { name: '내 탐방 확인하기' })).toHaveAttribute(
+      'href',
+      '/my-tours',
+    );
+    expect(screen.queryByRole('button', { name: '리뷰 등록하기' })).not.toBeInTheDocument();
+  });
+
+  it('쿠폰을 다시 읽다가 없어졌다고 하면(받아 둔 쿠폰이 있어도) EmptyState', async () => {
+    const { queryClient } = await openReviewForm();
+    // 쿠폰이 목록에서 사라진 뒤 다시 읽는다 — 받아 둔 값이 남아 있어도 폼을 닫는다.
+    mutate((db) => {
+      db.coupons = db.coupons.filter((c) => c.storeId !== 1);
+    });
+    await queryClient.refetchQueries({ queryKey: ['myCoupons'] });
+    expect(await screen.findByText('리뷰를 쓸 쿠폰을 찾을 수 없어요.')).toBeVisible();
+    expect(screen.queryByRole('button', { name: '리뷰 등록하기' })).not.toBeInTheDocument();
+  });
+
+  it('서버 VALIDATION 칸 오류(content)는 입력 칸 아래에 보이고 폼은 그대로 쓸 수 있다', async () => {
+    const { user } = await openReviewForm();
+    server.use(
+      http.post('/api/stores/:storeId/reviews', () =>
+        wireFail('E400', { errors: [{ field: 'content', reason: '내용이 너무 짧아요.' }] }),
+      ),
+    );
+    await fillAndSubmit(user);
+    const box = screen.getByLabelText('좋았던 점과 아쉬웠던 점');
+    expect(await screen.findByText('내용이 너무 짧아요.')).toBeVisible();
+    expect(box).toHaveAccessibleDescription('내용이 너무 짧아요.');
+    expect(box).toBeEnabled();
+    expect(submit()).toBeEnabled();
   });
 });
