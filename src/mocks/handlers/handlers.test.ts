@@ -747,8 +747,13 @@ describe('coupons', () => {
 });
 
 describe('demo', () => {
-  it('헬스 체크는 목업 모드', async () =>
-    expect(await request('/health')).toEqual({ ok: true, mode: 'mock' }));
+  it('헬스 체크는 목업 모드(백엔드 봉투)', async () => {
+    const res = await rawFetch<{ code: string; data: unknown }>('/health', { method: 'GET' });
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe('S200');
+    expect(res.body.data).toEqual({ ok: true, mode: 'mock' });
+    expect(await request('/health')).toEqual({ ok: true, mode: 'mock' });
+  });
 
   it('시연 초기화는 체크포인트를 적용', async () => {
     await login('student@demo.kr');
@@ -778,8 +783,21 @@ describe('demo', () => {
     await request('/tours/1/applications', { method: 'POST', body: { motivation: '궁금해요' } });
     await expect(
       request('/demo/reset', { method: 'POST', body: { checkpoint: 'DONE' } }),
-    ).rejects.toMatchObject({ status: 400, code: 'VALIDATION' });
+    ).rejects.toMatchObject({ status: 400, code: 'VALIDATION', backendCode: 'E400' });
+    const raw = await rawFetch<{ code: string }>('/demo/reset', {
+      method: 'POST',
+      body: { checkpoint: 'DONE' },
+    });
+    expect(raw.status).toBe(400);
+    expect(raw.body.code).toBe('E400');
     expect(await request<MyApplication[]>('/me/applications')).toHaveLength(1);
+  });
+
+  it('시연 초기화 응답은 성공 봉투 { ok: true }', async () => {
+    const res = await rawFetch<{ code: string; data: unknown }>('/demo/reset', { method: 'POST' });
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe('S200');
+    expect(res.body.data).toEqual({ ok: true });
   });
 });
 

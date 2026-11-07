@@ -11,7 +11,9 @@ import {
 
 // .env.test는 VITE_DEMO_TOOLS=false다. 시연 도구는 저장소의 enabled로만 켜진다.
 
-afterEach(() => useDemoStore.setState({ enabled: false, apiModeOverride: null }));
+afterEach(() =>
+  useDemoStore.setState({ enabled: false, apiModeOverride: null, resetMissing: false }),
+);
 
 describe('demoStore', () => {
   it('처음에는 꺼져 있고 모드 덮어쓰기가 없다', () => {
@@ -33,6 +35,15 @@ describe('demoStore', () => {
     await useDemoStore.persist.rehydrate();
     expect(readDemoOverride()).toBe('mock');
     expect(isDemoToolsOn()).toBe(true);
+  });
+
+  it('초기화 잠금(resetMissing)은 이 세션에서만 알고 저장하지 않는다', () => {
+    expect(useDemoStore.getState().resetMissing).toBe(false);
+    act(() => useDemoStore.getState().setResetMissing(true));
+    expect(useDemoStore.getState().resetMissing).toBe(true);
+    expect(JSON.parse(localStorage.getItem(DEMO_STORE_KEY)!).state).not.toHaveProperty(
+      'resetMissing',
+    );
   });
 
   it('모르는 모드 값은 덮어쓰기로 쓰지 않는다', () => {

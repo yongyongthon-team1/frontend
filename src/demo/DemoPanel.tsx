@@ -14,15 +14,16 @@ import {
 import type { ApiMode } from '@/shared/config/env';
 import { cn } from '@/shared/lib/cn';
 import { errorMessage } from '@/shared/lib/errors';
-import { ApiError, request } from '@/shared/lib/http';
+import { ApiError } from '@/shared/lib/http';
 import type { Tone } from '@/shared/lib/types';
 import { Button } from '@/shared/ui/Button';
 import { Select } from '@/shared/ui/Select';
 import { StatusChip } from '@/shared/ui/StatusChip';
 import { useBootStatus } from './bootStatus';
+import { checkBackend } from './health';
 import { useDemoStore, validLastCoupon, type AiSpeed, type MapMode } from './demoStore';
 import { quickLogin, switchToCouponOwner } from './quickLogin';
-import { resetDemoData } from './resetDemo';
+import { RESET_MISSING_REASON, resetDemoData } from './resetDemo';
 
 const ROLE_LABEL: Record<DemoRole, string> = {
   student: '고교생',
@@ -55,6 +56,11 @@ function switchFailed(error: unknown) {
 }
 
 function resetFailed(error: unknown) {
+  // 실서버에 초기화가 없으면(404 — `resetDemoData`가 버튼을 잠근다) 사유를 알린다(2C-R28).
+  if (error instanceof ApiError && error.status === 404) {
+    toast.error(RESET_FAILED, { description: RESET_MISSING_REASON });
+    return;
+  }
   const code = errorCode(error);
   toast.error(RESET_FAILED, { description: code ? errorMessage(code) : undefined });
 }
@@ -224,6 +230,7 @@ function FullPanel({ actions }: { actions: DemoActions }) {
   const coupon = validLastCoupon(useDemoStore((s) => s.lastCoupon));
   const mapMode = useDemoStore((s) => s.mapMode);
   const aiSpeed = useDemoStore((s) => s.aiSpeed);
+  const resetMissing = useDemoStore((s) => s.resetMissing);
   const { setApiModeOverride, setMapMode, setAiSpeed, setPresentMode } = useDemoStore.getState();
   const [checkpoint, setCheckpoint] = useState<SeedCheckpoint>('START');
   const [p1Email, setP1Email] = useState(P1_ACCOUNT_OPTIONS[0]?.value ?? '');
@@ -293,6 +300,8 @@ function FullPanel({ actions }: { actions: DemoActions }) {
             variant="secondary"
             className="shrink-0"
             loading={actions.running === 'reset'}
+            disabled={resetMissing}
+            hint={resetMissing ? { reason: RESET_MISSING_REASON } : undefined}
             onClick={() => actions.reset(checkpoint)}
           >
             시연 데이터 초기화
@@ -403,11 +412,11 @@ function Segmented<T extends string>({
   );
 }
 
-/** 백엔드 상태: `/api/health`를 15초마다 확인한다(판정 27). */
+/** 백엔드 상태: `/api/health`(실서버는 404라 `/api/campuses`로 대신 — `checkBackend`)를 15초마다 확인한다(판정 27). */
 function HealthBadge() {
   const health = useQuery({
     queryKey: qk.health,
-    queryFn: () => request<unknown>('/health'),
+    queryFn: checkBackend,
     refetchInterval: 15_000,
     retry: false,
   });

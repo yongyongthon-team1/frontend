@@ -1,9 +1,13 @@
 import { QueryClient } from '@tanstack/react-query';
-import { beforeEach, describe, expect, it } from 'vitest';
+import { http } from 'msw';
+import { toast } from 'sonner';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { handleUnauthorized, registerQueryClient, useSession } from '@/features/auth/session';
 import { getDb } from '@/mocks/db/store';
+import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
 import { configureHttp } from '@/shared/lib/http';
+import { wireFail } from '@/test/wire';
 import {
   applyDemoParamsBeforeRender,
   demoCleanUrl,
@@ -22,6 +26,7 @@ beforeEach(() => {
     mapMode: 'auto',
     lastCoupon: null,
     resetKey: null,
+    resetMissing: false,
     activeDemoEmail: null,
     activeDemoToken: null,
   });
@@ -175,5 +180,21 @@ describe('첫 렌더 전 실행(초기화 · 빠른 로그인)', () => {
     useDemoStore.setState({ lastCoupon: { code: '123456', storeId: 2 } });
     await runDemoParams(parseDemoParams('?demo=1&reset=1&as=student'), { queryClient, path: '/' });
     expect(useDemoStore.getState().lastCoupon).toBeNull();
+  });
+
+  it('reset=1이 404(실서버에 초기화 없음)면 사유를 보이고 패널 버튼을 잠근다 — 로그인은 이어 간다 (2C-R28)', async () => {
+    const queryClient = setupClient();
+    const error = vi.spyOn(toast, 'error');
+    server.use(http.post('/api/demo/reset', () => wireFail('E404')));
+    const landing = await runDemoParams(parseDemoParams('?demo=1&reset=1&as=student'), {
+      queryClient,
+      path: '/',
+    });
+    expect(error).toHaveBeenCalledWith('시연 데이터를 초기화하지 못했어요.', {
+      description: '실서버에는 시연 초기화가 없어요.',
+    });
+    expect(useDemoStore.getState().resetMissing).toBe(true);
+    expect(landing).not.toBeNull();
+    error.mockRestore();
   });
 });

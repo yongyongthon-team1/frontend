@@ -1,9 +1,10 @@
 import { QueryClient } from '@tanstack/react-query';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { handleUnauthorized, registerQueryClient, useSession } from '@/features/auth/session';
 import { server } from '@/mocks/node';
 import { configureHttp } from '@/shared/lib/http';
+import { wireFail } from '@/test/wire';
 import { useDemoStore } from './demoStore';
 import { resetDemoData } from './resetDemo';
 
@@ -52,11 +53,7 @@ describe('시연 데이터 초기화 요청 (결정 0007)', () => {
 
   it('초기화가 401이어도 세션 만료로 처리하지 않는다(지금 세션이 남는다)', async () => {
     useSession.setState({ token: 'live-token' });
-    server.use(
-      http.post('/api/demo/reset', () =>
-        HttpResponse.json({ code: 'UNAUTHORIZED', message: 'x' }, { status: 401 }),
-      ),
-    );
+    server.use(http.post('/api/demo/reset', () => wireFail('E401')));
     await expect(resetDemoData({}, { queryClient: queryClient() })).rejects.toMatchObject({
       status: 401,
     });
@@ -86,11 +83,7 @@ describe('시연 데이터 초기화 요청 (결정 0007)', () => {
   it('실패하면 아무것도 비우지 않는다', async () => {
     useSession.setState({ token: 'live-token' });
     useDemoStore.setState({ lastCoupon: { code: '123456', storeId: 1 } });
-    server.use(
-      http.post('/api/demo/reset', () =>
-        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
-      ),
-    );
+    server.use(http.post('/api/demo/reset', () => wireFail('E403')));
     await expect(resetDemoData({}, { queryClient: queryClient() })).rejects.toMatchObject({
       code: 'FORBIDDEN',
     });

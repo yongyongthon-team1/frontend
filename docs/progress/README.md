@@ -140,8 +140,8 @@
 | admin | #12 `POST /api/admin/student-verifications/:id/approve` | owner-a02 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | admin | #13 `POST /api/admin/student-verifications/:id/reject` | owner-a02 (반려 사유) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | reviews | #21 `POST /api/reviews` | hs-s10 방문 리뷰 작성 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
-| demo | `GET /api/health` | 시연 패널 | ⬜ | ✅ | ⬜ | ⬜ |
-| demo | `POST /api/demo/reset` | 시연 패널 | ⬜ | ✅ | ⬜ | ⬜ |
+| demo | `GET /api/health` | 시연 패널 (확장 · 목업 전용, 봉투) | ⬜ | ✅ | ⬜ | ⬜ |
+| demo | `POST /api/demo/reset` | 시연 패널 (확장 · 목업 전용, 봉투) | ⬜ | ✅ | ⬜ | ⬜ |
 
 - P1 행의 `#번호`는 계약 3-2절 번호다. 목업 사진(재학 인증 업로드)은 메모리에만 있어 새로고침하거나 시연 초기화를 하면 사라진다(운영자 화면은 그때 정적 견본 사진을 보인다, 2B-R9).
 

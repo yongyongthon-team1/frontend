@@ -1,13 +1,14 @@
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { mockNow } from '@/mocks/clock';
 import { clearMockFiles } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { delayBase } from '@/mocks/latency';
 import { MockApiError } from '@/mocks/rules/errors';
 import { SEED_CHECKPOINTS, type SeedCheckpoint } from '@/shared/config/demoAccounts';
-import { api, readBody, withErrors } from './util';
+import { ok, withWire } from '@/mocks/wire/envelope';
+import { api, readBody } from './util';
 
-// 시연 패널용 헬스 체크와 시연 데이터 초기화. 목업의 초기화는 `X-Demo-Key`를 보지 않는다(403은 실서버 전용).
+// 시연 패널용 헬스 체크와 시연 데이터 초기화(목업 전용 확장 엔드포인트, 백엔드 봉투). 목업의 초기화는 `X-Demo-Key`를 보지 않는다(403은 실서버 전용).
 
 const isCheckpoint = (value: unknown): value is SeedCheckpoint =>
   SEED_CHECKPOINTS.includes(value as SeedCheckpoint);
@@ -15,9 +16,9 @@ const isCheckpoint = (value: unknown): value is SeedCheckpoint =>
 export const demoHandlers = [
   http.get(
     api('/health'),
-    withErrors(async () => {
+    withWire(async () => {
       await delayBase();
-      return HttpResponse.json({ ok: true, mode: 'mock' });
+      return ok({ ok: true, mode: 'mock' });
     }),
   ),
 
@@ -25,7 +26,7 @@ export const demoHandlers = [
   // 시드 사용자 id는 늘 같으므로 기존 세션을 새 DB로 옮겨 로그인을 유지한다(새 DB에 없는 사용자의 세션은 버린다).
   http.post(
     api('/demo/reset'),
-    withErrors(async ({ request }) => {
+    withWire(async ({ request }) => {
       await delayBase();
       const checkpoint = (await readBody(request)).checkpoint ?? 'START';
       if (!isCheckpoint(checkpoint)) throw new MockApiError(400, 'VALIDATION');
@@ -35,7 +36,7 @@ export const demoHandlers = [
       mutate((db) => {
         db.sessions = sessions.filter((s) => db.users.some((u) => u.id === s.userId));
       });
-      return HttpResponse.json({ ok: true });
+      return ok({ ok: true });
     }),
   ),
 ];

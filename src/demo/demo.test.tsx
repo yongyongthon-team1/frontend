@@ -11,6 +11,7 @@ import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
 import { DEMO_EMAILS, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { findApplicationId, renderApp } from '@/test/renderApp';
+import { wireFail, wireOk } from '@/test/wire';
 import { useBootStatus } from './bootStatus';
 import { useDemoStore } from './demoStore';
 import { connectDemoSession, quickLogin } from './quickLogin';
@@ -28,6 +29,7 @@ beforeEach(() => {
     mapMode: 'auto',
     lastCoupon: null,
     resetKey: null,
+    resetMissing: false,
     activeDemoEmail: null,
     activeDemoToken: null,
   });
@@ -258,6 +260,99 @@ describe('시연 패널', () => {
     useDemoStore.setState({ enabled: true });
     await renderApp('/', { as: 'student' });
     expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
+  });
+
+  it('헬스가 404면 캠퍼스 조회로 연결을 확인한다', async () => {
+    server.use(
+      http.get('/api/health', () => wireFail('E404')),
+      http.get('/api/campuses', () => wireOk({ items: [] })),
+    );
+    useDemoStore.setState({ enabled: true });
+    await renderApp('/', { as: 'student' });
+    expect(await within(panel()).findByText('정상')).toBeInTheDocument();
+  });
+
+  it('헬스가 404이고 캠퍼스 조회도 실패하면 응답 없음', async () => {
+    server.use(
+      http.get('/api/health', () => wireFail('E404')),
+      http.get('/api/campuses', () => wireFail('E500')),
+    );
+    useDemoStore.setState({ enabled: true });
+    await renderApp('/', { as: 'student' });
+    expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
+  });
+
+  it('헬스가 404 말고 다른 오류면 캠퍼스 조회로 대신하지 않는다', async () => {
+    let campusCalls = 0;
+    server.use(
+      http.get('/api/health', () => wireFail('E500')),
+      http.get('/api/campuses', () => {
+        campusCalls += 1;
+        return wireOk({ items: [] });
+      }),
+    );
+    useDemoStore.setState({ enabled: true });
+    await renderApp('/', { as: 'student' });
+    expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
+    expect(campusCalls).toBe(0);
+  });
+
+  it('초기화가 404면 버튼을 잠그고 사유를 보인다', async () => {
+    const reason = '실서버에는 시연 초기화가 없어요.';
+    let resetCalls = 0;
+    server.use(
+      http.post('/api/demo/reset', () => {
+        resetCalls += 1;
+        return wireFail('E404');
+      }),
+    );
+    useDemoStore.setState({ enabled: true });
+    const { user } = await renderApp('/', { as: 'student' });
+    await user.click(screen.getByRole('button', { name: '시연 데이터 초기화' }));
+
+    const title = await screen.findByText('시연 데이터를 초기화하지 못했어요.');
+    expect(
+      within(title.closest('[data-sonner-toast]') as HTMLElement).getByText(reason),
+    ).toBeInTheDocument();
+    const button = screen.getByRole('button', { name: '시연 데이터 초기화' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(reason);
+    // 실패한 초기화는 아무것도 비우지 않는다(세션 유지).
+    expect(useSession.getState().token).not.toBeNull();
+    expect(useDemoStore.getState().resetMissing).toBe(true);
+    expect(resetCalls).toBe(1);
+  });
+
+  it('초기화를 연타해도 요청은 1번이다', async () => {
+    useDemoStore.setState({ enabled: true });
+    const { user, router } = await renderApp('/', { as: 'student' });
+    setMockLatency({ base: 100, ai: 0 }); // 첫 초기화가 진행 중일 때 두 번째 클릭이 들어오게
+    let resetCalls = 0;
+    server.events.on('request:start', ({ request }) => {
+      if (request.url.endsWith('/api/demo/reset')) resetCalls += 1;
+    });
+    const button = screen.getByRole('button', { name: '시연 데이터 초기화' });
+    await user.dblClick(button);
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(resetCalls).toBe(1);
+  });
+
+  it('초기화 잠금은 패널을 접었다 펴도(다시 그려도) 세션 동안 유지된다', async () => {
+    useDemoStore.setState({ enabled: true, resetMissing: true });
+    await renderApp('/', { as: 'student' });
+    const button = screen.getByRole('button', { name: '시연 데이터 초기화' });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription('실서버에는 시연 초기화가 없어요.');
+  });
+
+  it('초기화가 404 말고 다른 오류면 잠그지 않는다', async () => {
+    server.use(http.post('/api/demo/reset', () => wireFail('E403')));
+    useDemoStore.setState({ enabled: true });
+    const { user } = await renderApp('/', { as: 'student' });
+    await user.click(screen.getByRole('button', { name: '시연 데이터 초기화' }));
+    await screen.findByText('시연 데이터를 초기화하지 못했어요.');
+    expect(screen.getByRole('button', { name: '시연 데이터 초기화' })).toBeEnabled();
+    expect(useDemoStore.getState().resetMissing).toBe(false);
   });
 
   it('목업 워커를 못 켰으면 패널 맨 위에 알린다', async () => {

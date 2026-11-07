@@ -32,6 +32,11 @@ interface DemoState {
   lastCoupon: LastCoupon | null;
   /** 실서버 시연 초기화 키(`?key=` → 헤더 `X-Demo-Key`). */
   resetKey: string | null;
+  /**
+   * 실서버에 `POST /demo/reset`이 없다(404)고 확인됐다. 이 세션 동안 패널의 `시연 데이터 초기화`를 잠근다(2C-R28).
+   * 저장하지 않는다 — 새로고침하면 풀리고, 패널을 접었다 펴거나 다시 그려도 유지된다.
+   */
+  resetMissing: boolean;
   /** 빠른 로그인한 시연 계정. 세션이 끊기면(401) 이 계정으로 한 번 다시 로그인한다. */
   activeDemoEmail: string | null;
   /**
@@ -47,6 +52,7 @@ interface DemoState {
   setMapMode(mapMode: MapMode): void;
   setLastCoupon(coupon: LastCoupon | null): void;
   setResetKey(resetKey: string | null): void;
+  setResetMissing(resetMissing: boolean): void;
   setActiveDemoEmail(email: string | null): void;
   setActiveDemoToken(token: string | null): void;
 }
@@ -61,6 +67,7 @@ export const useDemoStore = create<DemoState>()(
       mapMode: 'auto',
       lastCoupon: null,
       resetKey: null,
+      resetMissing: false,
       activeDemoEmail: null,
       activeDemoToken: null,
       setEnabled: (enabled) => set({ enabled }),
@@ -70,10 +77,18 @@ export const useDemoStore = create<DemoState>()(
       setMapMode: (mapMode) => set({ mapMode }),
       setLastCoupon: (lastCoupon) => set({ lastCoupon }),
       setResetKey: (resetKey) => set({ resetKey }),
+      setResetMissing: (resetMissing) => set({ resetMissing }),
       setActiveDemoEmail: (activeDemoEmail) => set({ activeDemoEmail }),
       setActiveDemoToken: (activeDemoToken) => set({ activeDemoToken }),
     }),
-    { name: DEMO_STORE_KEY },
+    {
+      name: DEMO_STORE_KEY,
+      // `resetMissing`은 이 세션에서만 안다 — 저장하지 않는다.
+      partialize: ({ resetMissing, ...persisted }) => {
+        void resetMissing;
+        return persisted;
+      },
+    },
   ),
 );
 
