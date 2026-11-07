@@ -68,12 +68,10 @@ const NOT_MOCKED: string[] = [
   'GET /admin/verifications',
   'GET /admin/verifications/:verificationId',
   'PATCH /admin/verifications/:verificationId',
-  'GET /tours',
   'POST /tour-wishes',
   'GET /users/me/tour-wishes',
   'PATCH /users/me/tour-wishes/:wishId',
   'GET /tour-wishes',
-  'GET /tours/:tourId',
   'POST /tours',
   'GET /users/me/tours',
   'POST /tours/:tourId/cancel',
@@ -103,8 +101,6 @@ const NOT_MOCKED: string[] = [
 /** 아직 바꾸지 않은 옛 경로(전환 기간). 도메인 태스크가 자기 줄을 지운다. */
 const LEGACY: string[] = [
   'POST /recommendations',
-  'GET /tours',
-  'GET /tours/:id',
   'POST /tours/:id/applications',
   'GET /me/applications',
   'GET /me/applications/:id',

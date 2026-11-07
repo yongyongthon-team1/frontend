@@ -8,7 +8,6 @@ import type { Me } from '@/features/auth/model';
 import { fromWireMe } from '@/features/auth/wire';
 import { computeCouponState, type Coupon } from '@/features/coupons/model';
 import { slotTimes, type Course, type CourseStop } from '@/features/courses/model';
-import type { TourDetail, TourSummary } from '@/features/tours/model';
 import { COURSE_CRITERIA } from '@/mocks/ai/course';
 import { mockNow } from '@/mocks/clock';
 import type { ApplicationRow, CouponRow, CourseStopRow, DB, TourRow } from '@/mocks/db/schema';
@@ -48,27 +47,6 @@ export function toMe(db: DB, userId: number, now: Date = mockNow()): Me {
     toWireMe(db, userId, now),
     db.stores.find((s) => s.ownerId === userId)?.id ?? null,
   );
-}
-
-export function toTourSummary(db: DB, tour: TourRow): TourSummary {
-  return buildTourSummary(db, tour);
-}
-
-/**
- * 탐방 상세. `myApplication`은 요청자의 가장 최근 신청 중 취소되지 않은 것이다(모두 취소했으면 null —
- * 취소 후 재신청은 허용). 오픈채팅 링크는 요청자의 신청이 승인(APPROVED)일 때만 준다.
- */
-export function toTourDetail(db: DB, tour: TourRow, viewerId: number | null): TourDetail {
-  const [mine] = db.applications
-    .filter((a) => a.tourId === tour.id && a.userId === viewerId && a.status !== 'CANCELED')
-    .sort(newestFirst);
-  return {
-    ...buildTourSummary(db, tour),
-    introduction: tour.introduction,
-    guideIntroduction: db.guideProfiles.find((g) => g.id === tour.guideId)?.introduction ?? null,
-    openChatUrl: mine?.status === 'APPROVED' ? tour.openChatUrl : null,
-    myApplication: mine ? { id: mine.id, status: mine.status } : null,
-  };
 }
 
 export function toMyApplication(db: DB, app: ApplicationRow, now: Date): MyApplication {

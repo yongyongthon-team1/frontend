@@ -1,11 +1,12 @@
-import { useQuery, type UseQueryResult } from '@tanstack/react-query';
+import { useQuery, useQueryClient, type UseQueryResult } from '@tanstack/react-query';
+import { loadCampuses } from '@/features/campuses/queries';
 import { qk } from '@/shared/api/queryKeys';
 import { getTour, listTours, recommend } from './api';
 import type {
   RecommendationQuery,
   RecommendationResult,
   TourDetail,
-  TourStatus,
+  TourFilter,
   TourSummary,
 } from './model';
 
@@ -28,13 +29,18 @@ export function useRecommendations(
   });
 }
 
-export function useTours(filter: {
-  status?: TourStatus;
-  universityId?: number;
-}): UseQueryResult<TourSummary[]> {
-  return useQuery({ queryKey: qk.tours(filter), queryFn: () => listTours(filter) });
+export function useTours(filter: TourFilter): UseQueryResult<TourSummary[]> {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: qk.tours(filter),
+    queryFn: async () => listTours(filter, await loadCampuses(queryClient)),
+  });
 }
 
 export function useTour(id: number): UseQueryResult<TourDetail> {
-  return useQuery({ queryKey: qk.tour(id), queryFn: () => getTour(id) });
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: qk.tour(id),
+    queryFn: async () => getTour(id, await loadCampuses(queryClient)),
+  });
 }

@@ -1,12 +1,13 @@
 import type { QueryKey } from '@tanstack/react-query';
 import { act, screen, waitFor } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import type { SeedCheckpoint } from '@/mocks/db/seed';
 import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
 import { DEMO_EMAILS } from '@/shared/config/demoAccounts';
 import { findApplicationId, renderApp } from '@/test/renderApp';
+import { wireFail } from '@/test/wire';
 
 // 판정 24: 창 포커스 · 30초 뒤 재조회가 실패해도 이미 받은 데이터는 그대로 보인다. ErrorState는 데이터가 없을 때만이다.
 // 골든 패스 학생 화면마다 데이터를 받은 뒤 그 쿼리의 재조회를 4xx로 실패시킨다.
@@ -24,13 +25,20 @@ const ROWS: Array<
     queryKey: () => QueryKey,
   ]
 > = [
-  ['탐방 상세', 'START', () => '/tours/1', '이런 경험을 해요', '/api/tours/:id', () => qk.tour(1)],
+  [
+    '탐방 상세',
+    'START',
+    () => '/tours/1',
+    '이런 경험을 해요',
+    '/api/tours/:tourId',
+    () => qk.tour(1),
+  ],
   [
     '탐방 신청서',
     'START',
     () => '/tours/1/apply',
     '탐방에서 하고 싶은 것',
-    '/api/tours/:id',
+    '/api/tours/:tourId',
     () => qk.tour(1),
   ],
   [
@@ -38,7 +46,7 @@ const ROWS: Array<
     'APPLIED',
     () => '/tours/1/apply/done',
     '경희대 국제캠퍼스 산업디자인학과 탐방',
-    '/api/tours/:id',
+    '/api/tours/:tourId',
     () => qk.tour(1),
   ],
   [
@@ -93,11 +101,7 @@ describe('다시 불러오다 실패해도 받은 데이터는 그대로 보인�
       throw error;
     }
 
-    server.use(
-      http.get(failingApi, () =>
-        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
-      ),
-    );
+    server.use(http.get(failingApi, () => wireFail('E403')));
     // 쿼리 관찰자는 상태 변화를 한 틱 뒤에 화면에 알린다 — act 안에서 그 틱까지 기다린 뒤 확인한다.
     await act(async () => {
       await queryClient.refetchQueries({ queryKey: queryKey() });

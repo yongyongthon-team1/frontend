@@ -29,6 +29,15 @@ export interface TourDetail extends TourSummary {
   myApplication: { id: number; status: ApplicationStatus } | null;
 }
 
+/** `GET /tours` 조건. `status`를 빼면 백엔드 기본(RECRUITING)이다. 날짜는 서울 날짜 `yyyy-MM-dd`. */
+export interface TourFilter {
+  status?: TourStatus;
+  universityId?: number;
+  major?: string;
+  dateFrom?: string;
+  dateTo?: string;
+}
+
 export interface RecommendationQuery {
   q: string;
   major?: string;

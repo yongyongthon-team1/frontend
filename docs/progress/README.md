@@ -95,8 +95,8 @@
 | campuses | `GET /api/campuses` (D-01, 백엔드 와이어) | hs-s03, guide-s02 | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses/:campusId/insight` (확장 · 목업 전용, 봉투) | hs-s04, guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `POST /api/recommendations` | hs-s03, hs-s04, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
-| tours | `GET /api/tours?status=&universityId=` | `/explore`(P2). 추천 0건 대체 목록(hs-a06)은 `POST /api/recommendations`가 준다 | ⬜ | ✅ | ⬜ | ⬜ |
-| tours | `GET /api/tours/:id` | hs-s05, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | `GET /api/tours` (T-01 보완, 쿼리 `status · campus_id · major · date_from · date_to · page · size`, 백엔드 와이어) | hs-s03 홈 모집 중 목록, `/explore`(P2). 추천 0건 대체 목록(hs-a06)은 `POST /api/recommendations`가 준다 | ⬜ | ✅ | ⬜ | ⬜ |
+| tours | `GET /api/tours/:tourId` (T-02, 백엔드 와이어) | hs-s05, hs-a04, hs-s06, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | #14 `POST /api/guide/tours` | guide-s02 탐방 개설 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | tours | #15 `GET /api/guide/tours/:id` | guide-s07 탐방 종료 · guide-a04 탐방 취소 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | tours | #16 `POST /api/guide/tours/:id/complete` | guide-s07 탐방 종료 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |

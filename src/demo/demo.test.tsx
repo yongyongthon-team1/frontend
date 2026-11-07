@@ -312,7 +312,8 @@ describe('시연 패널', () => {
       }),
     );
     useDemoStore.setState({ enabled: true });
-    await renderApp('/', { as: 'student' });
+    // 홈은 탐방 목록의 캠퍼스 조인으로 `GET /campuses`를 직접 부른다. 헬스의 대체 호출만 세려고 캠퍼스를 쓰지 않는 화면에서 연다.
+    await renderApp('/me', { as: 'student' });
     expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
     expect(campusCalls).toBe(0);
   });
