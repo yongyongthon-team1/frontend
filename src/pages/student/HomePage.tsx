@@ -17,6 +17,7 @@ import { formatDotDateWeekday } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import { preventImeEnter } from '@/shared/lib/ime';
 import { BrandMark } from '@/shared/ui/BrandMark';
+import { BOTTOM_ACTION_PAGE_TAB_ROOT, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
@@ -118,7 +119,7 @@ export function HomePage() {
     .slice(0, MAX_TOURS);
 
   return (
-    <Page className="pt-6">
+    <Page className={BOTTOM_ACTION_PAGE_TAB_ROOT}>
       <BrandMark variant="wordmark" />
       <PageHeading
         className="mt-3"
@@ -133,37 +134,42 @@ export function HomePage() {
           titleTone="brand-strong"
           footer={<WishFields form={form} campuses={campusList} />}
         />
-        <Button type="submit" className="mt-4" loading={create.isPending}>
-          희망 사항 남기고 탐방 찾기
-        </Button>
-        <p className="mt-2 px-1 text-[13px] text-muted">
-          남긴 희망 사항은 이름 없이 대학생 가이드에게 보여요.
-        </p>
+        {/* 제출은 폼 안의 하단 고정 띠다: 무대 화면에서도 스크롤 없이 보이고, 폼이 끝나 아래 목록에 닿으면 함께 지나간다. */}
+        <BottomAction>
+          <p className="mb-2 px-1 text-[13px] text-muted">
+            남긴 희망 사항은 이름 없이 대학생 가이드에게 보여요.
+          </p>
+          <Button type="submit" loading={create.isPending}>
+            희망 사항 남기고 탐방 찾기
+          </Button>
+        </BottomAction>
       </form>
 
-      <h2 className="mt-7 mb-3 text-lg font-bold text-ink">이번 방학, 이런 탐방은 어때요?</h2>
-      {tours.data === undefined && tours.isError ? (
-        <ErrorState error={tours.error} onRetry={() => void tours.refetch()} />
-      ) : tours.data === undefined ? (
-        <div className="flex flex-col gap-3">
-          <Skeleton className="h-[90px] rounded-[18px]" />
-        </div>
-      ) : open.length === 0 ? (
-        <EmptyState title="지금 모집 중인 탐방이 없어요" />
-      ) : (
-        <ul aria-label="모집 중인 탐방" className="flex flex-col gap-3">
-          {open.map((tour) => (
-            <li key={tour.id}>
-              <ListRow
-                to={`/tours/${tour.id}`}
-                eyebrow={campusLabel(tour.universityName, tour.campusName)}
-                title={tour.title}
-                meta={`${formatDotDateWeekday(tour.startsAt)} · ${tour.remainingSeats}자리 남음`}
-              />
-            </li>
-          ))}
-        </ul>
-      )}
+      <div className="pb-6">
+        <h2 className="mt-7 mb-3 text-lg font-bold text-ink">이번 방학, 이런 탐방은 어때요?</h2>
+        {tours.data === undefined && tours.isError ? (
+          <ErrorState error={tours.error} onRetry={() => void tours.refetch()} />
+        ) : tours.data === undefined ? (
+          <div className="flex flex-col gap-3">
+            <Skeleton className="h-[90px] rounded-[18px]" />
+          </div>
+        ) : open.length === 0 ? (
+          <EmptyState title="지금 모집 중인 탐방이 없어요" />
+        ) : (
+          <ul aria-label="모집 중인 탐방" className="flex flex-col gap-3">
+            {open.map((tour) => (
+              <li key={tour.id}>
+                <ListRow
+                  to={`/tours/${tour.id}`}
+                  eyebrow={campusLabel(tour.universityName, tour.campusName)}
+                  title={tour.title}
+                  meta={`${formatDotDateWeekday(tour.startsAt)} · ${tour.remainingSeats}자리 남음`}
+                />
+              </li>
+            ))}
+          </ul>
+        )}
+      </div>
     </Page>
   );
 }

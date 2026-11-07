@@ -68,14 +68,16 @@ export function TourResultsPage() {
   const results = useWishTours(search);
   const campuses = useUniversities();
 
-  // 탐방 상세의 `다른 탐방 보기`가 이 결과 화면으로 돌아오게 마지막 검색을 기억한다.
+  const campus = campuses.data?.find((u) => u.id === search?.universityId);
+
+  // 탐방 상세의 `다른 탐방 보기`가 이 결과 화면으로 돌아오게 마지막 검색을 기억한다. 캠퍼스 목록에서 학교를 찾은 뒤에만
+  // 기억한다 — 목록에 없는 학교는 틀린 검색이라 아래에서 홈으로 보낸다.
   useEffect(() => {
-    if (search) setLastSearch(toWishSearch(search));
-  }, [search, setLastSearch]);
+    if (search && campus) setLastSearch(toWishSearch(search));
+  }, [search, campus, setLastSearch]);
 
   if (search === null) return <Navigate to="/" replace />;
 
-  const campus = campuses.data?.find((u) => u.id === search.universityId);
   // 캠퍼스 목록에 없는 학교도 틀린 검색이다(학교 이름을 보일 수 없다).
   if (campuses.data !== undefined && campus === undefined) return <Navigate to="/" replace />;
 
@@ -86,9 +88,13 @@ export function TourResultsPage() {
     return (
       <Page className="pt-2">
         <BackRow to={backToForm} />
-        {/* 제목 두 줄 + 설명 한 줄 자리(결과가 오면 같은 높이의 글로 바뀐다). */}
-        <Skeleton className="h-[72px] w-3/4" />
-        <Skeleton className="mt-2 h-4 w-1/2" />
+        {/* 제목 두 줄 + 설명 한 줄 자리(결과가 오면 같은 높이의 글로 바뀐다). 오류일 때는 거둔다. */}
+        {results.isError ? null : (
+          <>
+            <Skeleton className="h-[72px] w-3/4" />
+            <Skeleton className="mt-2 h-4 w-1/2" />
+          </>
+        )}
         <WishCard search={search} campus={campus} />
         {results.isError ? (
           <div className="mt-4">

@@ -102,6 +102,23 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     expect(field('희망 날짜 (선택)')).toHaveValue('');
   });
 
+  it('시연 도구가 켜져 있어도 캠퍼스 목록에 id 2가 없으면 학교는 비워 두고 학과 · 희망 사항만 채운다', async () => {
+    act(() => useDemoStore.setState({ enabled: true }));
+    server.use(
+      http.get('/api/campuses', () => {
+        const db = getDb();
+        return wireOk({
+          items: db.universities.filter((u) => u.id !== 2).map((u) => toWireCampus(db, u)),
+        });
+      }),
+    );
+    await renderApp('/', { as: 'student' });
+    await screen.findByRole('option', { name: '강남대학교' });
+    await waitFor(() => expect(field('학과')).toHaveValue('산업디자인'));
+    expect(field('탐방 희망 사항')).toHaveValue(DEMO_WISH.wish);
+    expect(field('학교')).toHaveValue('');
+  });
+
   it('칸을 건드린 뒤에는 늦게 온 캠퍼스 목록으로 학교를 채우지 않는다(2C-R19)', async () => {
     act(() => useDemoStore.setState({ enabled: true }));
     let release: () => void = () => {};
@@ -220,6 +237,33 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     expect(router.state.location.pathname).toBe('/');
     expect(submitButton()).toBeEnabled();
   });
+
+  it.each([
+    ['major', '학과', '학과를 확인해 주세요.'],
+    ['wish', '탐방 희망 사항', '희망 사항을 확인해 주세요.'],
+    ['date', '희망 날짜 (선택)', '날짜를 확인해 주세요.'],
+  ])(
+    '서버 칸 오류(E400 · %s)는 그 칸 아래 문구로 보이고 이동하지 않는다',
+    async (name, label, reason) => {
+      act(() => useDemoStore.setState({ enabled: true }));
+      server.use(
+        http.post('/api/tour-wishes', () =>
+          wireFail('E400', { errors: [{ field: name, reason }] }),
+        ),
+      );
+      const { user, router } = await renderApp('/', { as: 'student' });
+      await campusesLoaded();
+      await waitFor(() => expect(field('학교')).toHaveValue('2'));
+      await user.click(submitButton());
+      // 희망 사항 칸은 안내(`한두 문장 · 100자 이내`)도 설명에 같이 든다.
+      await waitFor(() =>
+        expect(field(label)).toHaveAccessibleDescription(expect.stringContaining(reason)),
+      );
+      expect(field(label)).toBeInvalid();
+      expect(router.state.location.pathname).toBe('/');
+      expect(submitButton()).toBeEnabled();
+    },
+  );
 
   it('칸 오류가 없는 실패는 토스트로 알린다', async () => {
     act(() => useDemoStore.setState({ enabled: true }));

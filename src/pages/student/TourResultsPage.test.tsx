@@ -104,6 +104,8 @@ describe('탐방 찾기 결과 (T-01 · hs-s04)', () => {
   it('캠퍼스 목록에 없는 학교도 틀린 검색이라 홈으로', async () => {
     const { router } = await renderApp(`/tours?${search({ universityId: 99 })}`, { as: 'student' });
     await waitFor(() => expect(router.state.location.pathname).toBe('/'));
+    // 홈으로 보낸 틀린 학교는 마지막 검색으로 기억하지 않는다.
+    expect(useLastQuery.getState().search).toBeNull();
   });
 
   it('뒤로 가기는 같은 검색으로 홈(`/?{search}`), 들어오면 마지막 검색으로 기억한다', async () => {
@@ -113,7 +115,8 @@ describe('탐방 찾기 결과 (T-01 · hs-s04)', () => {
       'href',
       `/?${s}`,
     );
-    expect(useLastQuery.getState().search).toBe(s);
+    // 캠퍼스 목록이 와서 학교를 찾은 뒤에 기억한다.
+    await waitFor(() => expect(useLastQuery.getState().search).toBe(s));
   });
 
   it('목록을 받는 동안 원문 카드는 바로 보이고 목록 자리는 Skeleton', async () => {
@@ -144,6 +147,8 @@ describe('탐방 찾기 결과 (T-01 · hs-s04)', () => {
     server.use(http.get('/api/tours', () => wireFail('E500')));
     const { user } = await renderApp(`/tours?${search()}`, { as: 'student' });
     const alert = await screen.findByRole('alert', {}, { timeout: 3000 });
+    // 오류일 때는 제목 자리 Skeleton을 거두고 ErrorState만 남는다.
+    expect(screen.queryAllByTestId('skeleton')).toHaveLength(0);
     expect(within(wishCard()).getByTestId('wish-text').textContent).toBe(RAW_WISH);
     server.resetHandlers();
     await user.click(within(alert).getByRole('button', { name: '다시 시도' }));

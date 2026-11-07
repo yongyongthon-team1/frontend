@@ -182,7 +182,9 @@ function NoApplicants({ tour }: { tour: GuideTourSummary }) {
           ☺
         </span>
         <h2 className="mt-3 text-lg font-bold text-ink">첫 신청을 기다리는 중</h2>
-        <p className="mt-1 text-[13px] text-muted">모집 중인 탐방이 학생의 추천 화면에 노출돼요.</p>
+        <p className="mt-1 text-[13px] text-muted">
+          모집 중인 탐방이 학생의 탐방 찾기 결과에 노출돼요.
+        </p>
       </section>
 
       <section aria-label="모집 중인 탐방" className="mt-4 rounded-xl bg-surface p-5">

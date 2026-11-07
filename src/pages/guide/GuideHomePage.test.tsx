@@ -79,7 +79,9 @@ describe('가이드 홈 (G01 · G11)', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('학생들이 찾기 쉽도록 탐방 소개를 점검해 봐요.')).toBeInTheDocument();
     expect(screen.getByText('첫 신청을 기다리는 중')).toBeInTheDocument();
-    expect(screen.getByText('모집 중인 탐방이 학생의 추천 화면에 노출돼요.')).toBeInTheDocument();
+    expect(
+      screen.getByText('모집 중인 탐방이 학생의 탐방 찾기 결과에 노출돼요.'),
+    ).toBeInTheDocument();
     expect(screen.getByText('모집 중')).toBeInTheDocument();
     expect(screen.getByText(/^\d{2}\.\d{2} \([월화수목금토일]\) · 정원 5명$/)).toBeInTheDocument();
     expect(

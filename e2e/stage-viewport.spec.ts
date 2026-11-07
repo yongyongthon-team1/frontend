@@ -85,11 +85,24 @@ async function expectVisibleWithoutScroll(page: Page, targets: Locator[], name: 
 
 for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
   const stage = `${width}x${height}@${deviceScaleFactor}x`;
-  const screenshot = (page: Page, n: number) =>
+  const screenshot = (page: Page, n: number | string) =>
     page.screenshot({ path: path.join(test.info().project.outputDir, `stage-${stage}-${n}.png`) });
 
   test.describe(`무대 ${stage}`, () => {
     test.use({ viewport: { width, height }, deviceScaleFactor });
+
+    test('① 희망 사항 등록: 제출 버튼', async ({ page }) => {
+      await page.goto('/?demo=1&reset=1&as=student');
+      // 시연 도구가 켜져 있어 칸이 미리 채워진다 — 학교까지 채워진 뒤의 홈이 무대 장면이다.
+      await expect(page.getByLabel('학교', { exact: true })).toHaveValue(
+        String(DEMO_WISH.universityId),
+      );
+      const submit = page
+        .getByRole('main')
+        .getByRole('button', { name: '희망 사항 남기고 탐방 찾기' });
+      await expectVisibleWithoutScroll(page, [submit], '① 희망 사항 등록');
+      await screenshot(page, '1-wish');
+    });
 
     test('① 탐방 찾기: 희망 원문 카드와 첫 탐방 행', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&as=student');
