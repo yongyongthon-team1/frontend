@@ -4,23 +4,18 @@ import type { CourseStopRow, DB } from '@/mocks/db/schema';
 import { partnershipOn } from '@/mocks/rules/courses';
 import { MockApiError } from '@/mocks/rules/errors';
 import { seoulDateKey } from '@/shared/lib/date';
+import { averageRating, latestReviewSummary } from './reviews';
 
 // 코스 행 → 와이어 객체(`ok`가 키를 snake로 바꾼다). 도메인 객체를 만들던 `toCourse` · `toCourseStop`의 자리(2C-R26).
 // 확장(2C-R8): 스팟의 `spotId` · `discountText`(제휴만) · `reviewAverage` · `reviewCount`(상점만), 코스의 `couponCount`.
 
-/** 리뷰 평균은 소수 첫째 자리(리뷰가 없으면 null), 요약은 가장 최근 것(없으면 null). */
+/** 리뷰 평균은 소수 첫째 자리(리뷰가 없으면 null), 요약은 가장 최근 것(없으면 null). 판정은 `mocks/wire/reviews` 하나다(errata PM1). */
 function reviewOf(db: DB, storeId: number) {
   const ratings = db.reviews.filter((r) => r.storeId === storeId).map((r) => r.rating);
-  const [latest] = db.reviewSummaries
-    .filter((s) => s.storeId === storeId)
-    .sort((a, b) => Date.parse(b.generatedAt) - Date.parse(a.generatedAt) || b.id - a.id);
   return {
-    average:
-      ratings.length === 0
-        ? null
-        : Math.round((ratings.reduce((sum, r) => sum + r, 0) / ratings.length) * 10) / 10,
+    average: averageRating(ratings),
     count: ratings.length,
-    summary: latest?.summary ?? null,
+    summary: latestReviewSummary(db, storeId)?.summary ?? null,
   };
 }
 

@@ -28,6 +28,7 @@ import {
 } from '@/features/courses/api';
 import { COURSE_CRITERIA } from '@/features/courses/model';
 import { buildSpots } from '@/features/courses/spots';
+import { getStoreReviews, postReview } from '@/features/reviews/api';
 import { getMyStore } from '@/features/stores/api';
 import { findWishTours, getTour, listTours } from '@/features/tours/api';
 import type { TourFilter } from '@/features/tours/model';
@@ -39,6 +40,7 @@ import { createDraft } from '@/mocks/rules/courses';
 import { fieldError, MockApiError } from '@/mocks/rules/errors';
 import { server } from '@/mocks/node';
 import { testImage } from '@/test/files';
+import { redeemDemoCoupon } from '@/test/renderApp';
 import {
   GUIDE_PROFILE_OK,
   LOGIN_FAILED,
@@ -73,6 +75,12 @@ import {
   REDEEM_EXPIRED,
   REDEEM_OK,
 } from '@/test/fixtures/backend/coupons';
+import {
+  REVIEW_ALREADY,
+  REVIEW_CREATED,
+  REVIEW_NOT_USED,
+  STORE_REVIEWS,
+} from '@/test/fixtures/backend/reviews';
 import { MY_STORE } from '@/test/fixtures/backend/stores';
 import { TOUR_DETAIL, TOURS_LIST } from '@/test/fixtures/backend/tours';
 import {
@@ -1707,6 +1715,171 @@ describe('coupons', () => {
       status: 409,
       code: 'COUPON_DAILY_LIMIT',
     });
+  });
+});
+
+describe('reviews', () => {
+  // R-02 상점 리뷰 · 요약 조회와 R-01 리뷰 작성. 저장하면 목업이 그 상점의 요약을 바로 다시 만든다(2B′-R18).
+  const campuses = () => listCampuses();
+  type Envelope = { code: string; data: Record<string, unknown> | null };
+
+  it('R-02: 시드 상점 1 — 전체 수 5 · 평균 4.6 · 시드 요약, 최근 3개(시각이 같아 id 내림차순)', async () => {
+    await login('student@demo.kr');
+    const reviews = await getStoreReviews(1);
+    expect(reviews).toMatchObject({
+      count: 5,
+      average: 4.6,
+      summary:
+        '학생들은 양이 넉넉하고 사장님이 친절하다고 해요. 시험 기간엔 줄이 길다는 평이 있어요.',
+    });
+    expect(reviews.items).toHaveLength(3);
+    expect(reviews.items[0]).toMatchObject({
+      rating: 4,
+      content: '시험 기간엔 사람이 많지만 음식은 빨리 나와요.',
+      author: '한*영',
+    });
+    const ids = reviews.items.map((r) => r.id);
+    expect(ids).toEqual([...ids].sort((a, b) => b - a));
+  });
+
+  it('R-02: 가이드 · 사장님도 읽는다(로그인한 누구나), 로그인 없이는 401, 없는 상점은 NOT_FOUND', async () => {
+    await login('guide@demo.kr');
+    expect((await getStoreReviews(2)).count).toBe(5);
+    await login('owner1@demo.kr');
+    expect((await getStoreReviews(1)).count).toBe(5);
+    await expect(getStoreReviews(999)).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+    configureHttp({ getToken: () => null });
+    await expect(getStoreReviews(1)).rejects.toMatchObject({ status: 401 });
+  });
+
+  it('R-02 와이어: 명세 예시와 같은 모양, 쪽 매개변수가 요청대로 나간다', async () => {
+    const student = await login('student@demo.kr');
+    const res = await rawFetch<Envelope>('/stores/1/reviews', {
+      method: 'GET',
+      token: student.token,
+    });
+    expect([res.status, res.body.code]).toEqual([200, 'S200']);
+    expectWireShape(res.body.data, STORE_REVIEWS.data);
+    expect(res.body.data).toMatchObject({ review_count: 5, page: 1, size: 20, total: 5 });
+    const paged = await rawFetch<Envelope>('/stores/1/reviews?page=2&size=2', {
+      method: 'GET',
+      token: student.token,
+    });
+    expect(paged.body.data).toMatchObject({ page: 2, size: 2, total: 5, review_count: 5 });
+    expect((paged.body.data as { items: unknown[] }).items).toHaveLength(2);
+  });
+
+  it('R-01: 쓰면 공백을 뺀 내용이 저장되고 요약 · 수 · 코스 지점이 바뀐다', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    await login('student@demo.kr');
+    const couponId = redeemDemoCoupon(1);
+    const created = await postReview({
+      storeId: 1,
+      couponId,
+      rating: 4,
+      content: '  양이 많아요  ',
+    });
+    expect(created).toMatchObject({ storeId: 1, rating: 4, content: '양이 많아요' });
+
+    const reviews = await getStoreReviews(1);
+    expect(reviews.count).toBe(6);
+    expect(reviews.average).toBe(4.5);
+    expect(reviews.summary).toContain('"양이 많아요"');
+    expect(reviews.summary).toContain('학생 6명이');
+    expect(reviews.items[0]).toMatchObject({
+      id: created.id,
+      content: '양이 많아요',
+      author: '김*지',
+    });
+
+    const course = await getCourse(1, campuses());
+    const spot = course.stops.find((s) => s.storeId === 1)!;
+    expect(spot.review).toMatchObject({ count: 6, average: 4.5 });
+    expect(
+      (await getMyCoupons(undefined, campuses())).find((c) => c.id === couponId)!.reviewWritten,
+    ).toBe(true);
+  });
+
+  it('R-01: 두 번째는 REVIEW_DUPLICATE(E409_ALREADY_REVIEWED), ISSUED 쿠폰은 REVIEW_NOT_ALLOWED(E403_COUPON_NOT_USED)', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    await login('student@demo.kr');
+    const couponId = redeemDemoCoupon(1);
+    await postReview({ storeId: 1, couponId, rating: 5, content: '좋아요' });
+    await expect(
+      postReview({ storeId: 1, couponId, rating: 5, content: '또 좋아요' }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'REVIEW_DUPLICATE',
+      backendCode: 'E409_ALREADY_REVIEWED',
+    });
+
+    const issued = getDb().coupons.find((c) => c.storeId === 2 && c.status === 'ISSUED')!;
+    await expect(
+      postReview({ storeId: 2, couponId: issued.id, rating: 5, content: '아직 안 썼어요' }),
+    ).rejects.toMatchObject({
+      status: 403,
+      code: 'REVIEW_NOT_ALLOWED',
+      backendCode: 'E403_COUPON_NOT_USED',
+    });
+  });
+
+  it('R-01: 칸 오류는 fieldErrors, 가이드는 FORBIDDEN', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    await login('student@demo.kr');
+    const couponId = redeemDemoCoupon(1);
+    await expect(
+      postReview({ storeId: 1, couponId, rating: 6, content: '좋아요' }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      fieldErrors: { rating: '별점은 1~5점으로 골라 주세요.' },
+    });
+    await expect(
+      postReview({ storeId: 1, couponId, rating: 5, content: '   ' }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      fieldErrors: { content: '한 줄 평은 1~100자로 적어 주세요.' },
+    });
+    await expect(
+      postReview({ storeId: 999, couponId, rating: 5, content: '좋아요' }),
+    ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+    await login('guide@demo.kr');
+    await expect(
+      postReview({ storeId: 1, couponId, rating: 5, content: '좋아요' }),
+    ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+  });
+
+  it('R-01 와이어: 201 + 명세 예시와 같은 모양, 오류 봉투 코드는 명세와 같다', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    const student = await login('student@demo.kr');
+    const couponId = redeemDemoCoupon(1);
+    const post = (body: unknown) =>
+      rawFetch<Envelope>('/stores/1/reviews', { method: 'POST', token: student.token, body });
+    const created = await post({ coupon_id: couponId, rating: 5, content: '양도 많고 맛있었어요' });
+    expect([created.status, created.body.code]).toEqual([201, 'S201']);
+    expectWireShape(created.body.data, REVIEW_CREATED.data);
+    expect(created.body.data).toMatchObject({
+      store_id: 1,
+      rating: 5,
+      content: '양도 많고 맛있었어요',
+    });
+
+    const again = await post({ coupon_id: couponId, rating: 5, content: '또' });
+    expect([again.status, again.body.code, again.body.data]).toEqual([
+      409,
+      REVIEW_ALREADY.code,
+      REVIEW_ALREADY.data,
+    ]);
+    const issued = getDb().coupons.find((c) => c.storeId === 1 && c.status === 'ISSUED');
+    const notUsed = await rawFetch<Envelope>('/stores/2/reviews', {
+      method: 'POST',
+      token: student.token,
+      body: { coupon_id: issued?.id ?? 999999, rating: 5, content: '아직' },
+    });
+    expect([notUsed.status, notUsed.body.code, notUsed.body.data]).toEqual([
+      403,
+      REVIEW_NOT_USED.code,
+      REVIEW_NOT_USED.data,
+    ]);
   });
 });
 

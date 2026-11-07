@@ -10,7 +10,9 @@ import { handleUnauthorized, registerQueryClient, useSession } from '@/features/
 import type { DB } from '@/mocks/db/schema';
 import { DEMO_TOUR_ID, type SeedCheckpoint } from '@/mocks/db/seed';
 import { createSession, getDb, mutate, resetDb } from '@/mocks/db/store';
-import { DEMO_EMAILS, type DemoRole } from '@/shared/config/demoAccounts';
+import { mockNow } from '@/mocks/clock';
+import { redeemCoupon } from '@/mocks/rules/coupons';
+import { DEMO_EMAILS, DEMO_STORE_OWNERS, type DemoRole } from '@/shared/config/demoAccounts';
 import { configureHttp } from '@/shared/lib/http';
 
 // 화면 테스트 하네스. 실제 앱과 같은 라우트 · 프로바이더 · HTTP 클라이언트를 메모리 라우터로 그린다(API는 MSW 목업).
@@ -88,4 +90,25 @@ export function demoCouponCode(storeId: number): string {
   );
   if (!coupon) throw new Error(`demoCouponCode: 상점 ${storeId}의 ISSUED 쿠폰이 없어요.`);
   return coupon.code;
+}
+
+/**
+ * `checkpoint: 'CONFIRMED'` 뒤, 그 학생의 탐방 1 신청에 발급된 그 상점의 ISSUED 쿠폰을 상점 사장님(`DEMO_STORE_OWNERS`)이 사용 처리해
+ * `USED`로 만들고 쿠폰 id를 돌려준다. 전역 목업 DB를 바꾸므로 핸들러 · api · 화면 테스트에서만 쓴다(규칙 테스트는 지역 DB에서 `redeemCoupon`).
+ */
+export function redeemDemoCoupon(storeId: number, email = DEMO_EMAILS.student): number {
+  const code = (() => {
+    const db = getDb();
+    const applicationId = findApplicationId(email, DEMO_TOUR_ID);
+    const coupon = db.coupons.find(
+      (c) => c.applicationId === applicationId && c.storeId === storeId && c.status === 'ISSUED',
+    );
+    if (!coupon) throw new Error(`redeemDemoCoupon: 상점 ${storeId}의 ISSUED 쿠폰이 없어요.`);
+    return coupon.code;
+  })();
+  const ownerEmail = DEMO_STORE_OWNERS[storeId];
+  return mutate((db) => {
+    redeemCoupon(db, userIdOf(db, ownerEmail), code, mockNow());
+    return db.coupons.find((c) => c.code === code)!.id;
+  });
 }

@@ -3,7 +3,7 @@ import { fieldError, MockApiError } from '@/mocks/rules/errors';
 import { ERROR_CODES, resolveErrorCode, type ErrorCode } from '@/shared/lib/errors';
 import { wireFail, wireOk } from '@/test/wire';
 import { LOSSY_CODES, toBackendError } from './errorCodes';
-import { fail, ok, okItems, okPage, withWire } from './envelope';
+import { fail, ok, okItems, okPage, pageOf, withWire } from './envelope';
 
 const TIMESTAMP = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\+09:00$/;
 
@@ -37,6 +37,17 @@ describe('ok', () => {
     const b = (await wireOk({ tour_id: 1 }).json()) as Record<string, unknown>;
     expect({ ...a, timestamp: 0 }).toEqual({ ...b, timestamp: 0 });
     expect(b.timestamp).toMatch(TIMESTAMP);
+  });
+});
+
+describe('pageOf', () => {
+  it('쪽을 자르고 { items, page, size, total }을 낸다(okPage의 자르기 규칙)', () => {
+    expect(pageOf(['a', 'b', 'c'], new URLSearchParams('page=2&size=2'))).toEqual({
+      items: ['c'],
+      page: 2,
+      size: 2,
+      total: 3,
+    });
   });
 });
 

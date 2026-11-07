@@ -30,12 +30,20 @@ function positiveInt(raw: string | null, fallback: number): number {
   return raw !== null && Number.isInteger(n) && n >= 1 ? n : fallback;
 }
 
-/** 목록 봉투 `data: { items, page, size, total }`. `page` 기본 1, `size` 기본 20 · 최대 50. `items`는 전체 목록이고 여기서 자른다. */
-export function okPage(items: unknown[], search: URLSearchParams): Response {
+/** 목록 봉투의 `data`: `page` 기본 1, `size` 기본 20 · 최대 50. `items`는 전체 목록이고 여기서 자른다. 목록 말고 쪽 정보가 필요한 응답(리뷰 R-02)도 쓴다. */
+export function pageOf<T>(
+  items: T[],
+  search: URLSearchParams,
+): { items: T[]; page: number; size: number; total: number } {
   const page = positiveInt(search.get('page'), 1);
   const size = Math.min(positiveInt(search.get('size'), DEFAULT_PAGE_SIZE), MAX_PAGE_SIZE);
   const start = (page - 1) * size;
-  return ok({ items: items.slice(start, start + size), page, size, total: items.length });
+  return { items: items.slice(start, start + size), page, size, total: items.length };
+}
+
+/** 목록 봉투 `data: { items, page, size, total }`(`pageOf`). */
+export function okPage(items: unknown[], search: URLSearchParams): Response {
+  return ok(pageOf(items, search));
 }
 
 /** 쪽 없는 목록 봉투 `data: { items }`. */

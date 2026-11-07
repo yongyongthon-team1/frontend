@@ -2,6 +2,7 @@ import { slotTimes } from '@/features/courses/model';
 import { distanceMeters } from '@/mocks/db/geo';
 import type { CampusPlaceRow, CourseStopRow, DB, StoreRow } from '@/mocks/db/schema';
 import { MockApiError } from '@/mocks/rules/errors';
+import { latestReviewSummary } from '@/mocks/wire/reviews';
 import { seoulDateKey } from '@/shared/lib/date';
 import {
   extractInterests,
@@ -58,9 +59,7 @@ function campusPlace(
 
 /** 상점 리뷰 요약(가장 최근 것)의 첫 문장. 요약이 없으면 null. */
 function summaryLead(db: DB, storeId: number): string | null {
-  const [latest] = db.reviewSummaries
-    .filter((s) => s.storeId === storeId)
-    .sort((a, b) => Date.parse(b.generatedAt) - Date.parse(a.generatedAt) || b.id - a.id);
+  const latest = latestReviewSummary(db, storeId);
   if (!latest) return null;
   const text = latest.summary.trim();
   return /^.*?[.!?](?=\s|$)/.exec(text)?.[0] ?? text;

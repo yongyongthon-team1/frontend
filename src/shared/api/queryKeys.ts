@@ -26,6 +26,10 @@ export const qk = {
   /** 내 쿠폰 목록 · 상세 전부의 접두사(무효화용). */
   allMyCoupons: ['myCoupons'] as const,
   course: (tourId: number) => ['course', tourId] as const,
+  /** 코스 전부의 접두사(무효화용). */
+  allCourses: ['course'] as const,
+  /** 상점의 AI 요약 · 평균 · 최근 리뷰(R-02). */
+  storeReviews: (storeId: number) => ['storeReviews', storeId] as const,
   guideTours: ['guideTours'] as const,
   applicants: (tourId: number) => ['applicants', tourId] as const,
   /** 가이드의 신청자 보드 전부의 접두사(무효화용). */
