@@ -1,10 +1,10 @@
-import { screen, waitFor, within } from '@testing-library/react';
+import { act, screen, waitFor, within } from '@testing-library/react';
 import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
 import { addDaysKey, formatMonthDay, seoulDateKey } from '@/shared/lib/date';
-import { renderApp } from '@/test/renderApp';
+import { demoCouponCode, renderApp } from '@/test/renderApp';
 import { wireFail, wireOk } from '@/test/wire';
 
 /**
@@ -57,6 +57,39 @@ describe('사장님 방문 · 리뷰 리포트 (S-07, owner-s04)', () => {
     expect(
       within(list).getByText('시험 기간엔 사람이 많지만 음식은 빨리 나와요.'),
     ).toBeInTheDocument();
+  });
+
+  it('기간 안 방문이 0이어도 전체 리뷰가 있으면 빈 상태 대신 AI 요약과 최근 리뷰를 보인다', async () => {
+    await renderReport('owner1@demo.kr', (db) => {
+      for (const c of db.coupons) {
+        if (c.storeId === 1 && c.status === 'USED') c.usedAt = '2000-01-01T10:00:00+09:00';
+      }
+    });
+    expect(await screen.findByText('0명')).toBeInTheDocument();
+    expect(screen.getByText('5개')).toBeInTheDocument();
+    expect(screen.getByText(SEED_SUMMARY)).toBeInTheDocument();
+    expect(
+      within(screen.getByRole('list', { name: '최근 리뷰' })).getAllByRole('listitem'),
+    ).toHaveLength(3);
+    expect(screen.queryByText('아직 탐방으로 온 학생이 없어요')).not.toBeInTheDocument();
+  });
+
+  it('쿠폰을 사용 처리한 뒤 30초 안에 돌아와도 방문 수가 바로 늘어 있다', async () => {
+    const { user, router } = await renderApp('/owner/report', {
+      as: 'owner1@demo.kr',
+      checkpoint: 'CONFIRMED',
+    });
+    expect(await screen.findByText('5명')).toBeInTheDocument();
+
+    await act(() => router.navigate('/owner/coupons/redeem'));
+    await user.type(await screen.findByLabelText('6자리 쿠폰 코드'), demoCouponCode(1));
+    const button = await screen.findByRole('button', { name: '사용 처리하기' });
+    await waitFor(() => expect(button).toBeEnabled());
+    await user.click(button);
+    await screen.findByRole('heading', { name: '쿠폰 사용이 완료됐어요.' });
+
+    await act(() => router.navigate('/owner/report'));
+    expect(await screen.findByText('6명')).toBeInTheDocument();
   });
 
   it('요약이 아직 없으면 안내 문구만 보이고 캡션은 없다', async () => {
