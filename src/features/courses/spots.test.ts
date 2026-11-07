@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import type { Course, CourseStop } from './model';
+import { COURSE_NOTE_MAX, slotTimes, type Course, type CourseStop } from './model';
 import { buildSpots } from './spots';
 
 const stop = (patch: Partial<CourseStop> & Pick<CourseStop, 'id' | 'order'>): CourseStop => ({
@@ -84,5 +84,68 @@ describe('buildSpots (2C-R13)', () => {
         'reorder: 지점 id가 맞지 않아요',
       );
     }
+  });
+
+  describe('경계', () => {
+    const only = (patch: Partial<CourseStop> = {}): Course => ({
+      ...COURSE,
+      stops: [stop({ id: 9, order: 1, storeId: 209, ...patch })],
+    });
+
+    it('지점이 하나뿐이면 reorder는 그대로이고 한줄평 편집은 된다', () => {
+      expect(buildSpots(only(), { kind: 'reorder', stopIds: [9] })).toEqual([
+        { stopType: 'STORE', storeId: 209, startTime: '14:00' },
+      ]);
+      expect(buildSpots(only(), { kind: 'note', stopId: 9, description: '혼자 있는 곳' })).toEqual([
+        { stopType: 'STORE', storeId: 209, startTime: '14:00', comment: '혼자 있는 곳' },
+      ]);
+    });
+
+    it('다섯 곳 넘게 있으면 다섯째 뒤로는 50분씩(slotTimes와 같다)', () => {
+      const seven: Course = {
+        ...COURSE,
+        stops: Array.from({ length: 7 }, (_, i) =>
+          stop({ id: i + 1, order: i + 1, storeId: 300 + i }),
+        ),
+      };
+      const spots = buildSpots(seven, { kind: 'note', stopId: 1, description: '' });
+      const times = spots.map((s) => s.startTime);
+      expect(times).toEqual(['14:00', '15:10', '16:00', '16:50', '17:40', '18:30', '19:20']);
+      expect(times).toEqual(slotTimes(seven.tour.startsAt, 7));
+    });
+
+    it('이미 같은 순서면 reorder는 그대로, 첫 지점을 위로 · 마지막 지점을 아래로 옮기려는 id 목록은 던진다', () => {
+      const same = buildSpots(COURSE, { kind: 'reorder', stopIds: [1, 2, 3] });
+      expect(same).toEqual(buildSpots(COURSE, { kind: 'note', stopId: 1, description: '' }));
+      expect(same.map((s) => s.startTime)).toEqual(['14:00', '15:10', '16:00']);
+      // 화면의 `move`는 자리 바꿈이라 가장자리 밖은 undefined가 끼는데, 버튼이 막지만 빌더도 받지 않는다.
+      for (const stopIds of [
+        [undefined, 1, 2],
+        [2, 3, undefined],
+      ]) {
+        expect(() =>
+          buildSpots(COURSE, { kind: 'reorder', stopIds: stopIds as unknown as number[] }),
+        ).toThrow('reorder: 지점 id가 맞지 않아요');
+      }
+    });
+
+    it(`한줄평은 ${COURSE_NOTE_MAX}자까지 그대로 보내고, 비우면 comment 키가 없다`, () => {
+      const exact = 'ㄱ'.repeat(COURSE_NOTE_MAX);
+      const withNote = buildSpots(only(), { kind: 'note', stopId: 9, description: exact });
+      expect(withNote[0]).toHaveProperty('comment', exact);
+      const cleared = buildSpots(only({ description: exact }), {
+        kind: 'note',
+        stopId: 9,
+        description: '',
+      });
+      expect(cleared[0]).toEqual({ stopType: 'STORE', storeId: 209, startTime: '14:00' });
+      expect(cleared[0]).not.toHaveProperty('comment');
+    });
+
+    it('캠퍼스 지점은 다시 보낼 때도 campusBuildingId로 보낸다(storeId 없이)', () => {
+      const spots = buildSpots(COURSE, { kind: 'reorder', stopIds: [2, 3, 1] });
+      expect(spots[2]).toEqual({ stopType: 'CAMPUS', campusBuildingId: 3, startTime: '16:00' });
+      expect(spots[2]).not.toHaveProperty('storeId');
+    });
   });
 });

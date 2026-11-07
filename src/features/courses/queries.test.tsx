@@ -8,10 +8,10 @@ import { qk } from '@/shared/api/queryKeys';
 import { toCamel } from '@/shared/lib/caseKeys';
 import { configureHttp } from '@/shared/lib/http';
 import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
-import { COURSE_SPOTS_OK } from '@/test/fixtures/backend/courses';
+import { COURSE_CONFIRM_OK, COURSE_SPOTS_OK } from '@/test/fixtures/backend/courses';
 import { TOUR_31, TOUR_DETAIL } from '@/test/fixtures/backend/tours';
 import { wireFail, wireOk } from '@/test/wire';
-import { useGuideCourse, useReorderStops } from './queries';
+import { useConfirmCourse, useGuideCourse, useReorderStops } from './queries';
 import { fromWireCourse, type WireCourse } from './wire';
 
 // 명세 C-02 예시(탐방 31, 13:00 시작): 지점 1 = 상점 201(한줄평), 지점 2 = 캠퍼스 건물 3(한줄평).
@@ -125,5 +125,64 @@ describe('코스 훅', () => {
       });
     });
     expect(seen.puts).toEqual([]);
+  });
+
+  it('useConfirmCourse: 확정은 됐는데 코스 다시 읽기가 실패하면 뮤테이션은 오류여도 가이드 코스를 다시 받는다', async () => {
+    let courseGets = 0;
+    server.use(
+      http.get('/api/campuses', () => wireOk(CAMPUSES_LIST.data)),
+      http.get('/api/tours/:tourId', () => wireOk(TOUR_DETAIL.data)),
+      http.get('/api/tours/:tourId/course', () => {
+        courseGets += 1;
+        // 1: 화면의 첫 조회, 2: 확정 뒤 다시 읽기(실패), 3: 무효화로 인한 다시 받기
+        return courseGets === 2 ? wireFail('E500') : wireOk(COURSE_SPOTS_OK.data);
+      }),
+      http.post('/api/tours/:tourId/course/confirm', () => wireOk(COURSE_CONFIRM_OK.data)),
+    );
+    const { wrapper } = setup();
+    const { result } = renderHook(
+      () => ({ course: useGuideCourse(31), confirm: useConfirmCourse(31) }),
+      {
+        wrapper,
+      },
+    );
+    await waitFor(() => expect(result.current.course.data).toBeTruthy());
+    await act(async () => {
+      await expect(result.current.confirm.mutateAsync()).rejects.toMatchObject({ status: 500 });
+    });
+    await waitFor(() => expect(courseGets).toBe(3));
+    await waitFor(() => expect(result.current.course.fetchStatus).toBe('idle'));
+  });
+
+  it('useReorderStops: PUT은 됐는데 탐방 다시 읽기가 실패해도 가이드 코스를 다시 받는다', async () => {
+    let courseGets = 0;
+    let tourGets = 0;
+    server.use(
+      http.get('/api/campuses', () => wireOk(CAMPUSES_LIST.data)),
+      http.get('/api/tours/:tourId', () => {
+        tourGets += 1;
+        // 1: 첫 조회, 2: PUT과 함께 읽는 탐방(실패), 3~: 무효화로 인한 다시 받기
+        return tourGets === 2 ? wireFail('E500') : wireOk(TOUR_DETAIL.data);
+      }),
+      http.get('/api/tours/:tourId/course', () => {
+        courseGets += 1;
+        return wireOk(COURSE_SPOTS_OK.data);
+      }),
+      http.put('/api/tours/:tourId/course/spots', () => wireOk(COURSE_SPOTS_OK.data)),
+    );
+    const { wrapper } = setup();
+    const { result } = renderHook(
+      () => ({ course: useGuideCourse(31), reorder: useReorderStops(31) }),
+      {
+        wrapper,
+      },
+    );
+    await waitFor(() => expect(result.current.course.data).toBeTruthy());
+    await act(async () => {
+      await expect(result.current.reorder.mutateAsync([2, 1])).rejects.toMatchObject({
+        status: 500,
+      });
+    });
+    await waitFor(() => expect(courseGets).toBe(2));
   });
 });

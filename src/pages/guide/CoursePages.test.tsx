@@ -230,6 +230,21 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
   });
 
+  it('AI가 코스를 못 만들면(502 AI_FAILED) 그 안내를 보여 주고, 다시 시도하면 다시 만든다', async () => {
+    server.use(
+      http.post('/api/tours/:tourId/course', () => wireFail('E502_AI_FAILED'), { once: true }),
+    );
+    const { user } = await renderApp('/guide/tours/1/course/draft?generate=1', {
+      as: 'guide',
+      checkpoint: 'APPROVED',
+    });
+    expect(await screen.findByRole('alert')).toHaveTextContent(
+      'AI가 코스를 만들지 못했어요. 잠시 후 다시 시도해 주세요.',
+    );
+    await user.click(screen.getByRole('button', { name: '다시 시도' }));
+    expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+  });
+
   it('다시 만들기는 확인 창을 거쳐 초안을 새로 만들고 G03에 머문다', async () => {
     let drafts = 0;
     server.events.on('request:start', ({ request }) => {
@@ -444,6 +459,21 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
     expect(toEdit).toHaveAttribute('href', '/guide/tours/1/course/edit');
     await user.click(toEdit);
     expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
+  });
+
+  it('서버가 제휴 0곳으로 확정을 거절하면(422 PARTNER_REQUIRED) 안내 토스트를 보이고 점검 화면에 머문다', async () => {
+    const { user, router } = await openCourse();
+    await router.navigate('/guide/tours/1/course/confirm');
+    await screen.findByRole('heading', { name: G08_TITLE });
+    server.use(
+      http.post('/api/tours/:tourId/course/confirm', () => wireFail('E422_PARTNER_REQUIRED'), {
+        once: true,
+      }),
+    );
+    await user.click(screen.getByRole('button', { name: '코스 확정하기' }));
+    expect(await screen.findByText('제휴 상점을 1곳 이상 넣어 주세요.')).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: G08_TITLE })).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/confirm');
   });
 
   it('AI 초안을 다시 만드는 중이면 코스 확정하기는 비활성 + 사유, 끝나면 풀린다', async () => {

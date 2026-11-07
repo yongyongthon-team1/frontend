@@ -62,6 +62,10 @@ function useSpotEdit<TVariables>(
     onSuccess: (course) => {
       queryClient.setQueryData(qk.guideCourse(tourId), course);
     },
+    // 쓰기는 됐는데 탐방을 다시 읽다 실패해도 서버 코스는 이미 바뀌었다 — 캐시를 낡은 채로 두지 않고 다시 받는다.
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.guideCourse(tourId) });
+    },
   });
 }
 
@@ -119,6 +123,10 @@ export function useConfirmCourse(tourId: number): UseMutationResult<Course, ApiE
       queryClient.setQueryData(qk.guideCourse(tourId), course);
       void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });
       void queryClient.invalidateQueries({ queryKey: qk.guideTours });
+    },
+    // 확정은 됐는데 코스를 다시 읽다 실패했을 수 있다 — 낡은 캐시로 다시 확정하면 409이므로 가이드 코스를 다시 받는다.
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.guideCourse(tourId) });
     },
   });
 }
