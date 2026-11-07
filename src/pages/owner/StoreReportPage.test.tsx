@@ -16,7 +16,8 @@ async function renderReport(
   patch?: Parameters<typeof mutate>[0],
   beforeNavigate?: () => void,
 ) {
-  const app = await renderApp('/owner/coupons/redeem', { as: email });
+  // 시작 화면은 가게가 없는 사장님에게 `연결된 가게가 없어요` 카드를 그리지 않는 곳이어야 한다(쿠폰 화면은 같은 문구의 가드를 그린다).
+  const app = await renderApp('/owner/store', { as: email });
   if (patch) mutate(patch);
   beforeNavigate?.();
   await app.router.navigate('/owner/report');

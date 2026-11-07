@@ -1,6 +1,6 @@
 import { useState } from 'react';
 import { Check, ChevronRight } from 'lucide-react';
-import { useLocation, useSearchParams } from 'react-router';
+import { Link, useLocation, useSearchParams } from 'react-router';
 import { toast } from 'sonner';
 import { useMe } from '@/features/auth/queries';
 import {
@@ -17,13 +17,16 @@ import { formatDotDateWeekday, formatTime } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
+import { buttonClass } from '@/shared/ui/buttonStyles';
 import { CodeInput } from '@/shared/ui/CodeInput';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { InfoCard } from '@/shared/ui/InfoCard';
 import { Page } from '@/shared/ui/Page';
 import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
 import { TopBar } from '@/shared/ui/TopBar';
+import { connectActionFor } from './noStore';
 
 const CODE_LENGTH = 6;
 
@@ -33,11 +36,43 @@ function cleanCode(raw: string | null): string {
 }
 
 /**
- * 사장님 쿠폰 사용 처리(owner-s03 · owner-a03). 6자리 코드를 조회하고 사용 가능(USABLE)이면 사용 처리한다.
+ * 사장님 쿠폰 사용 처리(owner-s03 · owner-a03). 연결된 가게가 없는 사장님(`me.storeId === null`)에게는 가드 카드만 보인다. 6자리 코드를 조회하고 사용 가능(USABLE)이면 사용 처리한다.
  * 같은 주소(`/owner/coupons/redeem`)가 세 모습이다 — 입력과 조회(O02), 사용 완료(O07), 오류(O08). 오류 카드의 문구는
  * `couponNotice`가 정하고, 서버가 준 상태만 그린다(시간 판단은 서버).
  */
 export function CouponRedeemPage() {
+  const { data: me } = useMe();
+  // 내 정보를 아직 모르면(불러오는 중) 지금 화면을 그대로 그린다 — 가드는 가게가 없다고 확인된 때만이다.
+  return me?.storeId === null ? (
+    <NoStoreGuard businessVerified={me.businessVerified} />
+  ) : (
+    <RedeemForm />
+  );
+}
+
+/** 가게 없음 가드: 인증했으면 가게 연결, 아직이면 사업자 인증부터. */
+function NoStoreGuard({ businessVerified }: { businessVerified: boolean }) {
+  const action = connectActionFor({ businessVerified });
+  return (
+    <>
+      <TopBar title="쿠폰 사용 처리" back="/owner/store" />
+      <Page className={BOTTOM_ACTION_PAGE}>
+        <InfoCard
+          className="mt-3"
+          title="연결된 가게가 없어요"
+          description="가게를 연결하면 학생 쿠폰을 사용 처리할 수 있어요."
+          footer={
+            <Link to={action.to} className={buttonClass('primary')}>
+              {action.label}
+            </Link>
+          }
+        />
+      </Page>
+    </>
+  );
+}
+
+function RedeemForm() {
   const [params, setParams] = useSearchParams();
   const { key: locationKey } = useLocation();
   const urlCode = cleanCode(params.get('code'));

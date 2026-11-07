@@ -143,6 +143,13 @@ describe('레이아웃', () => {
     expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).toBeNull();
   });
 
+  it('사장님이 /owner/me로 가면 /owner/store(replace) — 사장님 MY는 없다(2B-R4)', async () => {
+    const { router } = await renderApp('/owner/me', { as: 'owner' });
+    await waitFor(() => expect(router.state.location.pathname).toBe('/owner/store'));
+    expect(router.state.historyAction).toBe('REPLACE');
+    expect(await screen.findByText('서천 밥상')).toBeInTheDocument();
+  });
+
   it('자리 화면: /explore만 남는다(2B′-R24)', async () => {
     await renderApp('/explore', { as: 'owner' });
     expect(await screen.findByText('곧 열려요.')).toBeInTheDocument();
@@ -195,6 +202,8 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/owner/store', 'OWNER'],
   ['/owner/verify', 'OWNER'],
   ['/owner/store/connect', 'OWNER'],
+  ['/owner/store/partnership', 'OWNER'],
+  ['/owner/store/edit', 'OWNER'],
   ['/owner/me', 'OWNER'],
   ['/owner/report', 'OWNER'],
   ['/admin/verifications', 'ADMIN'],

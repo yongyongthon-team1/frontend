@@ -84,15 +84,40 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     expect(screen.queryByText('제휴 운영 중')).not.toBeInTheDocument();
   });
 
-  it('제휴가 없으면 제휴 혜택을 설정해 달라는 안내(링크 없음 — 설정 화면은 2B)', async () => {
+  it('제휴가 없으면 제휴 혜택을 설정해 달라는 링크(→ /owner/store/partnership)', async () => {
     await renderStore((db) => {
       db.partnerships = db.partnerships.filter((p) => p.storeId !== 1);
     });
     expect(await screen.findByText('제휴 혜택을 설정해 주세요')).toBeInTheDocument();
     expect(screen.queryByText(/운영 중$/)).not.toBeInTheDocument();
-    expect(
-      screen.queryByRole('link', { name: '제휴 혜택을 설정해 주세요' }),
-    ).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: /제휴 혜택을 설정해 주세요/ })).toHaveAttribute(
+      'href',
+      '/owner/store/partnership',
+    );
+    // 제휴가 없으니 텍스트 링크 `제휴 혜택 수정`은 따로 없다(같은 주소의 카드 문구가 대신한다).
+    expect(screen.queryByRole('link', { name: '제휴 혜택 수정' })).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '가게 정보 수정' })).toBeInTheDocument();
+  });
+
+  it('O01: 리포트 링크와 같은 줄에 제휴 혜택 수정 › · 가게 정보 수정 › (› 는 장식), 쿠폰 코드 입력하기는 그대로', async () => {
+    await renderStore();
+    await screen.findByText('서천 밥상');
+    const report = screen.getByRole('link', { name: '방문 · 리뷰 리포트' });
+    const partnership = screen.getByRole('link', { name: '제휴 혜택 수정' });
+    const edit = screen.getByRole('link', { name: '가게 정보 수정' });
+    expect(partnership).toHaveAttribute('href', '/owner/store/partnership');
+    expect(partnership).toHaveTextContent('제휴 혜택 수정 ›');
+    expect(edit).toHaveAttribute('href', '/owner/store/edit');
+    expect(edit).toHaveTextContent('가게 정보 수정 ›');
+    const howTo = screen.getByRole('heading', { name: '쿠폰 사용 방법' });
+    for (const link of [report, partnership, edit]) {
+      expect(howTo.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    }
+    expect(report.parentElement).toBe(partnership.parentElement);
+    expect(screen.getByRole('link', { name: '쿠폰 코드 입력하기' })).toHaveAttribute(
+      'href',
+      '/owner/coupons/redeem',
+    );
   });
 
   it('O01-E: 연결된 가게가 없으면(404 STORE_NOT_LINKED) 연결 안내와 내 가게 연결하기', async () => {
@@ -116,10 +141,12 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
       'href',
       '/owner/store/connect',
     );
-    // 도착지는 막다른 곳이 아니다 — 누르면 가게 연결 화면(자리)이 열린다.
+    // 도착지는 막다른 곳이 아니다 — 누르면 가게 찾기 · 연결(O05)이 열린다.
     await user.click(screen.getByRole('link', { name: '내 가게 연결하기' }));
     expect(router.state.location.pathname).toBe('/owner/store/connect');
-    expect(await screen.findByText('와이어프레임: owner-a01')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '가게 찾기 · 연결' }),
+    ).toBeInTheDocument();
   });
 
   it('불러오는 동안은 Skeleton, 로그아웃은 그때도 보인다', async () => {

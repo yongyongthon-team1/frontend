@@ -21,8 +21,12 @@ import { TourCreatePage } from '@/pages/guide/TourCreatePage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { SignupPage } from '@/pages/auth/SignupPage';
 import { ConsentPage } from '@/pages/public/ConsentPage';
+import { BusinessVerifyPage } from '@/pages/owner/BusinessVerifyPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
 import { MyStorePage } from '@/pages/owner/MyStorePage';
+import { PartnershipPage } from '@/pages/owner/PartnershipPage';
+import { StoreConnectPage } from '@/pages/owner/StoreConnectPage';
+import { StoreEditPage } from '@/pages/owner/StoreEditPage';
 import { StoreReportPage } from '@/pages/owner/StoreReportPage';
 import { CancelApplicationPage } from '@/pages/student/CancelApplicationPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
@@ -247,13 +251,19 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/owner/store/connect',
-                    element: (
-                      <PlaceholderPage title="가게 후보 선택 · 직접 등록" wireframe="owner-a01" />
-                    ),
+                    element: <StoreConnectPage />, // S-01 owner-a01 (O05)
+                  },
+                  {
+                    path: '/owner/store/partnership',
+                    element: <PartnershipPage />, // S-03 (O06)
+                  },
+                  {
+                    path: '/owner/store/edit',
+                    element: <StoreEditPage />, // S-01 PATCH
                   },
                   {
                     path: '/owner/verify',
-                    element: <PlaceholderPage title="사업자 인증" wireframe="owner-s01" />,
+                    element: <BusinessVerifyPage />, // U-07 owner-s01
                   },
                   {
                     path: '/owner/report',
@@ -261,7 +271,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/owner/me',
-                    element: <PlaceholderPage title="내 정보" showLogout />,
+                    element: <Navigate to="/owner/store" replace />, // 사장님 MY는 없다(2B-R4)
                   },
                 ],
               },

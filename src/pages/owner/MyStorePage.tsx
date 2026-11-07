@@ -24,6 +24,13 @@ const STATE_TONE: Record<PartnershipState, Tone> = {
   ENDED: 'neutral',
 };
 
+/** `쿠폰 사용 방법` 아래 텍스트 링크. 제휴 혜택 수정은 제휴가 있을 때만(없으면 위 카드의 문구가 같은 주소다). */
+const LINKS = [
+  { to: '/owner/report', label: '방문 · 리뷰 리포트' },
+  { to: '/owner/store/partnership', label: '제휴 혜택 수정' },
+  { to: '/owner/store/edit', label: '가게 정보 수정' },
+] as const;
+
 const HOW_TO = [
   { no: '01', label: '학생이 쿠폰 제시' },
   { no: '02', label: '코드 입력 후 처리' },
@@ -81,7 +88,7 @@ export function MyStorePage() {
   return store === null ? <NotLinked /> : <StoreHome store={store} />;
 }
 
-/** O01-E: 연결된 가게가 없다. 가게 연결은 2B의 `/owner/store/connect`다. */
+/** O01-E: 연결된 가게가 없다. 가게 연결은 `/owner/store/connect`(O05)다. */
 function NotLinked() {
   return (
     <Page className={BOTTOM_ACTION_PAGE_TAB_ROOT}>
@@ -144,8 +151,13 @@ function StoreHome({ store }: { store: MyStore }) {
               </StatusChip>
             </>
           ) : (
-            // 제휴 설정 화면(`/owner/store/partnership`)은 2B에서 열린다 — 길이 생기면 이 문구를 링크로 바꾼다.
-            <p className="text-[13px] font-bold text-ink">제휴 혜택을 설정해 주세요</p>
+            <Link
+              to="/owner/store/partnership"
+              className="inline-flex min-h-11 items-center text-[13px] font-bold text-ink"
+            >
+              제휴 혜택을 설정해 주세요
+              <span aria-hidden> ›</span>
+            </Link>
           )}
         </HeroCard>
       </div>
@@ -164,13 +176,21 @@ function StoreHome({ store }: { store: MyStore }) {
         ))}
       </ol>
 
-      <Link
-        to="/owner/report"
-        className="mt-2 flex min-h-11 items-center text-[13px] font-bold text-brand"
-      >
-        방문 · 리뷰 리포트
-        <span aria-hidden> ›</span>
-      </Link>
+      {/* 링크 셋은 한 줄에 모아 무대 높이를 아낀다(좁으면 줄이 바뀐다). `쿠폰 코드 입력하기` 자리는 그대로다. */}
+      <div className="mt-2 flex flex-wrap gap-x-5">
+        {LINKS.filter((link) => link.to !== '/owner/store/partnership' || partnership).map(
+          ({ to, label }) => (
+            <Link
+              key={to}
+              to={to}
+              className="flex min-h-11 items-center text-[13px] font-bold text-brand"
+            >
+              {label}
+              <span aria-hidden> ›</span>
+            </Link>
+          ),
+        )}
+      </div>
     </Page>
   );
 }
