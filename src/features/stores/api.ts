@@ -11,7 +11,9 @@ export async function getMyStore(token?: string): Promise<MyStore | null> {
   try {
     const wire = await request<WireMyStore>('/users/me/store', {
       errorMap: { E404: 'STORE_NOT_LINKED' },
-      ...(token !== undefined ? { headers: { Authorization: `Bearer ${token}` }, auth: false } : {}),
+      ...(token !== undefined
+        ? { headers: { Authorization: `Bearer ${token}` }, auth: false }
+        : {}),
     });
     return fromWireMyStore(wire, new Date());
   } catch (error) {

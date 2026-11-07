@@ -110,11 +110,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
   });
 
   it('조회가 실패하고 받은 데이터가 없으면 ErrorState와 다시 시도', async () => {
-    server.use(
-      http.get('/api/users/me/store', () =>
-        wireFail('E400'),
-      ),
-    );
+    server.use(http.get('/api/users/me/store', () => wireFail('E400')));
     const { user } = await renderStore();
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.getByRole('heading', { level: 1, name: '내 가게' })).toBeInTheDocument();
@@ -127,11 +123,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
   it('다시 불러오다 실패해도 받은 가게는 그대로 보인다', async () => {
     const { queryClient } = await renderStore();
     await screen.findByText('서천 밥상');
-    server.use(
-      http.get('/api/users/me/store', () =>
-        wireFail('E400'),
-      ),
-    );
+    server.use(http.get('/api/users/me/store', () => wireFail('E400')));
     await queryClient.refetchQueries({ queryKey: qk.myStore });
     expect(queryClient.getQueryState(qk.myStore)?.status).toBe('error');
     expect(screen.getByText('서천 밥상')).toBeInTheDocument();

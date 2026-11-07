@@ -829,10 +829,10 @@ describe('demo', () => {
 describe('사장님 내 가게 (GET /users/me/store)', () => {
   it('사장님: 명세 S-01 보완 응답과 같은 봉투 · 모양(확장 없음)', async () => {
     const { token } = await login('owner1@demo.kr');
-    const res = await rawFetch<{ code: string; data: Record<string, unknown> }>(
-      '/users/me/store',
-      { method: 'GET', token },
-    );
+    const res = await rawFetch<{ code: string; data: Record<string, unknown> }>('/users/me/store', {
+      method: 'GET',
+      token,
+    });
     expect(res.status).toBe(200);
     expect(res.body.code).toBe('S200');
     expectWireShape(res.body.data, MY_STORE.data);

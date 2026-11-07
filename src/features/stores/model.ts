@@ -1,6 +1,6 @@
 import { seoulDateKey } from '@/shared/lib/date';
 
-/** 서버가 오늘(서울)과 기간으로 계산해서 준다. ERD 칼럼이 아니다. */
+/** 백엔드는 주지 않는다. 어댑터(`wire.ts`)가 오늘(서울)과 제휴 기간으로 계산한다. ERD 칼럼이 아니다. */
 export type PartnershipState = 'ACTIVE' | 'SCHEDULED' | 'ENDED';
 
 export interface Partnership {
@@ -25,7 +25,7 @@ export interface MyStore {
 }
 
 /**
- * 목업 서버 전용. 컴포넌트는 서버가 준 `Partnership.state`를 그린다.
+ * 어댑터(`fromWireMyStore`)가 와이어의 제휴 기간으로 `Partnership.state`를 계산한다. 컴포넌트는 이 값을 그리기만 한다.
  * 시작일 전이면 SCHEDULED, 종료일 다음 날부터 ENDED(종료일 당일까지는 운영 중). 날짜는 모두 서울 기준이다.
  */
 export function computePartnershipState(

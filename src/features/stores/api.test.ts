@@ -78,6 +78,20 @@ describe('내 가게 API (명세 예시 응답)', () => {
     expect(onUnauthorized).not.toHaveBeenCalled();
   });
 
+  it('토큰 인자를 주면 200 응답도 MyStore로 읽는다', async () => {
+    server.use(http.get('/api/users/me/store', () => wireOk(MY_STORE.data)));
+    expect(await getMyStore('login-token')).toMatchObject({
+      id: 201,
+      name: '용인 분식',
+      partnership: { id: 0, condition: null, discount: '음료 1,000원 할인' },
+    });
+  });
+
+  it('토큰 인자를 줘도 E404 봉투는 null', async () => {
+    server.use(http.get('/api/users/me/store', () => wireFail('E404')));
+    expect(await getMyStore('login-token')).toBeNull();
+  });
+
   it('토큰 인자가 없으면 세션 토큰을 보낸다', async () => {
     const seen: (string | null)[] = [];
     configureHttp({ getToken: () => 'session-token' });
