@@ -71,9 +71,14 @@ export function findCampus(
   );
 }
 
-/** 캠퍼스 조인의 세 번째 길: 첫 공백에서 나눈다. 공백이 없으면 캠퍼스는 `본교`. */
+/** 캠퍼스 조인의 세 번째 길: 앞뒤 공백을 뺀 뒤 첫 공백에서 나눈다. 공백이 없거나 그 뒤에 남는 것이 없으면 캠퍼스는 `본교`. */
 export function splitCampusName(label: string): { universityName: string; campusName: string } {
-  const at = label.indexOf(' ');
-  if (at < 0) return { universityName: label, campusName: '본교' };
-  return { universityName: label.slice(0, at), campusName: label.slice(at + 1) };
+  const trimmed = label.trim();
+  const at = trimmed.search(/\s/);
+  if (at < 0) return { universityName: trimmed, campusName: '본교' };
+  const campusName = trimmed.slice(at + 1).trim();
+  return {
+    universityName: trimmed.slice(0, at),
+    campusName: campusName === '' ? '본교' : campusName,
+  };
 }

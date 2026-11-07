@@ -30,6 +30,11 @@ describe('fromWireCampus', () => {
     });
   });
 
+  it('방학 기간이 비어 있으면 vacations는 빈 배열', () => {
+    const wire = toCamel<WireCampus>({ ...CAMPUSES_LIST.data.items[0], vacation_periods: [] });
+    expect(fromWireCampus(wire).vacations).toEqual([]);
+  });
+
   it('주소가 null이면 그대로 null', () => {
     const wire = toCamel<WireCampus>({ ...CAMPUSES_LIST.data.items[0], address: null });
     expect(fromWireCampus(wire).address).toBeNull();
@@ -108,6 +113,28 @@ describe('findCampus · splitCampusName', () => {
     expect(splitCampusName('한국외국어대학교 글로벌 캠퍼스')).toEqual({
       universityName: '한국외국어대학교',
       campusName: '글로벌 캠퍼스',
+    });
+  });
+
+  it('splitCampusName: 앞뒤 공백을 빼고, 공백이 여러 개여도 캠퍼스 이름만 남긴다', () => {
+    expect(splitCampusName('단국대학교  죽전캠퍼스 ')).toEqual({
+      universityName: '단국대학교',
+      campusName: '죽전캠퍼스',
+    });
+    expect(splitCampusName(' 단국대학교 죽전캠퍼스')).toEqual({
+      universityName: '단국대학교',
+      campusName: '죽전캠퍼스',
+    });
+  });
+
+  it('splitCampusName: 첫 공백 뒤에 남는 것이 없으면(끝 공백) 캠퍼스는 본교', () => {
+    expect(splitCampusName('강남대학교 ')).toEqual({
+      universityName: '강남대학교',
+      campusName: '본교',
+    });
+    expect(splitCampusName('강남대학교   ')).toEqual({
+      universityName: '강남대학교',
+      campusName: '본교',
     });
   });
 
