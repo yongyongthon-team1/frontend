@@ -1,6 +1,10 @@
 // 상점 리뷰(R-01 · R-02)의 도메인 모양과 상수. 화면(상점 시트 · 리포트 · 리뷰 쓰기)이 같이 쓴다.
 
+import type { ApplicationStatus } from '@/features/applications/model';
+import type { Coupon } from '@/features/coupons/model';
 import type { CourseStop } from '@/features/courses/model';
+import { errorMessage } from '@/shared/lib/errors';
+import type { ActionLink } from '@/shared/lib/types';
 
 /** 리뷰 한 줄 평 최대 길이(명세 R-01 `content` 100자 이내). */
 export const REVIEW_CONTENT_MAX = 100;
@@ -60,4 +64,55 @@ export function mergeStoreReview(
     return { summary: fetched.summary, average: fetched.average, count: fetched.count };
   }
   return stop;
+}
+
+/** H12 리뷰 쓰기 화면의 주소. */
+export function reviewNewPath(couponId: number): string {
+  return `/reviews/new?couponId=${couponId}`;
+}
+
+/** 그 상점 지점의 시트를 연 채 시작하는 코스 지도 주소(리뷰를 쓴 뒤 AI 요약 갱신이 보이는 곳). */
+export function courseStorePath(applicationId: number, storeId: number): string {
+  return `/my-tours/${applicationId}/course?storeId=${storeId}`;
+}
+
+/** 쿠폰에서 리뷰로 가는 길: 쓰러 가기(WRITE) · 이미 씀(DONE) · 해당 없음(null). */
+export type ReviewEntry = { kind: 'WRITE'; to: string } | { kind: 'DONE' } | null;
+
+export function reviewEntry(
+  coupon: Pick<Coupon, 'id' | 'state' | 'reviewWritten'> | null,
+): ReviewEntry {
+  if (coupon === null || coupon.state !== 'USED') return null;
+  return coupon.reviewWritten ? { kind: 'DONE' } : { kind: 'WRITE', to: reviewNewPath(coupon.id) };
+}
+
+/** 리뷰를 쓴 뒤 가는 곳(2B′-R17): 신청이 승인 상태면 그 상점 시트를 연 코스, 아니면 쿠폰 상세. */
+export function reviewLandingPath(
+  coupon: Pick<Coupon, 'id' | 'applicationId' | 'storeId'>,
+  applicationStatus: ApplicationStatus | null,
+): string {
+  return applicationStatus === 'APPROVED'
+    ? courseStorePath(coupon.applicationId, coupon.storeId)
+    : `/coupons/${coupon.id}`;
+}
+
+/** 리뷰를 쓸 수 없는 쿠폰의 사유 + 다음 행동. 쓸 수 있으면 null. */
+export function reviewBlock(
+  coupon: Pick<Coupon, 'id' | 'state' | 'reviewWritten' | 'applicationId' | 'storeId'>,
+  applicationStatus: ApplicationStatus | null,
+): { reason: string; action: ActionLink } | null {
+  const couponLink: ActionLink = { label: '쿠폰 보기', to: `/coupons/${coupon.id}` };
+  if (coupon.state !== 'USED') {
+    return { reason: errorMessage('REVIEW_NOT_ALLOWED'), action: couponLink };
+  }
+  if (coupon.reviewWritten) {
+    return {
+      reason: errorMessage('REVIEW_DUPLICATE'),
+      action:
+        applicationStatus === 'APPROVED'
+          ? { label: '코스 지도 보기', to: courseStorePath(coupon.applicationId, coupon.storeId) }
+          : couponLink,
+    };
+  }
+  return null;
 }

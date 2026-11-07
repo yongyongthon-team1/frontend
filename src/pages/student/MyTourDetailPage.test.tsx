@@ -150,4 +150,20 @@ describe('신청 내역 상세 (H10)', () => {
     expect(router.state.location.pathname).toBe('/my-tours');
     expect(router.state.location.search).toBe('');
   });
+
+  it('승인된 신청 + 완료된 탐방이면 리뷰 남기기 행이 쿠폰 목록으로 간다 (H10 · R-01 진입)', async () => {
+    const { router } = await renderApp('/', { as: 'seojun@demo.kr' });
+    const id = findApplicationId('seojun@demo.kr', 7);
+    await router.navigate(`/my-tours/${id}`);
+    const review = await screen.findByRole('link', { name: /리뷰 남기기/ });
+    expect(review).toHaveAttribute('href', `/my-tours/${id}/coupons`);
+    expect(within(review).getByText('다녀온 상점에 리뷰를 남겨 주세요')).toBeInTheDocument();
+  });
+
+  it('진행 예정 탐방이나 완료되지 않은 신청에는 리뷰 남기기 행이 없다 (양성 대조: 완료 탐방에는 있다)', async () => {
+    const { router } = await renderApp('/', { as: 'student', checkpoint: 'CONFIRMED' });
+    await router.navigate(`/my-tours/${findApplicationId(STUDENT, 1)}`);
+    await screen.findByText('가이드 승인 상태');
+    expect(screen.queryByRole('link', { name: /리뷰 남기기/ })).not.toBeInTheDocument();
+  });
 });

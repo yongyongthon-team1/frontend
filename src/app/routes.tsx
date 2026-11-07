@@ -26,6 +26,7 @@ import { HomePage } from '@/pages/student/HomePage';
 import { MyTourDetailPage } from '@/pages/student/MyTourDetailPage';
 import { MyToursPage } from '@/pages/student/MyToursPage';
 import { MyWishesPage } from '@/pages/student/MyWishesPage';
+import { ReviewNewPage } from '@/pages/student/ReviewNewPage';
 import { TourDetailPage } from '@/pages/student/TourDetailPage';
 import { TourResultsPage } from '@/pages/student/TourResultsPage';
 import { PlaceholderPage } from '@/pages/PlaceholderPage';
@@ -126,7 +127,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/reviews/new',
-                    element: <PlaceholderPage title="방문 리뷰 작성" wireframe="hs-s10" />,
+                    element: <ReviewNewPage />,
                   },
                   {
                     path: '/verify',

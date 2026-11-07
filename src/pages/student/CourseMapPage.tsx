@@ -1,6 +1,6 @@
 import { ArrowUpRight, ChevronDown } from 'lucide-react';
 import { useEffect, useId, useRef, useState } from 'react';
-import { Link, useParams } from 'react-router';
+import { Link, useNavigate, useParams, useSearchParams } from 'react-router';
 import { STUDENT_APPLICATION_STATUS, type MyApplication } from '@/features/applications/model';
 import { useMyApplication } from '@/features/applications/queries';
 import { useMyCoupons } from '@/features/coupons/queries';
@@ -120,6 +120,12 @@ export function CourseMapPage() {
   // 쿠폰 목록 오류는 따로 보이지 않는다 — 시트는 "쿠폰 보기" 없이 그려지고, 아래 버튼으로 쿠폰 목록에 갈 수 있다.
   const { data: coupons } = useMyCoupons(applicationId);
   const [selectedId, setSelectedId] = useState<number | null>(null);
+  // 리뷰를 쓴 뒤 `?storeId=`로 돌아오면 그 상점 시트를 연 채 시작한다(AI 요약 갱신이 보이는 곳). 시트를 닫으면 주소에서 지운다.
+  const [searchParams] = useSearchParams();
+  const navigate = useNavigate();
+  const storeIdParam = /^[1-9]\d*$/.test(searchParams.get('storeId') ?? '')
+    ? Number(searchParams.get('storeId'))
+    : null;
   const [mapOpen, setMapOpen] = useState(false);
   const mapPanelId = useId();
   const mapPanelRef = useRef<HTMLDivElement>(null);
@@ -176,7 +182,10 @@ export function CourseMapPage() {
 
   const { tour, stops } = course;
   const durations = stopDurations(stops, tour.endsAt);
-  const selected = stops.find((s) => s.id === selectedId) ?? null;
+  const selected =
+    stops.find((s) => s.id === selectedId) ??
+    stops.find((s) => storeIdParam !== null && s.storeId === storeIdParam) ??
+    null;
   const selectedCoupon =
     coupons?.find((c) => selected !== null && c.storeId === selected.storeId) ?? null;
 
@@ -257,7 +266,10 @@ export function CourseMapPage() {
         stop={selected}
         coupon={selectedCoupon}
         onOpenChange={(open) => {
-          if (!open) setSelectedId(null);
+          if (open) return;
+          setSelectedId(null);
+          if (storeIdParam !== null)
+            void navigate(`/my-tours/${applicationId}/course`, { replace: true });
         }}
       />
     </>

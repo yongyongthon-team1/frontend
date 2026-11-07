@@ -2,7 +2,8 @@ import { Link } from 'react-router';
 import type { Coupon } from '@/features/coupons/model';
 import type { CourseStop } from '@/features/courses/model';
 import { RecentReviews } from '@/features/reviews/components/RecentReviews';
-import { mergeStoreReview } from '@/features/reviews/model';
+import { ReviewEntryLink } from '@/features/reviews/components/ReviewEntryLink';
+import { mergeStoreReview, reviewEntry } from '@/features/reviews/model';
 import { useStoreReviews } from '@/features/reviews/queries';
 import { AiBadge } from '@/shared/ui/AiBadge';
 import { BottomSheet } from '@/shared/ui/BottomSheet';
@@ -18,12 +19,14 @@ export interface StoreSheetProps {
 
 /**
  * 코스 지점의 상점 시트(설계 5.6 · V2): 흰 시트에 시간 · 업종 → AI 추천 이유(페일 블루) → ✦ AI 리뷰 요약 · 별점 → 데이터 출처
- * → 제휴 혜택(페일 피치)과 쿠폰 보기.
+ * → 제휴 혜택(페일 피치)과 쿠폰 보기. 쿠폰을
+ * 사용했으면 그 위에 `리뷰 쓰기`(쓴 뒤에는 `리뷰 작성 완료`)가 오고 쿠폰 보기는 보조 버튼이 된다.
  */
 export function StoreSheet({ stop, coupon, onOpenChange }: StoreSheetProps) {
   return (
     <BottomSheet open={stop !== null} onOpenChange={onOpenChange} title={stop?.name ?? ''}>
-      {stop ? <StoreDetail stop={stop} coupon={coupon} /> : null}
+      {/* 지점이 바뀌면 펼침 상태(최근 리뷰)를 처음으로 되돌린다. */}
+      {stop ? <StoreDetail key={stop.id} stop={stop} coupon={coupon} /> : null}
     </BottomSheet>
   );
 }
@@ -78,8 +81,12 @@ function StoreDetail({ stop, coupon }: { stop: CourseStop; coupon: Coupon | null
       {partnership ? (
         <div className="flex flex-col gap-3 rounded-lg bg-local-soft p-4">
           <p className="text-[17px] font-bold text-ink">{`제휴 혜택 · ${partnership.discount}`}</p>
+          <ReviewEntryLink coupon={coupon} />
           {coupon ? (
-            <Link to={`/coupons/${coupon.id}`} className={buttonClass('primary')}>
+            <Link
+              to={`/coupons/${coupon.id}`}
+              className={buttonClass(reviewEntry(coupon) === null ? 'primary' : 'secondary')}
+            >
               쿠폰 보기
             </Link>
           ) : null}

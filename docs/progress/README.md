@@ -34,9 +34,9 @@
 | `hs-s05` | 탐방 상세 · 신청 · V2(H03) | `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s06` | 신청 완료 · 승인 대기 · V2(H08) | `/tours/:tourId/apply/done` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s07` | 내 탐방 · 승인 완료 · V2(H10 신청 내역 상세) | `/my-tours/:applicationId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `hs-s08` | 탐방 코스 · V2(H04 단계 막대 · 시간표, 지도는 아래 `지도로 보기` 펼침 · H14 코스 준비 중 · 상점 시트 R-02(요약 · 별점 · 최근 리뷰) ✅) | `/my-tours/:applicationId/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `hs-s09` | 상점 쿠폰 · 사용 · V2(H05 내 쿠폰 · 코드 3자리씩, H15 사용 완료는 같은 주소의 USED 모습) | `/my-tours/:applicationId/coupons` · `/coupons/:couponId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `hs-s10` | 방문 리뷰 작성 | `/reviews/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `hs-s08` | 탐방 코스 · V2(H04 단계 막대 · 시간표, 지도는 아래 `지도로 보기` 펼침 · H14 코스 준비 중 · 상점 시트 R-02(요약 · 별점 · 최근 리뷰) ✅ · 리뷰 진입 ✅) | `/my-tours/:applicationId/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `hs-s09` | 상점 쿠폰 · 사용 · V2(H05 내 쿠폰 · 코드 3자리씩, H15 사용 완료는 같은 주소의 USED 모습) · 리뷰 진입 ✅ | `/my-tours/:applicationId/coupons` · `/coupons/:couponId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `hs-s10` | 방문 리뷰 작성 ✅(H12, R-01 — 별점 + 한 줄 평, 저장하면 상점 시트를 연 코스 지도로) | `/reviews/new` | P1 | ✅ | ✅ | ⬜ | V2 부품(H12 노드 `2:475`) | ⬜ |
 | `hs-a01` | 회원가입 · 역할 선택 | `/signup` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a02` | 보호자 동의 페이지 | `/consent/:token` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `hs-a03` | 내 정보 · 인증 상태 | `/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -126,7 +126,7 @@
 | stores | `PUT /api/users/me/store/partnership` | owner-s02 제휴 설정 `/owner/store/partnership` (S-03) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | `GET /api/users/me/store/report` | owner-s04 방문 · 리뷰 리포트 ✅ 화면 연결 (S-07, 쿼리 없이 부른다 — 기본 기간은 서버 몫, 목업은 오늘 −30일 ~ 오늘. AI 요약 · 최근 리뷰는 `GET /users/me/store` + `GET /stores/{storeId}/reviews`로 합성, `E404` → `STORE_NOT_LINKED`면 빈 상태) | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 (U-07) | ⬜ | ⬜ | ⬜ | ⬜ |
-| reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
+| reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 ✅ 화면 연결 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
 | reviews | `GET /api/stores/:storeId/reviews` | hs-s08 · 가이드 확정 코스 상점 시트의 요약 · 별점 · 접힌 `최근 리뷰` ✅ 화면 연결 (R-02, `page=1&size=3` 한 쪽, 캠퍼스 지점은 부르지 않음. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05) | ⬜ | ⬜ | ⬜ | ⬜ |
 | verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 (U-06) | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -173,7 +173,7 @@
 
 ## 열린 질문
 
-- 리뷰 단계 무대 측정: 방문 리뷰 작성(`/reviews/new`) · 등록 뒤 코스 시트의 AI 요약 갱신이 11/6 대본(팀 요청 23)에 들어가면, 판정 뷰포트 3종에서 별점 · 등록 버튼 · 갱신된 요약이 탭바 위에 보이는지 재서 위 실측표에 행을 더한다.
+- 리뷰 단계 무대 측정: 방문 리뷰 작성(`/reviews/new`) · 등록 뒤 코스 시트의 AI 요약 갱신이 11/6 대본(팀 요청 23)에 들어가면, 판정 뷰포트 3종에서 별점 · 등록 버튼 · 갱신된 요약이 탭바 위에 보이는지 재서 위 실측표에 행을 더한다. `review-loop E2E 있음`(`e2e/review-loop.spec.ts` — 리뷰 쓰기 → 시트의 새 요약 → 사장님 리포트, 무대 뷰포트 실측은 아님).
 - 무대 노트북의 실제 페이지 영역(해상도 · 배율 · 브라우저 UI)이 E2E가 가정한 판정 뷰포트(1366×620 · 1280×600 · 1280×590 @1.5배)보다 작은가? 작으면 골든 패스 화면의 무대 예산(설계 5.7, 본문 약 400px)을 다시 잡는다. V2 적용 뒤 본문 높이 여유는 아래 표다. 팀 요청 15의 운영진 답으로 확인한다.
 
   무대 실측표(2026-11-06, MVP 2A Task 12 — ① 행은 2026-11-07 MVP 2C Task 11, 전체는 2026-11-07 MVP 2C Task 13에서 다시 쟀다. 배포 빌드 E2E `stage-viewport`의 `stage-measure` 기록). 기준점은 프레임 위 + 56 = 뷰포트 y 72px(설계 헤더의 452 · 432 · 422와 같은 기준)이다. 코스 · 쿠폰 화면은 상단 바(56px) 하단이고, ① 탐방 찾기 결과(`/tours`)는 상단 바 없이 자기 뒤로 가기 줄(`pt-2` + `h-12` = 56px)이 같은 선을 만든다. 사용 = 그 선에서 가장 아래 핵심 요소 하단까지, 가용 = 그 선에서 하단 탭 위까지, 여유 = 가용 − 사용(px).

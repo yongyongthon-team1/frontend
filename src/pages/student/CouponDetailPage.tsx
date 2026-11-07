@@ -8,6 +8,7 @@ import {
   type Coupon,
 } from '@/features/coupons/model';
 import { useMyCoupon } from '@/features/coupons/queries';
+import { ReviewEntryLink } from '@/features/reviews/components/ReviewEntryLink';
 import { useDemoStore } from '@/demo/demoStore';
 import { cn } from '@/shared/lib/cn';
 import { formatDotDate, formatDotDateWeekday, formatTime } from '@/shared/lib/date';
@@ -76,9 +77,7 @@ function UsedCoupon({ coupon }: { coupon: Coupon }) {
         </p>
 
         <BottomAction>
-          <Link to={`/reviews/new?couponId=${coupon.id}`} className={buttonClass('primary')}>
-            방문 리뷰 작성하기
-          </Link>
+          <ReviewEntryLink coupon={coupon} label="방문 리뷰 작성하기" />
         </BottomAction>
       </Page>
     </>

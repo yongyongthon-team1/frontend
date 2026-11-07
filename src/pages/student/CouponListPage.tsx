@@ -1,6 +1,7 @@
 import { Navigate, useParams } from 'react-router';
 import { couponStateLabel, couponStateTone } from '@/features/coupons/model';
 import { useMyCoupons } from '@/features/coupons/queries';
+import { ReviewEntryLink } from '@/features/reviews/components/ReviewEntryLink';
 import { EmptyState } from '@/shared/ui/EmptyState';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { ListRow } from '@/shared/ui/ListRow';
@@ -52,6 +53,8 @@ export function CouponListPage() {
                     </StatusChip>
                   }
                 />
+                {/* 행 전체가 링크라 링크 안에 링크를 넣지 않고 형제로 둔다. */}
+                <ReviewEntryLink coupon={coupon} size="sm" className="mt-1" />
               </li>
             ))}
           </ul>

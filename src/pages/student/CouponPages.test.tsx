@@ -7,7 +7,7 @@ import { server } from '@/mocks/node';
 import { redeemCoupon as redeemCouponRule } from '@/mocks/rules/coupons';
 import { DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { formatDotDate } from '@/shared/lib/date';
-import { findApplicationId, renderApp } from '@/test/renderApp';
+import { findApplicationId, redeemDemoCoupon, renderApp } from '@/test/renderApp';
 import { wireFail } from '@/test/wire';
 
 const STUDENT = 'student@demo.kr';
@@ -151,5 +151,69 @@ describe('쿠폰 목록 · 상세 (hs-s09)', () => {
     expect(queryClient.getQueryState(['myCoupons', 'detail', id])?.status).toBe('error');
     expect(screen.getByTestId('coupon-code')).toHaveTextContent(shown!);
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
+  });
+});
+
+describe('리뷰 진입점 (R-01)', () => {
+  it('H15 사용 완료의 방문 리뷰 작성하기가 H12로 이어진다', async () => {
+    const { user, router } = await renderApp('/my-tours', {
+      as: 'student',
+      checkpoint: 'CONFIRMED',
+    });
+    const couponId = redeemDemoCoupon(1);
+    await router.navigate(`/coupons/${couponId}`);
+    await user.click(await screen.findByRole('link', { name: '방문 리뷰 작성하기' }));
+    expect(
+      await screen.findByRole('heading', { name: '오늘 탐방은 어땠나요?' }),
+    ).toBeInTheDocument();
+    expect(router.state.location.pathname + router.state.location.search).toBe(
+      `/reviews/new?couponId=${couponId}`,
+    );
+  });
+
+  it('쿠폰 목록: 사용한 쿠폰 행에만 리뷰 쓰기, 작성하면 리뷰 작성 완료로 바뀐다', async () => {
+    const { user, router } = await renderApp('/my-tours', {
+      as: 'student',
+      checkpoint: 'CONFIRMED',
+    });
+    const couponId = redeemDemoCoupon(1);
+    const applicationId = findApplicationId(STUDENT, 1);
+    await router.navigate(`/my-tours/${applicationId}/coupons`);
+
+    // 행 전체 링크 두 개는 그대로, 리뷰 쓰기는 사용한 쿠폰의 형제 링크 하나뿐
+    expect(await screen.findAllByRole('link', { name: /할인/ })).toHaveLength(2);
+    const write = screen.getAllByRole('link', { name: '리뷰 쓰기' });
+    expect(write).toHaveLength(1);
+    expect(write[0]).toHaveAttribute('href', `/reviews/new?couponId=${couponId}`);
+    expect(screen.queryByText('리뷰 작성 완료')).not.toBeInTheDocument();
+
+    await user.click(write[0]!);
+    await user.click(await screen.findByRole('radio', { name: '별점 5점' }));
+    await user.type(screen.getByLabelText('좋았던 점과 아쉬웠던 점'), '친절해요');
+    await user.click(screen.getByRole('button', { name: '리뷰 등록하기' }));
+    // 신청이 승인 상태라 코스 지도(상점 시트가 열린 채)로 착지한다 — 거기서 쿠폰 목록으로 돌아간다.
+    await screen.findByRole('dialog', { name: '서천 밥상' });
+    await router.navigate(`/my-tours/${applicationId}/coupons`);
+    // 사라지는 시트에도 같은 글이 있으니, 쿠폰 목록이 그려진 뒤에 센다.
+    await screen.findAllByRole('link', { name: /할인/ });
+    expect(await screen.findByText('리뷰 작성 완료')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '리뷰 쓰기' })).not.toBeInTheDocument();
+  });
+
+  it('H15: 리뷰를 쓴 쿠폰은 방문 리뷰 작성하기 대신 리뷰 작성 완료', async () => {
+    const { user, router } = await renderApp('/my-tours', {
+      as: 'student',
+      checkpoint: 'CONFIRMED',
+    });
+    const couponId = redeemDemoCoupon(1);
+    await router.navigate(`/reviews/new?couponId=${couponId}`);
+    await user.click(await screen.findByRole('radio', { name: '별점 4점' }));
+    await user.type(screen.getByLabelText('좋았던 점과 아쉬웠던 점'), '좋아요');
+    await user.click(screen.getByRole('button', { name: '리뷰 등록하기' }));
+    await screen.findByRole('dialog', { name: '서천 밥상' });
+    await router.navigate(`/coupons/${couponId}`);
+    await screen.findByRole('heading', { name: '쿠폰을 사용했어요!' });
+    expect(await screen.findByText('리뷰 작성 완료')).toBeInTheDocument();
+    expect(screen.queryByRole('link', { name: '방문 리뷰 작성하기' })).not.toBeInTheDocument();
   });
 });

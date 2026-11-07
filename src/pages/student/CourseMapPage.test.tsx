@@ -8,7 +8,7 @@ import { qk } from '@/shared/api/queryKeys';
 import { formatDotDateWeekday, formatMonthDay } from '@/shared/lib/date';
 import { COURSE_VIEW } from '@/test/fixtures/backend/courses';
 import { STORE_REVIEWS } from '@/test/fixtures/backend/reviews';
-import { findApplicationId, renderApp } from '@/test/renderApp';
+import { findApplicationId, redeemDemoCoupon, renderApp } from '@/test/renderApp';
 import { wireFail, wireOk } from '@/test/wire';
 
 const STUDENT = 'student@demo.kr';
@@ -355,5 +355,67 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     await router.navigate('/my-tours/999999/course');
     expect(await screen.findByText('찾을 수 없어요.')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '다시 시도' })).toBeInTheDocument();
+  });
+});
+
+describe('상점 시트의 리뷰 진입 (R-01)', () => {
+  it('사용한 쿠폰의 상점 시트는 리뷰 쓰기(주) + 쿠폰 보기(보조)', async () => {
+    const { user, id } = await openCourseMap('CONFIRMED', () => {
+      redeemDemoCoupon(1);
+    });
+    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
+    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    const coupon = getDb().coupons.find((c) => c.applicationId === id && c.storeId === 1)!;
+    expect(within(sheet).getByRole('link', { name: '리뷰 쓰기' })).toHaveAttribute(
+      'href',
+      `/reviews/new?couponId=${coupon.id}`,
+    );
+    const couponLink = within(sheet).getByRole('link', { name: '쿠폰 보기' });
+    expect(couponLink).toHaveAttribute('href', `/coupons/${coupon.id}`);
+    expect(couponLink.className).toContain('bg-brand-soft'); // secondary
+    expect(within(sheet).getByRole('link', { name: '리뷰 쓰기' }).className).toContain('bg-brand ');
+  });
+
+  it('아직 쓰지 않은 쿠폰의 시트에는 리뷰 쓰기가 없고 쿠폰 보기가 주 버튼이다', async () => {
+    const { user } = await openCourseMap('CONFIRMED');
+    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
+    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    expect(within(sheet).getByRole('link', { name: '쿠폰 보기' }).className).toContain('bg-brand ');
+    expect(within(sheet).queryByRole('link', { name: '리뷰 쓰기' })).not.toBeInTheDocument();
+    expect(within(sheet).queryByText('리뷰 작성 완료')).not.toBeInTheDocument();
+  });
+
+  it('?storeId=가 있으면 그 상점 시트를 연 채 시작하고, 닫으면 주소에서 storeId가 빠진다', async () => {
+    const { router, user, id } = await openCourseMap('CONFIRMED');
+    await router.navigate(`/my-tours/${id}/course?storeId=1`);
+    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    expect(within(sheet).getByText('✦ AI 리뷰 요약')).toBeInTheDocument();
+
+    await user.keyboard('{Escape}');
+    await waitFor(() => expect(screen.queryByRole('dialog')).not.toBeInTheDocument());
+    expect(router.state.location.pathname).toBe(`/my-tours/${id}/course`);
+    expect(router.state.location.search).toBe('');
+  });
+
+  it('?storeId=가 이 코스에 없는 상점이면 시트 없이 코스만 보인다', async () => {
+    const { router, id } = await openCourseMap('CONFIRMED');
+    await router.navigate(`/my-tours/${id}/course?storeId=999`);
+    await screen.findByText('함께 걸을 캠퍼스와 동네');
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument();
+  });
+
+  it('리뷰를 쓴 상점의 시트는 리뷰 작성 완료를 보인다', async () => {
+    const { router, user, id } = await openCourseMap('CONFIRMED', () => {
+      redeemDemoCoupon(1);
+    });
+    const coupon = getDb().coupons.find((c) => c.applicationId === id && c.storeId === 1)!;
+    await router.navigate(`/reviews/new?couponId=${coupon.id}`);
+    await user.click(await screen.findByRole('radio', { name: '별점 5점' }));
+    await user.type(screen.getByLabelText('좋았던 점과 아쉬웠던 점'), '최고예요');
+    await user.click(screen.getByRole('button', { name: '리뷰 등록하기' }));
+    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    expect(await within(sheet).findByText('리뷰 작성 완료')).toBeInTheDocument();
+    expect(within(sheet).queryByRole('link', { name: '리뷰 쓰기' })).not.toBeInTheDocument();
+    expect(within(sheet).getByRole('link', { name: '쿠폰 보기' })).toBeInTheDocument();
   });
 });
