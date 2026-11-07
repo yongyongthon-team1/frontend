@@ -1,9 +1,11 @@
-import { configure, screen, waitFor, within } from '@testing-library/react';
+import { act, configure, screen, waitFor, within } from '@testing-library/react';
 import { http } from 'msw';
 import { afterEach, describe, expect, it } from 'vitest';
+import { nextId } from '@/mocks/db/ids';
 import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
+import { qk } from '@/shared/api/queryKeys';
 import { formatMonthDay, formatTimeRange } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
 import { renderApp } from '@/test/renderApp';
@@ -375,6 +377,80 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     expect(guideTourGets).toBe(1);
     await router.navigate('/guide/tours');
     await waitFor(() => expect(guideTourGets).toBe(2));
+  });
+});
+
+describe('G03 → 장소 고르기(G07) 진입점 (2B′-R5 ⑥ · R14)', () => {
+  it('소제목 줄의 `+ 장소 추가`는 다시 만들기와 같은 줄에 있고, 누르면 추가 모드 고르기 화면으로', async () => {
+    const { user, router } = await openCourse();
+    const heading = screen.getByRole('heading', { name: '일정 · 3개 장소' });
+    const add = screen.getByRole('button', { name: '+ 장소 추가' });
+    // 소제목 줄 하나 안에 제목 · `+ 장소 추가` · `다시 만들기`(지점 카드 · `article` 수는 그대로)
+    expect(heading.parentElement).toContainElement(add);
+    expect(heading.parentElement).toContainElement(
+      screen.getByRole('button', { name: '다시 만들기' }),
+    );
+    expect(heading).toHaveClass('truncate');
+    expect(stopRows()).toHaveLength(3);
+    expect(document.querySelectorAll('article')).toHaveLength(0);
+
+    expect(add).toBeEnabled();
+    expect(add).not.toHaveAttribute('aria-disabled');
+    await user.click(add);
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/stops/pick');
+    expect(router.state.location.search).toBe('?mode=add');
+    expect(await screen.findByRole('heading', { name: '코스 장소 추가' })).toBeInTheDocument();
+  });
+
+  it.each(['서천 밥상', '예술·디자인대학'])(
+    '%s 지점 시트의 `다른 장소로 교체` → 그 지점의 교체 모드(상점 · 캠퍼스 지점 모두)',
+    async (name) => {
+      const { user, router } = await openCourse();
+      const id = screen.getByRole('button', { name: `${name} 편집` }).dataset.stopId;
+      const sheet = await openStopSheet(user, name);
+      await user.click(within(sheet).getByRole('button', { name: '다른 장소로 교체' }));
+      expect(router.state.location.pathname).toBe('/guide/tours/1/course/stops/pick');
+      expect(router.state.location.search).toBe(`?mode=replace&stopId=${id}`);
+      expect(await screen.findByRole('heading', { name: '코스 장소 교체' })).toBeInTheDocument();
+    },
+  );
+
+  it('지점이 5곳이면 `+ 장소 추가`는 aria-disabled, 누르면 상한 토스트만 보이고 머문다', async () => {
+    const { user, router, queryClient } = await openCourse();
+    // 경희대 캠퍼스 건물 4(중앙도서관) · 5(학생회관)를 코스 끝에 더해 5곳을 만든다.
+    mutate((db) => {
+      for (const campusBuildingId of [4, 5]) {
+        db.courseStops.push({
+          id: nextId(db),
+          tourId: 1,
+          stopType: 'CAMPUS',
+          campusBuildingId,
+          storeId: null,
+          partnershipId: null,
+          stopOrder: db.courseStops.filter((s) => s.tourId === 1).length + 1,
+          visitTime: null,
+          description: null,
+          recommendationReason: null,
+        });
+      }
+    });
+    await act(() => queryClient.invalidateQueries({ queryKey: qk.guideCourse(1) }));
+    expect(await screen.findByRole('heading', { name: '일정 · 5개 장소' })).toBeInTheDocument();
+
+    const add = screen.getByRole('button', { name: '+ 장소 추가' });
+    expect(add).toHaveAttribute('aria-disabled', 'true');
+    await user.click(add);
+    expect(await screen.findByText(errorMessage('COURSE_STOP_LIMIT'))).toBeInTheDocument();
+    expect(router.state.location.pathname).toBe('/guide/tours/1/course/edit');
+  });
+
+  it('편집 요청이 진행 중이면 `+ 장소 추가`도 잠긴다', async () => {
+    const { user } = await openCourse();
+    setMockLatency({ base: 150, ai: 0 });
+    const sheet = await openStopSheet(user, '서천 밥상');
+    await user.click(within(sheet).getByRole('button', { name: '아래로 이동' }));
+    expect(screen.getByRole('button', { name: '+ 장소 추가' })).toBeDisabled();
+    await waitFor(() => expect(screen.getByRole('button', { name: '+ 장소 추가' })).toBeEnabled());
   });
 });
 

@@ -490,6 +490,19 @@ describe('EmptyState · ErrorState · Skeleton · Page', () => {
     expect(screen.getByRole('link', { name: '탐방 찾기' })).toHaveAttribute('href', '/');
   });
 
+  it('EmptyState: 행동이 onClick이면 링크 대신 버튼', async () => {
+    const onClick = vi.fn();
+    render(
+      <EmptyState
+        title="'카페'에 맞는 상점이 없어요"
+        action={{ label: '검색어 지우기', onClick }}
+      />,
+    );
+    expect(screen.queryByRole('link')).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole('button', { name: '검색어 지우기' }));
+    expect(onClick).toHaveBeenCalledTimes(1);
+  });
+
   it('ErrorState: 에러 코드를 한국어 문구로, 다시 시도', async () => {
     const onRetry = vi.fn();
     render(<ErrorState error={{ code: 'NETWORK' }} onRetry={onRetry} />);

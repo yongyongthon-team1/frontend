@@ -53,12 +53,12 @@
 | `guide-s02` | 탐방 개설 · V2(G04 — 탐방 이름 칸 없음, 방학 안내 · 차단) | `/guide/tours/new` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s03` | 신청자 관리 · V2(G02 신청자 승인) | `/guide/tours/:tourId/applicants` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s04` | AI 추천 코스 생성 · V2(생성 중 로딩 뒤 G03 코스 완성 `edit`로 replace) | `/guide/tours/:tourId/course/draft` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `guide-s05` | 코스 편집 · 상점 교체 · V2(G03 코스 완성: AI 초안 + 편집 한 화면, 카드 `≡` → 지점 시트) | `/guide/tours/:tourId/course/edit` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `guide-s05` | 코스 편집 · 상점 교체 · V2(G03 코스 완성: AI 초안 + 편집 한 화면, 카드 `≡` → 지점 시트) · 지점 추가 · 교체 ✅(소제목 줄 `+ 장소 추가` · 지점 시트 `다른 장소로 교체` → G07) | `/guide/tours/:tourId/course/edit` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s06` | 코스 확정 · 쿠폰 발급 · V2(G08 확정 전 점검 → 같은 화면의 완료 상태, 옛 `/confirmed`는 이리로) | `/guide/tours/:tourId/course/confirm` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s07` | 탐방 종료 · 완료 · V2(G09, 확인 창 없음) | `/guide/tours/:tourId/complete` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a01` | 대학생 재학 인증 | `/guide/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-a02` | 내가 개설한 탐방 · V2(G06, `?tab=past`) | `/guide/tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `guide-a03` | 주변 상점 교체 | `/guide/tours/:tourId/course/stops/pick` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-a03` | 코스 장소 추가 · 교체 · V2(G07 — 추가는 `주변 상점` · `캠퍼스 장소` 탭, 교체는 그 지점 유형 목록만, 상점 카드의 `학생 요청:` 줄 대신 `✦` AI 리뷰 요약, 도보 거리순) | `/guide/tours/:tourId/course/stops/pick` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a04` | 탐방 취소 확인 · V2(G10, 확인 창 대체) | `/guide/tours/:tourId/cancel` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `owner-s01` | 사업자 인증 | `/owner/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s02` | 내 가게 · 제휴 할인 · V2(O01 가게 홈 · O01-E 미연결, 오른쪽 위 `로그아웃`. 제휴 설정 O06은 2B) | `/owner/store` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -80,7 +80,7 @@
 - `hs-s08` 상점 시트의 `최근 리뷰`(펼치기, 설계 5.6 · R-02)는 MVP 2B′ Task 2에서 `GET /stores/{storeId}/reviews`로 만들었다(요약 · 평균 · 수는 응답이 오면 그 값, 오기 전 · 실패하면 코스 지점 값).
 - `owner-s03`의 O07에는 V2에 없는 `이번 탐방으로 온 학생 {n}명`을 시연의 상권 효과 장면용으로 남겼다(판정 2A-R13). `owner-s02`에서 제휴가 없으면 `제휴 혜택을 설정해 주세요` 문구만 보이고(링크는 2B의 `/owner/store/partnership`이 생기면), 가게 연결은 `/owner/store/connect`(자리)로 간다.
 - `owner-a03`은 쿠폰 오류 3종(이미 사용 · 만료/다른 가게 · 없는 코드)과 "아직 사용할 수 없는 쿠폰"까지다. 리포트 빈 상태는 `owner-s04`(P1, MVP 2B′ Task 3)에서 만들었다.
-- `guide-s05`는 순서 · 한줄평 · 삭제까지다(V2 G03의 지점 시트). 지점 추가 · 상점 교체는 2단계(`guide-a03`)에서 만든다. 백엔드는 지점 단위 편집이 없어 전체 스팟 PUT(빌더)이다(`buildSpots`, 2C-R13). 백엔드가 지점 1곳 이상을 요구해 마지막 지점의 빼기는 사유 `지점은 1곳 이상 있어야 해요.`와 함께 잠긴다(2C-R12 ②).
+- `guide-s05`는 순서 · 한줄평 · 삭제(V2 G03의 지점 시트)이고, 지점 추가 · 교체는 `guide-a03`(G07, MVP 2B′ Task 8)이다 — 소제목 줄 `+ 장소 추가`(5곳이면 누르면 상한 토스트) · 지점 시트 `다른 장소로 교체`(상점 · 캠퍼스 지점 모두, 2B′-R14). 5곳 상한과 같은 장소 중복은 프론트만 막는다. 백엔드는 지점 단위 편집이 없어 전체 스팟 PUT(빌더)이다(`buildSpots`, 2C-R13). 백엔드가 지점 1곳 이상을 요구해 마지막 지점의 빼기는 사유 `지점은 1곳 이상 있어야 해요.`와 함께 잠긴다(2C-R12 ②).
 
 ## API 연동
 
@@ -95,7 +95,7 @@
 | auth | `PATCH /api/users/me` | hs-a03 내 정보 수정 `/me/edit` (U-03) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `PUT /api/users/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` (U-04) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses` | hs-s03, guide-s02 (D-01) | ⬜ | ✅ | ⬜ | ⬜ |
-| campuses | `GET /api/campuses/:campusId/places` | guide-a03 캠퍼스 장소 탭(코스에 캠퍼스 지점 추가, C-02 보완. 로그인한 누구나, 목업은 건물 id 순. 화면은 MVP 2B′ Task 8) | ⬜ | ✅ | ⬜ | ⬜ |
+| campuses | `GET /api/campuses/:campusId/places` | guide-a03 캠퍼스 장소 탭(코스에 캠퍼스 지점 추가 · 캠퍼스 지점 교체, C-02 보완. 로그인한 누구나, 목업은 건물 id 순. 화면 G07 — MVP 2B′ Task 8) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses/:campusId/insight` | hs-s04, guide-s04 (확장 · 목업 전용, 봉투. 오류면 카드를 그리지 않는다) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours` | hs-s03 홈 모집 중 목록, hs-s04 탐방 찾기 결과(`status=RECRUITING&campus_id&major[&date_from]`, 0건이면 `campus_id`만으로 같은 학교 대체 — hs-a06), `/explore`(P2). 쿼리 `status · campus_id · major · date_from · date_to · page · size` (T-01 보완, 목업 확장 `campus_id`) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `POST /api/tour-wishes` | hs-s03 (T-01 희망 사항 등록 · 고교생만, 본문 `{ campus_id, major, wish, date }`, 학교 칸 오류 `campus_id` → 폼 `universityId`. AI 없음 — 저장만 하고 탐방은 `GET /tours`로 찾는다) | ⬜ | ✅ | ⬜ | ⬜ |
@@ -112,7 +112,7 @@
 | applications | `GET /api/tours/:tourId/applications` | guide-s03, guide-s06 (A-04, 신청자 보드 = 이 목록 + `GET /tours/{tourId}` + 코스 상태 합성, `인증` 칩은 늘 켬) | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `GET /api/users/me/tours` | hs-a05, hs-s06, hs-s07, G01, guide-a02 (T-04, 역할마다 모양이 다르다. 고교생 행은 `GET /tours/{tourId}`로 탐방 요약을, 확장 `coupon_count`가 없으면 `GET /users/me/coupons?tour_id`로 쿠폰 수를 합성하고, 신청 단건(상세 · 신청 · 취소 뒤)도 이 행에서 찾는다 — 단건 경로는 없다. 가이드 행은 확정이 아니면 `GET /tours/{tourId}/course`로 초안 여부. 목업 확장 `wish` · `created_at` · `coupon_count`) | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | `POST /api/tours/:tourId/course` | guide-s04 · s05 다시 만들기 (C-01 AI 초안, 실패 `E502_AI_FAILED`) | ⬜ | ✅ | ⬜ | ⬜ |
-| courses | `PUT /api/tours/:tourId/course/spots` | guide-s05 (C-02 전체 스팟 교체 — 순서 · 한줄평 · 빼기를 `buildSpots`로 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
+| courses | `PUT /api/tours/:tourId/course/spots` | guide-s05 · guide-a03 (C-02 전체 스팟 교체 — 순서 · 한줄평 · 빼기 · 추가 · 교체를 `buildSpots`로 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | `POST /api/tours/:tourId/course/confirm` | guide-s05 → guide-s06 (C-03 · S-04, 제휴 0곳이면 `E422_PARTNER_REQUIRED`) | ⬜ | ✅ | ⬜ | ⬜ |
 | courses | `GET /api/tours/:tourId/course` | hs-s08, guide-s04 · s05 · s06, `/guide/tours/:tourId/course` (C-04, 학생과 가이드가 같이 쓴다. 가이드는 404 → 코스 없음, 학생은 확정 전 `E409_COURSE_NOT_READY`. 목업 확장 스팟 `spot_id` · `discount_text` · `review_average` · `review_count`, 응답 `coupon_count`) | ⬜ | ✅ | ⬜ | ⬜ |
 | coupons | `GET /api/users/me/coupons` | hs-s09 목록 · 상세(단건 경로가 없어 목록에서 찾고, 없으면 `NOT_FOUND`. 5초 폴링은 그대로), 코스 지도의 상점 시트 (S-05, 쪽 없는 목록, `tour_id` · `store_id`로 거른다. 쿠폰 상태는 어댑터가 `computeCouponState`로 계산하고, 탐방 요약은 `GET /tours/{tourId}`, 신청 id는 `GET /users/me/tours` 행으로 합성한다. 목업 확장 `store.category`) | ⬜ | ✅ | ⬜ | ⬜ |
@@ -122,7 +122,7 @@
 | stores | `POST /api/users/me/store` | owner-a01 가게 연결 · 직접 등록 (S-01) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | `GET /api/users/me/store` | owner-s02 (O01 · O01-E), 쿠폰 사용 처리 (S-01 보완) | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `PATCH /api/users/me/store` | owner-s02 가게 정보 수정 (S-01, 화면 없음 · P2) | ⬜ | ⬜ | ⬜ | ⬜ |
-| stores | `GET /api/stores/nearby` | guide-a03 주변 상점 선택 (S-02, `campus_id` 필수 · `category` 선택. 거리 · 순서는 프론트 — 캠퍼스 중심에서 직선거리로 가까운 순, 같으면 이름. 목업 반경은 `COURSE_RADIUS_M`, `is_partner`는 오늘 유효한 제휴. 화면은 MVP 2B′ Task 8) | ⬜ | ✅ | ⬜ | ⬜ |
+| stores | `GET /api/stores/nearby` | guide-a03 주변 상점 선택 (S-02, `campus_id` 필수 · `category` 선택. 거리 · 순서는 프론트 — 캠퍼스 중심에서 직선거리로 가까운 순, 같으면 이름. 목업 반경은 `COURSE_RADIUS_M`, `is_partner`는 오늘 유효한 제휴. 화면 G07 — MVP 2B′ Task 8, 탐방 학교를 모르면 부르지 않고 안내) | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `PUT /api/users/me/store/partnership` | owner-s02 제휴 설정 `/owner/store/partnership` (S-03) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | `GET /api/users/me/store/report` | owner-s04 방문 · 리뷰 리포트 ✅ 화면 연결 (S-07, 쿼리 없이 부른다 — 기본 기간은 서버 몫, 목업은 오늘 −30일 ~ 오늘. AI 요약 · 최근 리뷰는 `GET /users/me/store` + `GET /stores/{storeId}/reviews`로 합성, `E404` → `STORE_NOT_LINKED`면 빈 상태) | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 (U-07) | ⬜ | ⬜ | ⬜ | ⬜ |

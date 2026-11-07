@@ -67,6 +67,24 @@ export interface CourseStop {
   dataSource: string | null;
 }
 
+/** 지점의 장소. 응답이 지점 유형에 맞는 id를 채워 주므로 null이면 장소를 모르는 지점이다. */
+function placeOfStop(stop: CourseStop): PlaceRef | null {
+  if (stop.type === 'STORE') {
+    return stop.storeId === null ? null : { type: 'STORE', storeId: stop.storeId };
+  }
+  return stop.campusBuildingId === null
+    ? null
+    : { type: 'CAMPUS', campusBuildingId: stop.campusBuildingId };
+}
+
+/** 같은 장소인지. 상점 id와 캠퍼스 건물 id는 서로 다른 번호 체계다. */
+export function samePlace(a: PlaceRef, b: PlaceRef | null): boolean {
+  if (b === null) return false;
+  return a.type === 'STORE'
+    ? b.type === 'STORE' && a.storeId === b.storeId
+    : b.type === 'CAMPUS' && a.campusBuildingId === b.campusBuildingId;
+}
+
 export interface CourseTourInfo {
   id: number;
   title: string;
@@ -165,4 +183,41 @@ export function stopDurations(
     const minutes = hhmmToMinutes(next) - hhmmToMinutes(stop.visitTime);
     return minutes > 0 ? minutes : null;
   });
+}
+
+/** 장소 고르기(G07)가 하는 일: 맨 끝에 더하기, 그 지점 바꾸기, 또는 주소가 가리키는 지점이 없음. */
+export type PickTarget =
+  { kind: 'add' } | { kind: 'replace'; stop: CourseStop } | { kind: 'invalid' };
+
+/**
+ * 주소(`?mode=replace&stopId=`)에서 고르기 대상을 정한다. 교체는 지점 유형과 상관없이 코스에 있는 지점이면 된다(2B′-R14 —
+ * 옛 2B-R12의 "상점만"을 넓힘). 교체인데 id가 없거나 코스에 없으면 invalid, 그 밖은 추가다.
+ */
+export function pickTarget(course: Course, mode: string | null, stopId: string | null): PickTarget {
+  if (mode !== 'replace') return { kind: 'add' };
+  const stop = stopId === null ? undefined : course.stops.find((s) => String(s.id) === stopId);
+  return stop === undefined ? { kind: 'invalid' } : { kind: 'replace', stop };
+}
+
+/** 후보 카드 상태: 고를 수 있음 · 이미 코스에 있음 · 바꾸려는 지금 지점. */
+export type CandidateStatus = 'SELECTABLE' | 'IN_COURSE' | 'CURRENT';
+
+/** 같은 장소 중복은 명세에 없어 프론트만 막는다(2B′-R14, 9절 7번). */
+export function candidateStatus(
+  place: PlaceRef,
+  course: Course,
+  target: PickTarget,
+): CandidateStatus {
+  if (target.kind === 'replace' && samePlace(place, placeOfStop(target.stop))) return 'CURRENT';
+  return course.stops.some((stop) => samePlace(place, placeOfStop(stop)))
+    ? 'IN_COURSE'
+    : 'SELECTABLE';
+}
+
+const normalize = (text: string) => text.replace(/\s+/g, '').toLowerCase();
+
+/** 검색: 공백 · 대소문자를 무시한 부분 일치. 빈 검색어는 모두 맞는다. null 글은 건너뛴다. */
+export function matchesPlace(texts: (string | null)[], query: string): boolean {
+  const q = normalize(query);
+  return q === '' || texts.some((text) => text !== null && normalize(text).includes(q));
 }

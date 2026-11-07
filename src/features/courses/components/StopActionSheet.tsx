@@ -1,4 +1,11 @@
-import { ArrowDown, ArrowUp, MessageSquareText, Trash2, type LucideIcon } from 'lucide-react';
+import {
+  ArrowDown,
+  ArrowLeftRight,
+  ArrowUp,
+  MessageSquareText,
+  Trash2,
+  type LucideIcon,
+} from 'lucide-react';
 import { useId } from 'react';
 import type { CourseStop } from '@/features/courses/model';
 import { cn } from '@/shared/lib/cn';
@@ -17,6 +24,8 @@ export interface StopActionSheetProps {
   onMoveDown(): void;
   /** 한줄평 입력(1단계 한줄평 시트)을 연다. */
   onEditNote(): void;
+  /** 주면 `다른 장소로 교체`가 생긴다 — 장소 고르기(G07)의 교체 모드로 간다(2B′-R14, 지점 유형 무관). */
+  onReplace?: () => void;
   /** 빼기 확인 창(1단계 문구)을 연다. */
   onRemove(): void;
   onClose(): void;
@@ -26,7 +35,7 @@ export interface StopActionSheetProps {
 const LAST_STOP_REASON = '지점은 1곳 이상 있어야 해요.';
 
 /**
- * 코스 완성(G03) 지점 카드의 `≡`가 여는 시트(판정 2A-R10): 위로 · 아래로 이동 · 한줄평 · 빼기(상점 교체는 2B).
+ * 코스 완성(G03) 지점 카드의 `≡`가 여는 시트(판정 2A-R10): 위로 · 아래로 이동 · 한줄평 · (다른 장소로 교체) · 빼기.
  * 어느 동작이든 누르면 시트를 먼저 닫고 시작한다 — 순서가 바뀌는 카드 목록이 시트에 가리지 않고, 한줄평 · 빼기는
  * 자기 창을 연다. 처리 중이면 모두 비활성이고, 지점이 1곳뿐이면 `빼기`가 그 아래 사유와 함께 비활성이다.
  */
@@ -39,6 +48,7 @@ export function StopActionSheet({
   onMoveUp,
   onMoveDown,
   onEditNote,
+  onReplace,
   onRemove,
   onClose,
 }: StopActionSheetProps) {
@@ -64,6 +74,11 @@ export function StopActionSheet({
         <ActionRow icon={MessageSquareText} disabled={busy} onClick={run(onEditNote)}>
           한줄평
         </ActionRow>
+        {onReplace ? (
+          <ActionRow icon={ArrowLeftRight} disabled={busy} onClick={run(onReplace)}>
+            다른 장소로 교체
+          </ActionRow>
+        ) : null}
         <ActionRow
           icon={Trash2}
           danger

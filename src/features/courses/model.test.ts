@@ -1,7 +1,10 @@
 import { describe, expect, it } from 'vitest';
 import {
+  candidateStatus,
   courseKinds,
+  matchesPlace,
   partnerStopCount,
+  pickTarget,
   slotTimes,
   stopDurations,
   stopKindLabel,
@@ -9,6 +12,8 @@ import {
   walkingLabel,
   walkingMinutes,
   MAX_COURSE_STOPS,
+  type Course,
+  type CourseStop,
 } from './model';
 
 describe('slotTimes', () => {
@@ -111,4 +116,128 @@ describe('도보 시간 (2B′-R15)', () => {
   });
 
   it('코스 지점은 최대 5곳', () => expect(MAX_COURSE_STOPS).toBe(5));
+});
+
+const pickStop = (patch: Partial<CourseStop> & Pick<CourseStop, 'id' | 'order'>): CourseStop => ({
+  visitTime: '00:00',
+  type: 'STORE',
+  name: `지점 ${patch.id}`,
+  category: '식당',
+  lat: 0,
+  lng: 0,
+  description: null,
+  recommendationReason: null,
+  storeId: null,
+  campusBuildingId: null,
+  partnership: null,
+  review: null,
+  dataSource: null,
+  ...patch,
+});
+
+/** 지점 10 캠퍼스(건물 3) · 11 상점 1 · 12 상점 2. */
+const PICK_COURSE: Course = {
+  tourId: 1,
+  status: 'DRAFT',
+  tour: {
+    id: 1,
+    title: '',
+    universityId: 2,
+    universityShortName: '경희대',
+    campusName: '국제캠퍼스',
+    startsAt: '2027-01-15T14:00:00+09:00',
+    endsAt: '2027-01-15T16:30:00+09:00',
+  },
+  stops: [
+    pickStop({ id: 10, order: 1, type: 'CAMPUS', category: '캠퍼스', campusBuildingId: 3 }),
+    pickStop({ id: 11, order: 2, storeId: 1 }),
+    pickStop({ id: 12, order: 3, storeId: 2 }),
+  ],
+  interests: [],
+  criteria: '',
+  confirmedAt: null,
+  issuedCouponCount: 0,
+};
+
+describe('pickTarget (G07, 2B′-R14)', () => {
+  it('replace + 코스의 상점 지점 id → 그 지점을 바꾼다', () =>
+    expect(pickTarget(PICK_COURSE, 'replace', '11')).toEqual({
+      kind: 'replace',
+      stop: PICK_COURSE.stops[1],
+    }));
+
+  it('replace + 캠퍼스 지점 id도 replace다(옛 2B-R12의 STORE만을 넓힘)', () =>
+    expect(pickTarget(PICK_COURSE, 'replace', '10')).toEqual({
+      kind: 'replace',
+      stop: PICK_COURSE.stops[0],
+    }));
+
+  it('replace인데 코스에 없는 id면 invalid', () => {
+    expect(pickTarget(PICK_COURSE, 'replace', '99')).toEqual({ kind: 'invalid' });
+    expect(pickTarget(PICK_COURSE, 'replace', 'abc')).toEqual({ kind: 'invalid' });
+  });
+
+  it('replace인데 stopId가 없으면 invalid', () => {
+    expect(pickTarget(PICK_COURSE, 'replace', null)).toEqual({ kind: 'invalid' });
+    expect(pickTarget(PICK_COURSE, 'replace', '')).toEqual({ kind: 'invalid' });
+  });
+
+  it('그 밖(add · mode 없음 · 모르는 mode)은 add', () => {
+    expect(pickTarget(PICK_COURSE, 'add', null)).toEqual({ kind: 'add' });
+    expect(pickTarget(PICK_COURSE, null, '11')).toEqual({ kind: 'add' });
+    expect(pickTarget(PICK_COURSE, 'swap', '11')).toEqual({ kind: 'add' });
+  });
+});
+
+describe('candidateStatus (G07)', () => {
+  const replaceStore = { kind: 'replace', stop: PICK_COURSE.stops[1] } as const;
+
+  it('코스에 없는 장소는 SELECTABLE', () => {
+    expect(candidateStatus({ type: 'STORE', storeId: 3 }, PICK_COURSE, { kind: 'add' })).toBe(
+      'SELECTABLE',
+    );
+    expect(
+      candidateStatus({ type: 'CAMPUS', campusBuildingId: 4 }, PICK_COURSE, replaceStore),
+    ).toBe('SELECTABLE');
+  });
+
+  it('코스에 있는 장소는 IN_COURSE — 상점 id와 건물 id는 서로 다른 장소다', () => {
+    expect(candidateStatus({ type: 'STORE', storeId: 2 }, PICK_COURSE, { kind: 'add' })).toBe(
+      'IN_COURSE',
+    );
+    expect(
+      candidateStatus({ type: 'CAMPUS', campusBuildingId: 3 }, PICK_COURSE, { kind: 'add' }),
+    ).toBe('IN_COURSE');
+    // 상점 3과 건물 3은 다르다
+    expect(candidateStatus({ type: 'STORE', storeId: 3 }, PICK_COURSE, { kind: 'add' })).toBe(
+      'SELECTABLE',
+    );
+    expect(candidateStatus({ type: 'STORE', storeId: 2 }, PICK_COURSE, replaceStore)).toBe(
+      'IN_COURSE',
+    );
+  });
+
+  it('바꾸려는 지점의 장소는 CURRENT', () =>
+    expect(candidateStatus({ type: 'STORE', storeId: 1 }, PICK_COURSE, replaceStore)).toBe(
+      'CURRENT',
+    ));
+});
+
+describe('matchesPlace (G07 검색)', () => {
+  it('공백 · 대소문자를 무시한 부분 일치', () => {
+    expect(matchesPlace(['카페 모래시계', '카페'], ' 카페 ')).toBe(true);
+    expect(matchesPlace(['카페 모래시계', '카페'], '모래 시계')).toBe(true);
+    expect(matchesPlace(['Cafe Sand', null], 'cafe s')).toBe(true);
+    expect(matchesPlace(['서천 밥상', '한식'], '한식')).toBe(true);
+  });
+
+  it('어느 글에도 없으면 false, null은 건너뛴다', () => {
+    expect(matchesPlace(['학생회관', null], '도서')).toBe(false);
+    expect(matchesPlace([null, null], '도서')).toBe(false);
+  });
+
+  it('빈 검색어(공백뿐 포함)는 모두 맞는다', () => {
+    expect(matchesPlace(['학생회관', null], '')).toBe(true);
+    expect(matchesPlace([null], '   ')).toBe(true);
+  });
 });

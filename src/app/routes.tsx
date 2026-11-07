@@ -3,6 +3,7 @@ import { ApplicantsPage } from '@/pages/guide/ApplicantsPage';
 import { CourseConfirmPage } from '@/pages/guide/CourseConfirmPage';
 import { CourseDraftPage } from '@/pages/guide/CourseDraftPage';
 import { CourseEditPage } from '@/pages/guide/CourseEditPage';
+import { CoursePickPage } from '@/pages/guide/CoursePickPage';
 import { GuideCourseMapPage } from '@/pages/guide/GuideCourseMapPage';
 import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
 import { GuideHomePage } from '@/pages/guide/GuideHomePage';
@@ -198,7 +199,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/tours/:tourId/course/stops/pick',
-                    element: <PlaceholderPage title="주변 상점 선택" wireframe="guide-a03" />,
+                    element: <CoursePickPage />, // C-02 G07 장소 추가 · 교체
                   },
                   {
                     path: '/guide/tours/:tourId/course/confirm',

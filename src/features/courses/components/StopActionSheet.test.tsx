@@ -96,6 +96,32 @@ describe('StopActionSheet (G03 ≡ 시트)', () => {
     expect(calls).toEqual(['close', call]);
   });
 
+  it('onReplace를 주면 한줄평 다음 · 빼기 앞에 `다른 장소로 교체`, 누르면 시트를 먼저 닫고 시작한다 (2B′-R14)', async () => {
+    const onReplace = vi.fn();
+    const { calls, user } = renderSheet({ onReplace: () => (onReplace(), calls.push('replace')) });
+    const sheet = screen.getByRole('dialog', { name: '서천 밥상' });
+    expect(within(sheet).getAllByRole('button', { name: /이동|한줄평|교체|빼기/ })).toEqual([
+      within(sheet).getByRole('button', { name: '위로 이동' }),
+      within(sheet).getByRole('button', { name: '아래로 이동' }),
+      within(sheet).getByRole('button', { name: '한줄평' }),
+      within(sheet).getByRole('button', { name: '다른 장소로 교체' }),
+      within(sheet).getByRole('button', { name: '빼기' }),
+    ]);
+    await user.click(within(sheet).getByRole('button', { name: '다른 장소로 교체' }));
+    expect(calls).toEqual(['close', 'replace']);
+    expect(onReplace).toHaveBeenCalledOnce();
+  });
+
+  it('onReplace가 없으면 `다른 장소로 교체`가 없다', () => {
+    renderSheet();
+    expect(screen.queryByRole('button', { name: '다른 장소로 교체' })).toBeNull();
+  });
+
+  it('처리 중이면 `다른 장소로 교체`도 비활성', () => {
+    renderSheet({ busy: true, onReplace: vi.fn() });
+    expect(screen.getByRole('button', { name: '다른 장소로 교체' })).toBeDisabled();
+  });
+
   it('지점이 없으면 닫혀 있다', () => {
     renderSheet({ stop: null });
     expect(screen.queryByRole('dialog')).toBeNull();
