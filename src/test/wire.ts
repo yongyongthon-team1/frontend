@@ -1,10 +1,6 @@
-import { HttpResponse } from 'msw';
-import { ok } from '@/mocks/wire/envelope';
-import { toSnake } from '@/shared/lib/caseKeys';
+import { failRaw, ok } from '@/mocks/wire/envelope';
 
 // 백엔드 응답 봉투를 만드는 테스트 도구(2C-R25 ④). 본문은 snake_case 와이어 모양이다.
-
-const TIMESTAMP = '2026-11-04T21:00:00+09:00';
 
 /** 성공 봉투 `{ code: S200|S201, message, data, errors: null, timestamp }`. 목업 `ok`를 그대로 쓴다(봉투 규칙을 둘로 두지 않는다 — errata G10). */
 export function wireOk(data: unknown, init: { status?: 200 | 201 } = {}): Response {
@@ -24,7 +20,7 @@ export function wirePage(
   });
 }
 
-/** 오류 봉투. 상태 기본값은 코드의 세 자리(`E409_TOUR_FULL` → 409), 없으면 500. */
+/** 오류 봉투. 목업 `fail`과 같은 본문 규칙 · 시계를 쓴다(`failRaw`). 상태 기본값은 코드의 세 자리(`E409_TOUR_FULL` → 409), 없으면 500. */
 export function wireFail(
   code: string,
   init: {
@@ -35,16 +31,11 @@ export function wireFail(
   } = {},
 ): Response {
   const status = init.status ?? Number(/^E(\d{3})/.exec(code)?.[1] ?? 500);
-  return HttpResponse.json(
-    {
-      code,
-      message: init.message ?? '실패',
-      data: init.data === undefined ? null : toSnake(init.data),
-      errors: init.errors ?? null,
-      timestamp: TIMESTAMP,
-    },
-    { status },
-  );
+  return failRaw(code, status, {
+    message: init.message ?? '실패',
+    data: init.data,
+    errors: init.errors,
+  });
 }
 
 /**
@@ -111,12 +102,18 @@ function compareShape(
 
 /**
  * 목업 응답이 명세 예시와 같은 모양인지(2C-R25 ②). 객체는 `keys(example) ⊆ keys(actual)`이고 그 밖의 키는 `ext`(키 이름)에 든 것뿐이다.
- * 같은 키끼리 다시 비교하며, 배열은 둘 다 비어 있지 않으면 첫 원소끼리, 한쪽이 null이면 그 키는 넘어간다. 실패 메시지에 경로(`data.items[0].guide`)가 있다.
+ * 같은 키끼리 다시 비교하며, 배열은 둘 다 비어 있지 않으면 첫 원소끼리, 한쪽이 null이면 그 키는 넘어간다(최상위가 null · undefined면 실패). 실패 메시지에 경로(`data.items[0].guide`)가 있다.
+ *
+ * 주의: 안쪽 null은 건너뛰므로 `data: null`인 오류 봉투가 성공 예시와 맞을 수 있다. 호출하는 쪽이 `status`와 `code`도 따로 단언한다.
  */
 export function expectWireShape(
   actual: unknown,
   example: unknown,
   ext: readonly string[] = [],
 ): void {
+  // 최상위는 비어 있는 응답(`rawFetch`의 빈 본문 `undefined`, `null`)이 아무 예시와도 맞는 일이 없게 막는다.
+  if ((isRecord(example) || Array.isArray(example)) && (actual === null || actual === undefined)) {
+    throw new Error(`응답이 비어 있어요 (받은 값: ${String(actual)})`);
+  }
   compareShape(actual, example, ext, '');
 }

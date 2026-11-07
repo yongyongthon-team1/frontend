@@ -1,5 +1,7 @@
 import { describe, expect, it } from 'vitest';
-import { expectWireShape } from './wire';
+import { http, HttpResponse } from 'msw';
+import { server } from '@/mocks/node';
+import { expectWireShape, rawFetch } from './wire';
 
 describe('expectWireShape', () => {
   it('같은 키면 통과', () => {
@@ -54,5 +56,22 @@ describe('expectWireShape', () => {
         ['spot_id'],
       ),
     ).not.toThrow();
+  });
+
+  it('최상위 응답이 undefined · null이면 실패한다(빈 본문이 아무 예시와도 맞지 않는다)', () => {
+    expect(() => expectWireShape(undefined, { code: 'S200' })).toThrow(/비어 있어요/);
+    expect(() => expectWireShape(null, { code: 'S200' })).toThrow(/비어 있어요/);
+    expect(() => expectWireShape(undefined, [{ a: 1 }])).toThrow(/비어 있어요/);
+  });
+
+  it('빈 본문(rawFetch가 주는 undefined)은 실패한다', async () => {
+    server.use(http.get('/api/empty', () => new HttpResponse(null, { status: 204 })));
+    const { body } = await rawFetch('/empty', { method: 'GET' });
+    expect(() => expectWireShape(body, { code: 'S200', data: {} })).toThrow(/비어 있어요/);
+  });
+
+  it('명세 키의 예시 값이 null이어도 키가 없으면 실패한다', () => {
+    expect(() => expectWireShape({ a: 1 }, { a: 1, note: null })).toThrow(/note/);
+    expect(() => expectWireShape({ a: 1, note: null }, { a: 1, note: null })).not.toThrow();
   });
 });

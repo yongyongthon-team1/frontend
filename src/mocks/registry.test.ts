@@ -59,7 +59,54 @@ const BACKEND_CONTRACT: string[] = [
 const EXTENSIONS: string[] = ['GET /health', 'POST /demo/reset'];
 
 /** 아직 목업이 없는 백엔드 경로. 도메인 태스크가 자기 줄을 지운다. 끝에 남는 20개는 2B 몫이다. */
-const NOT_MOCKED: string[] = [...BACKEND_CONTRACT];
+const NOT_MOCKED: string[] = [
+  'POST /auth/signup',
+  'POST /auth/login',
+  'POST /auth/logout',
+  'GET /users/me',
+  'PATCH /users/me',
+  'PUT /users/me/guide-profile',
+  'POST /verifications/enrollment',
+  'POST /guardian-consents',
+  'GET /guardian-consents/:consentToken',
+  'PATCH /guardian-consents/:consentToken',
+  'POST /verifications/business',
+  'GET /admin/verifications',
+  'GET /admin/verifications/:verificationId',
+  'PATCH /admin/verifications/:verificationId',
+  'GET /tours',
+  'POST /tour-wishes',
+  'GET /users/me/tour-wishes',
+  'PATCH /users/me/tour-wishes/:wishId',
+  'GET /tour-wishes',
+  'GET /tours/:tourId',
+  'POST /tours',
+  'GET /users/me/tours',
+  'POST /tours/:tourId/cancel',
+  'POST /tours/:tourId/complete',
+  'POST /tours/:tourId/applications',
+  'PATCH /applications/:applicationId/decision',
+  'POST /applications/:applicationId/cancel',
+  'GET /tours/:tourId/applications',
+  'POST /tours/:tourId/course',
+  'PUT /tours/:tourId/course/spots',
+  'POST /tours/:tourId/course/confirm',
+  'GET /tours/:tourId/course',
+  'GET /stores/search',
+  'POST /users/me/store',
+  'GET /users/me/store',
+  'PATCH /users/me/store',
+  'GET /stores/nearby',
+  'PUT /users/me/store/partnership',
+  'GET /users/me/coupons',
+  'GET /coupons/:couponCode',
+  'POST /coupons/:couponCode/redeem',
+  'GET /users/me/store/report',
+  'POST /stores/:storeId/reviews',
+  'GET /stores/:storeId/reviews',
+  'GET /campuses',
+  'GET /campuses/:campusId/places',
+];
 
 /** 아직 바꾸지 않은 옛 경로(전환 기간). 도메인 태스크가 자기 줄을 지운다. */
 const LEGACY: string[] = [
@@ -123,6 +170,11 @@ describe('registry', () => {
   it('NOT_MOCKED ⊆ BACKEND_CONTRACT 이고 EXTENSIONS ∩ BACKEND_CONTRACT = ∅', () => {
     expect(NOT_MOCKED.filter((e) => !BACKEND_CONTRACT.includes(e))).toEqual([]);
     expect(EXTENSIONS.filter((e) => BACKEND_CONTRACT.includes(e))).toEqual([]);
+  });
+
+  it('LEGACY ∩ (BACKEND_CONTRACT − NOT_MOCKED) = ∅ (옛 줄을 지우지 않은 채 새 줄을 더하는 실수를 잡는다)', () => {
+    const mocked = BACKEND_CONTRACT.filter((e) => !NOT_MOCKED.includes(e));
+    expect(LEGACY.filter((e) => mocked.includes(e))).toEqual([]);
   });
 
   it('등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS ∪ LEGACY', () => {

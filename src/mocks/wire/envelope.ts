@@ -17,7 +17,7 @@ export function ok(data: unknown, status: 200 | 201 = 200): Response {
     {
       code: status === 201 ? 'S201' : 'S200',
       message: '성공',
-      data: toSnake(data),
+      data: toSnake(data ?? null),
       errors: null,
       timestamp: toSeoulIso(mockNow()),
     },
@@ -43,24 +43,41 @@ export function okItems(items: unknown[]): Response {
   return ok({ items });
 }
 
+/** 오류 봉투 본문과 상태를 직접 지정해 낸다(`fail`과 테스트 도구 `wireFail`이 공유). `data`는 snake로, `errors`는 그대로. */
+export function failRaw(
+  code: string,
+  status: number,
+  parts: {
+    message: string;
+    data?: unknown;
+    errors?: { field: string; reason: string }[] | null;
+  },
+): Response {
+  return HttpResponse.json(
+    {
+      code,
+      message: parts.message,
+      data: parts.data === undefined || parts.data === null ? null : toSnake(parts.data),
+      errors: parts.errors ?? null,
+      timestamp: toSeoulIso(mockNow()),
+    },
+    { status },
+  );
+}
+
 /** 규칙이 던진 `MockApiError`를 오류 봉투와 역표(`toBackendError`)의 상태로 바꾼다. `fieldErrors` → `errors[]`, `details` → `data`. */
 export function fail(error: MockApiError): Response {
   const wire = toBackendError(error.code, error.status);
-  return HttpResponse.json(
-    {
-      code: wire.code,
-      message: error.message,
-      data: error.details ? toSnake(error.details) : null,
-      errors: error.fieldErrors
-        ? Object.entries(error.fieldErrors).map(([field, reason]) => ({
-            field: camelToSnake(field),
-            reason,
-          }))
-        : null,
-      timestamp: toSeoulIso(mockNow()),
-    },
-    { status: wire.status },
-  );
+  return failRaw(wire.code, wire.status, {
+    message: error.message,
+    data: error.details,
+    errors: error.fieldErrors
+      ? Object.entries(error.fieldErrors).map(([field, reason]) => ({
+          field: camelToSnake(field),
+          reason,
+        }))
+      : null,
+  });
 }
 
 /** `withErrors`의 봉투판. `MockApiError`는 `fail`로, 다른 오류는 그대로 던진다. */

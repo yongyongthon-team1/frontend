@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { fieldError } from '@/mocks/handlers/util';
 import { MockApiError } from '@/mocks/rules/errors';
 import { ERROR_CODES, resolveErrorCode, type ErrorCode } from '@/shared/lib/errors';
-import { wireOk } from '@/test/wire';
+import { wireFail, wireOk } from '@/test/wire';
 import { LOSSY_CODES, toBackendError } from './errorCodes';
 import { fail, ok, okItems, okPage, withWire } from './envelope';
 
@@ -19,6 +19,12 @@ describe('ok', () => {
       errors: null,
       timestamp: expect.stringMatching(TIMESTAMP) as string,
     });
+  });
+
+  it('data가 undefined여도 data 키를 null로 남긴다(클라이언트 봉투 판별에 필요)', async () => {
+    const body = (await ok(undefined).json()) as Record<string, unknown>;
+    expect(body).toHaveProperty('data', null);
+    expect(body.code).toBe('S200');
   });
 
   it('201이면 코드 S201', async () => {
@@ -106,6 +112,50 @@ describe('fail', () => {
     expect(body.timestamp).toMatch(TIMESTAMP);
   });
 
+  it('명세 오류 예시 그대로의 본문이다(E409 이메일 중복 · E400 errors[])', async () => {
+    // backend-spec.md: { "code": "E409", "message": "이미 가입된 이메일입니다", "data": null }
+    expect(
+      await fail(new MockApiError(409, 'EMAIL_DUPLICATE', '이미 가입된 이메일입니다')).json(),
+    ).toEqual({
+      code: 'E409',
+      message: '이미 가입된 이메일입니다',
+      data: null,
+      errors: null,
+      timestamp: expect.stringMatching(TIMESTAMP) as string,
+    });
+    // backend-spec.md: E400 + errors: [{ "field": "document", "reason": "..." }]
+    const reason = 'jpg, png 형식의 5MB 이하 파일만 올릴 수 있어요';
+    expect(
+      await fail(
+        new MockApiError(400, 'VALIDATION', '요청 값이 유효하지 않습니다', undefined, {
+          document: reason,
+        }),
+      ).json(),
+    ).toEqual({
+      code: 'E400',
+      message: '요청 값이 유효하지 않습니다',
+      data: null,
+      errors: [{ field: 'document', reason }],
+      timestamp: expect.stringMatching(TIMESTAMP) as string,
+    });
+  });
+
+  it('테스트 도구 wireFail도 같은 봉투를 낸다(같은 본문 규칙)', async () => {
+    const res = wireFail('E409', { message: '이미 가입된 이메일입니다' });
+    expect(res.status).toBe(409);
+    expect(await res.json()).toEqual({
+      code: 'E409',
+      message: '이미 가입된 이메일입니다',
+      data: null,
+      errors: null,
+      timestamp: expect.stringMatching(TIMESTAMP) as string,
+    });
+    const withErrors = wireFail('E400', { errors: [{ field: 'document', reason: 'x' }] });
+    expect(((await withErrors.json()) as { errors: unknown }).errors).toEqual([
+      { field: 'document', reason: 'x' },
+    ]);
+  });
+
   it('message는 우리 오류 문구 표를 따른다', async () => {
     expect((await read(fail(new MockApiError(409, 'TOUR_CLOSED')))).message).toBe(
       '정원이 마감됐어요.',
@@ -190,6 +240,62 @@ describe('toBackendError', () => {
     for (const c of Object.keys(ERROR_CODES) as ErrorCode[]) {
       if (LOSSY_CODES.includes(c)) continue;
       expect(resolveErrorCode(toBackendError(c, 400).code), c).toBe(c);
+    }
+  });
+
+  // 2C-R6 표를 그대로 옮긴 기대값(코드 구현과 따로 적는다).
+  const TABLE: [ErrorCode, string, number][] = [
+    ['VALIDATION', 'E400', 400],
+    ['UNAUTHORIZED', 'E401', 401],
+    ['INVALID_CREDENTIALS', 'E401_INVALID_CREDENTIALS', 401],
+    ['FORBIDDEN', 'E403', 403],
+    ['NOT_VERIFIED', 'E403_VERIFICATION_REQUIRED', 403],
+    ['GUARDIAN_NOT_AGREED', 'E403_VERIFICATION_REQUIRED', 403],
+    ['BIZ_NOT_VERIFIED', 'E403_VERIFICATION_REQUIRED', 403],
+    ['COUPON_OTHER_STORE', 'E403_OTHER_STORE', 403],
+    ['REVIEW_NOT_ALLOWED', 'E403_COUPON_NOT_USED', 403],
+    ['NOT_FOUND', 'E404', 404],
+    ['COUPON_NOT_FOUND', 'E404', 404],
+    ['STORE_NOT_LINKED', 'E404', 404],
+    ['CONSENT_LINK_INVALID', 'E404', 404],
+    ['EMAIL_DUPLICATE', 'E409', 409],
+    ['TOUR_CLOSED', 'E409_TOUR_FULL', 409],
+    ['TOUR_NOT_RECRUITING', 'E409_TOUR_FULL', 409],
+    ['CAPACITY_EXCEEDED', 'E409_TOUR_FULL', 409],
+    ['DUPLICATE_APPLICATION', 'E409_ALREADY_APPLIED', 409],
+    ['ALREADY_PROCESSED', 'E409_ALREADY_PROCESSED', 409],
+    ['CANCEL_AFTER_TOUR_DATE', 'E409_INVALID_APPLICATION_STATUS', 409],
+    ['TOUR_ALREADY_COMPLETED', 'E409_INVALID_TOUR_STATUS', 409],
+    ['COMPLETE_BEFORE_TOUR_DATE', 'E409_INVALID_TOUR_STATUS', 409],
+    ['GUIDE_PROFILE_REQUIRED', 'E409_GUIDE_PROFILE_REQUIRED', 409],
+    ['NO_APPROVED_APPLICANTS', 'E409_NO_APPROVED_APPLICANT', 409],
+    ['COURSE_NOT_DRAFT', 'E409_COURSE_CONFIRMED', 409],
+    ['COURSE_NOT_READY', 'E409_COURSE_NOT_READY', 409],
+    ['COUPON_ALREADY_USED', 'E409_ALREADY_USED', 409],
+    ['COUPON_DAILY_LIMIT', 'E409_DAILY_LIMIT', 409],
+    ['STORE_ALREADY_LINKED', 'E409_STORE_UNAVAILABLE', 409],
+    ['STORE_LIMIT', 'E409_STORE_UNAVAILABLE', 409],
+    ['REVIEW_DUPLICATE', 'E409_ALREADY_REVIEWED', 409],
+    ['COUPON_EXPIRED', 'E410_EXPIRED', 410],
+    ['CONSENT_LINK_EXPIRED', 'E410_EXPIRED', 410],
+    ['BIZ_MISMATCH', 'E422_BUSINESS_INVALID', 422],
+    ['BIZ_CLOSED', 'E422_BUSINESS_INVALID', 422],
+    ['COURSE_PARTNER_REQUIRED', 'E422_PARTNER_REQUIRED', 422],
+    ['AI_FAILED', 'E502_AI_FAILED', 502],
+    ['UNKNOWN', 'E500', 500],
+  ];
+
+  it.each(TABLE)('%s → %s · %i (받은 상태와 무관)', (code, wantCode, wantStatus) => {
+    // 받은 상태가 달라도 표의 상태가 이긴다.
+    expect(toBackendError(code, 418)).toEqual({ code: wantCode, status: wantStatus });
+    expect(toBackendError(code, wantStatus)).toEqual({ code: wantCode, status: wantStatus });
+  });
+
+  it('표에 없는 ErrorCode는 모두 확장 코드 E{받은 상태}_{이름}이다', () => {
+    const listed = new Set(TABLE.map(([c]) => c));
+    for (const c of Object.keys(ERROR_CODES) as ErrorCode[]) {
+      if (listed.has(c)) continue;
+      expect(toBackendError(c, 422), c).toEqual({ code: `E422_${c}`, status: 422 });
     }
   });
 
