@@ -17,7 +17,8 @@ export function getLandingPath(me: Me): string {
       if (me.verificationStatus === 'NONE' || me.verificationStatus === 'REJECTED') {
         return '/guide/verify';
       }
-      if (!hasGuideProfile(me)) return '/guide/me';
+      // 학과가 없으면 프로필부터(2B-R5). 학과가 있으면 가이드 홈.
+      if (!hasGuideProfile(me)) return '/guide/me/profile';
       return '/guide';
     case 'OWNER':
       if (!me.businessVerified) return '/owner/verify';

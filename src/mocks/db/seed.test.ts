@@ -531,7 +531,7 @@ describe('P1 상태 계정(시드 v3)', () => {
     expect(landing('guide-new@demo.kr')).toBe('/guide/verify');
   });
 
-  it('한도윤: 심사 중 · 단국대 · 프로필 학과 없음 · 이 태스크에서는 /guide/me', () => {
+  it('한도윤: 심사 중 · 단국대 · 프로필 학과 없음 · /guide/me/profile', () => {
     expect(verificationOf('guide-pending@demo.kr')).toMatchObject({
       status: 'PENDING',
       universityId: 3,
@@ -544,7 +544,7 @@ describe('P1 상태 계정(시드 v3)', () => {
       major: null,
       introduction: null,
     });
-    expect(landing('guide-pending@demo.kr')).toBe('/guide/me');
+    expect(landing('guide-pending@demo.kr')).toBe('/guide/me/profile');
   });
 
   it('서지안: 반려 · 명지대 · 프로필 있음 · /guide/verify', () => {

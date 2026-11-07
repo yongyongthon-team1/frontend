@@ -36,26 +36,36 @@ describe('getLandingPath', () => {
     expect(getLandingPath({ ...base, role: 'UNIVERSITY', ...patch } as Me)).toBe(path),
   );
 
-  it('가이드: 학과가 비면 /guide/me', () =>
+  it('가이드: 학과가 비면 /guide/me/profile', () =>
     expect(
       getLandingPath({
         ...base,
         role: 'UNIVERSITY',
         guideProfile: { universityId: 2, major: null, introduction: null },
       }),
-    ).toBe('/guide/me'));
+    ).toBe('/guide/me/profile'));
 
-  it('가이드: 승인돼도 학과가 공백뿐이면 /guide/me (hasGuideProfile 기준)', () =>
+  it('가이드: 승인돼도 학과가 공백뿐이면 /guide/me/profile (hasGuideProfile 기준)', () =>
     expect(
       getLandingPath({
         ...base,
         role: 'UNIVERSITY',
         guideProfile: { universityId: 2, major: '  ', introduction: null },
       }),
-    ).toBe('/guide/me'));
+    ).toBe('/guide/me/profile'));
 
-  it('가이드: 프로필이 없어도 /guide/me', () =>
-    expect(getLandingPath({ ...base, role: 'UNIVERSITY' })).toBe('/guide/me'));
+  it('가이드: 프로필이 없어도 /guide/me/profile', () =>
+    expect(getLandingPath({ ...base, role: 'UNIVERSITY' })).toBe('/guide/me/profile'));
+
+  it('가이드: 심사 중이고 학과가 없으면 /guide/me/profile', () =>
+    expect(
+      getLandingPath({
+        ...base,
+        role: 'UNIVERSITY',
+        verificationStatus: 'PENDING',
+        guideProfile: { universityId: 3, major: null, introduction: null },
+      }),
+    ).toBe('/guide/me/profile'));
 
   it('가이드: 학과가 있으면 /guide', () =>
     expect(

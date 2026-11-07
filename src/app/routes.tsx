@@ -6,8 +6,10 @@ import { CourseEditPage } from '@/pages/guide/CourseEditPage';
 import { CoursePickPage } from '@/pages/guide/CoursePickPage';
 import { GuideCourseMapPage } from '@/pages/guide/GuideCourseMapPage';
 import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
+import { GuideProfilePage } from '@/pages/guide/GuideProfilePage';
 import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
+import { GuideVerifyPage } from '@/pages/guide/GuideVerifyPage';
 import { GuideWishesPage } from '@/pages/guide/GuideWishesPage';
 import { TourCancelPage } from '@/pages/guide/TourCancelPage';
 import { TourCompletePage } from '@/pages/guide/TourCompletePage';
@@ -224,13 +226,12 @@ export const routes: RouteObject[] = [
                     ),
                   },
                   {
-                    // 자리 — G04 차단의 `가이드 프로필 작성하기`가 가는 곳이라 먼저 둔다(Task 11이 실제 화면으로 바꾼다).
                     path: '/guide/me/profile',
-                    element: <PlaceholderPage title="가이드 프로필 등록" wireframe="guide-s01" />,
+                    element: <GuideProfilePage />, // U-04 G05
                   },
                   {
                     path: '/guide/verify',
-                    element: <PlaceholderPage title="대학생 재학 인증" wireframe="guide-a01" />,
+                    element: <GuideVerifyPage />, // U-05 guide-a01
                   },
                 ],
               },

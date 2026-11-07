@@ -49,14 +49,14 @@
 | `hs-a06` | 탐방 찾기 · 신청 예외 상태 · V2(H13 — `/tours` 0건 · 같은 학교 대체, 탐방 상세의 마감 · 중복 신청 카드) | `/tours` · `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `G01` | 가이드 홈 (V2, 신청자 없음 G11 포함) | `/guide` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | — | 코스 편집 탭 (다가오는 탐방의 코스로 이동) | `/guide/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `guide-s01` | 가이드 프로필 | `/guide/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-s01` | 가이드 프로필 등록 · 수정 ✅(G05 — 전공 · 소개 한마디 · 읽기 전용 학교 칸, U-04. 학과가 없는 가이드의 첫 화면 `/guide/me/profile`, 2B-R5) · MY 홈 G12는 `/guide/me` 자리(MVP 2B′ Task 15) | `/guide/me/profile` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s02` | 탐방 개설 · V2(G04 — 탐방 이름 칸 없음, 방학 안내 · 차단) | `/guide/tours/new` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s03` | 신청자 관리 · V2(G02 신청자 승인) | `/guide/tours/:tourId/applicants` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s04` | AI 추천 코스 생성 · V2(생성 중 로딩 뒤 G03 코스 완성 `edit`로 replace) | `/guide/tours/:tourId/course/draft` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s05` | 코스 편집 · 상점 교체 · V2(G03 코스 완성: AI 초안 + 편집 한 화면, 카드 `≡` → 지점 시트) · 지점 추가 · 교체 ✅(소제목 줄 `+ 장소 추가` · 지점 시트 `다른 장소로 교체` → G07) | `/guide/tours/:tourId/course/edit` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s06` | 코스 확정 · 쿠폰 발급 · V2(G08 확정 전 점검 → 같은 화면의 완료 상태, 옛 `/confirmed`는 이리로) | `/guide/tours/:tourId/course/confirm` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s07` | 탐방 종료 · 완료 · V2(G09, 확인 창 없음) | `/guide/tours/:tourId/complete` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `guide-a01` | 대학생 재학 인증 | `/guide/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-a01` | 대학생 재학 인증 ✅(U-05 — 대학 + 학생증 사진, 심사 중 · 승인 상태 카드, 반려 재제출) | `/guide/verify` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
 | `guide-a02` | 내가 개설한 탐방 · V2(G06, `?tab=past`) | `/guide/tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a03` | 코스 장소 추가 · 교체 · V2(G07 — 추가는 `주변 상점` · `캠퍼스 장소` 탭, 교체는 그 지점 유형 목록만, 상점 카드의 `학생 요청:` 줄 대신 `✦` AI 리뷰 요약, 도보 거리순) | `/guide/tours/:tourId/course/stops/pick` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a04` | 탐방 취소 확인 · V2(G10, 확인 창 대체) | `/guide/tours/:tourId/cancel` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -93,7 +93,7 @@
 | auth | `POST /api/auth/logout` | hs-a03 · guide-s01 · `/owner/me` 로그아웃 (U-02) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `GET /api/users/me` | 전 화면 가드 · 첫 화면, hs-s02, hs-a03 (U-03, 사장님은 `GET /users/me/store`로 가게 id 합성. 목업 확장 `campus_id`) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | `PATCH /api/users/me` | hs-a03 내 정보 수정 `/me/edit` (U-03) | ⬜ | ✅ | ⬜ | ⬜ |
-| auth | `PUT /api/users/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` (U-04) | ⬜ | ✅ | ⬜ | ⬜ |
+| auth | `PUT /api/users/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` ✅ 화면 연결 (U-04) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses` | hs-s03, guide-s02 (D-01) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses/:campusId/places` | guide-a03 캠퍼스 장소 탭(코스에 캠퍼스 지점 추가 · 캠퍼스 지점 교체, C-02 보완. 로그인한 누구나, 목업은 건물 id 순. 화면 G07 — MVP 2B′ Task 8) | ⬜ | ✅ | ⬜ | ⬜ |
 | campuses | `GET /api/campuses/:campusId/insight` | hs-s04, guide-s04 (확장 · 목업 전용, 봉투. 오류면 카드를 그리지 않는다) | ⬜ | ✅ | ⬜ | ⬜ |
@@ -128,7 +128,7 @@
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 (U-07) | ⬜ | ⬜ | ⬜ | ⬜ |
 | reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 ✅ 화면 연결 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
 | reviews | `GET /api/stores/:storeId/reviews` | hs-s08 · 가이드 확정 코스 상점 시트의 요약 · 별점 · 접힌 `최근 리뷰` ✅ 화면 연결 (R-02, `page=1&size=3` 한 쪽, 캠퍼스 지점은 부르지 않음. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
-| verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05, multipart `school_name`(고교생) · `campus_id`(대학생) + `document`, jpg · png 5MB. 고교생은 이어서 `PATCH /users/me`로 학년을 저장. 고교생 화면 ✅ 연결(`/verify`), 대학생 화면은 MVP 2B′ Task 11) | ⬜ | ✅ | ⬜ | ⬜ |
+| verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05, multipart `school_name`(고교생) · `campus_id`(대학생) + `document`, jpg · png 5MB. 고교생은 이어서 `PATCH /users/me`로 학년을 저장. 고교생 화면 ✅ 연결(`/verify`), 대학생 화면 ✅ 연결(`/guide/verify`)) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 ✅ 화면 연결 (U-06, 거부 · 만료일 때만 다시 요청, 링크 7일) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `GET /api/guardian-consents/:consentToken` | hs-a02 보호자 동의 안내 ✅ 화면 연결 (U-06, 로그인 없이 `auth: false`. 처리된 링크는 200 + 그 상태, 만료 `E410_EXPIRED` → `CONSENT_LINK_EXPIRED`, 없는 토큰 `E404` → `CONSENT_LINK_INVALID`) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `PATCH /api/guardian-consents/:consentToken` | hs-a02 동의 · 거부 ✅ 화면 연결 (U-06, 본문 `{ agree }`, 로그인 없이 `auth: false`, 처리한 요청은 `E409_ALREADY_PROCESSED`) | ⬜ | ✅ | ⬜ | ⬜ |
