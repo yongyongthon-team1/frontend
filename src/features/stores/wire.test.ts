@@ -1,7 +1,12 @@
 import { describe, expect, it } from 'vitest';
 import { toCamel } from '@/shared/lib/caseKeys';
-import { MY_STORE, MY_STORE_PATCHED } from '@/test/fixtures/backend/stores';
-import { fromWireMyStore, type WireMyStore } from './wire';
+import { MY_STORE, MY_STORE_PATCHED, STORE_REPORT } from '@/test/fixtures/backend/stores';
+import {
+  fromWireMyStore,
+  fromWireStoreReport,
+  type WireMyStore,
+  type WireStoreReport,
+} from './wire';
 
 const now = new Date('2026-11-07T12:00:00+09:00');
 
@@ -44,5 +49,26 @@ describe('fromWireMyStore', () => {
       category: '식당',
       partnership: null,
     });
+  });
+});
+
+describe('fromWireStoreReport', () => {
+  it('S-07 명세 예시를 StoreReport로 읽는다', () => {
+    expect(fromWireStoreReport(toCamel<WireStoreReport>(STORE_REPORT.data))).toEqual({
+      from: '2027-01-01',
+      to: '2027-01-31',
+      visitCount: 18,
+      reviewCount: 11,
+      averageRating: 4.5,
+    });
+  });
+
+  it('리뷰가 없으면 평균은 null 그대로', () => {
+    const wire = {
+      ...toCamel<WireStoreReport>(STORE_REPORT.data),
+      reviewCount: 0,
+      averageRating: null,
+    };
+    expect(fromWireStoreReport(wire).averageRating).toBeNull();
   });
 });

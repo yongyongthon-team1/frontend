@@ -11,6 +11,7 @@ import { GuideWishesPage } from '@/pages/guide/GuideWishesPage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
 import { MyStorePage } from '@/pages/owner/MyStorePage';
+import { StoreReportPage } from '@/pages/owner/StoreReportPage';
 import { CancelApplicationPage } from '@/pages/student/CancelApplicationPage';
 import { ApplyDonePage } from '@/pages/student/ApplyDonePage';
 import { ApplyPage } from '@/pages/student/ApplyPage';
@@ -249,7 +250,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/owner/report',
-                    element: <PlaceholderPage title="방문 · 리뷰 리포트" wireframe="owner-s04" />, // P2
+                    element: <StoreReportPage />,
                   },
                   {
                     path: '/owner/me',

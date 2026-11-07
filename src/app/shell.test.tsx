@@ -127,6 +127,7 @@ describe('레이아웃', () => {
     ['student', '/me/wishes', 'MY', ['탐색', '내 탐방']],
     ['student', '/me/wishes/1/edit', 'MY', ['탐색', '내 탐방']],
     ['owner', '/owner/verify', '내 가게', ['쿠폰']],
+    ['owner', '/owner/report', '내 가게', ['쿠폰']],
   ])('%s 인증 화면(%s)에서 %s 탭만 활성', async (as, path, tab, others) => {
     await renderApp(path, { as });
     const nav = await screen.findByRole('navigation', { name: '주요 메뉴' });
@@ -142,10 +143,10 @@ describe('레이아웃', () => {
     expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).toBeNull();
   });
 
-  it('자리 화면: 문구 · 와이어프레임 코드', async () => {
-    await renderApp('/owner/report', { as: 'owner' });
+  it('자리 화면: /explore만 남는다(2B′-R24)', async () => {
+    await renderApp('/explore', { as: 'owner' });
     expect(await screen.findByText('곧 열려요.')).toBeInTheDocument();
-    expect(screen.getByText('와이어프레임: owner-s04')).toBeInTheDocument();
+    expect(screen.queryByText(/^와이어프레임:/)).not.toBeInTheDocument();
   });
 });
 

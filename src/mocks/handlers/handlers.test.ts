@@ -29,7 +29,7 @@ import {
 import { COURSE_CRITERIA } from '@/features/courses/model';
 import { buildSpots } from '@/features/courses/spots';
 import { getStoreReviews, postReview } from '@/features/reviews/api';
-import { getMyStore } from '@/features/stores/api';
+import { getMyStore, getStoreReport, getStoreReportView } from '@/features/stores/api';
 import { findWishTours, getTour, listTours } from '@/features/tours/api';
 import type { TourFilter } from '@/features/tours/model';
 import { listGuideWishes, listMyWishes, patchTourWish, postTourWish } from '@/features/wishes/api';
@@ -81,7 +81,7 @@ import {
   REVIEW_NOT_USED,
   STORE_REVIEWS,
 } from '@/test/fixtures/backend/reviews';
-import { MY_STORE } from '@/test/fixtures/backend/stores';
+import { MY_STORE, STORE_REPORT } from '@/test/fixtures/backend/stores';
 import { TOUR_DETAIL, TOURS_LIST } from '@/test/fixtures/backend/tours';
 import {
   GUIDE_WISHES,
@@ -2011,6 +2011,90 @@ describe('사장님 내 가게 (GET /users/me/store)', () => {
     });
     configureHttp({ getToken: () => null });
     await expect(getMyStore()).rejects.toMatchObject({ status: 401 });
+  });
+});
+
+describe('사장님 방문 · 리뷰 리포트 (GET /users/me/store/report)', () => {
+  type Envelope = { code: string; data: Record<string, unknown> | null };
+
+  it('S-07 와이어: 명세 예시와 같은 모양, 기본 기간으로 방문 5 · 리뷰 5 · 평균 4.6', async () => {
+    const { token } = await login('owner1@demo.kr');
+    const res = await rawFetch<Envelope>('/users/me/store/report', { method: 'GET', token });
+    expect([res.status, res.body.code]).toEqual([200, 'S200']);
+    expectWireShape(res.body.data, STORE_REPORT.data);
+    expect(res.body.data).toMatchObject({ visit_count: 5, review_count: 5, average_rating: 4.6 });
+  });
+
+  it('from · to 쿼리가 기간으로 나간다 — 잘못된 날짜는 400 E400 + 칸 오류', async () => {
+    const { token } = await login('owner1@demo.kr');
+    const narrow = await rawFetch<Envelope>(
+      '/users/me/store/report?from=2000-01-01&to=2000-01-31',
+      {
+        method: 'GET',
+        token,
+      },
+    );
+    expect(narrow.body.data).toMatchObject({
+      from: '2000-01-01',
+      to: '2000-01-31',
+      visit_count: 0,
+      review_count: 0,
+      average_rating: null,
+    });
+    const bad = await rawFetch<Envelope & { errors: { field: string }[] }>(
+      '/users/me/store/report?from=어제',
+      { method: 'GET', token },
+    );
+    expect([bad.status, bad.body.code]).toEqual([400, 'E400']);
+    expect(bad.body.errors[0].field).toBe('from');
+  });
+
+  it('가게가 없으면 404 E404, 학생이면 403, 토큰이 없으면 401', async () => {
+    const nostore = await login('owner-nostore@demo.kr');
+    const none = await rawFetch<Envelope>('/users/me/store/report', {
+      method: 'GET',
+      token: nostore.token,
+    });
+    expect([none.status, none.body.code]).toEqual([404, 'E404']);
+    const student = await login('student@demo.kr');
+    const forbidden = await rawFetch<Envelope>('/users/me/store/report', {
+      method: 'GET',
+      token: student.token,
+    });
+    expect(forbidden.status).toBe(403);
+    const anonymous = await rawFetch<Envelope>('/users/me/store/report', { method: 'GET' });
+    expect(anonymous.status).toBe(401);
+  });
+
+  it('어댑터: getStoreReportView는 리포트 · 내 가게 · 상점 리뷰 세 요청을 합성한다', async () => {
+    await login('owner1@demo.kr');
+    let view: Awaited<ReturnType<typeof getStoreReportView>> = null;
+    const seen = await requestsDuring(async () => {
+      view = await getStoreReportView();
+    });
+    expect(view).toMatchObject({
+      report: { visitCount: 5, reviewCount: 5, averageRating: 4.6 },
+      store: { id: 1 },
+      reviews: { count: 5 },
+    });
+    expect([...seen].sort()).toEqual([
+      'GET /stores/1/reviews',
+      'GET /users/me/store',
+      'GET /users/me/store/report',
+    ]);
+  });
+
+  it('가게가 연결되지 않은 사장님은 getStoreReportView가 null, getStoreReport는 STORE_NOT_LINKED', async () => {
+    await login('owner-nostore@demo.kr');
+    expect(await getStoreReportView()).toBeNull();
+    await expect(getStoreReport()).rejects.toMatchObject({ status: 404, code: 'STORE_NOT_LINKED' });
+  });
+
+  it('쿠폰을 사용 처리하면 방문이 늘어난다(CONFIRMED + 사용 처리 → 6)', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    redeemDemoCoupon(1);
+    await login('owner1@demo.kr');
+    expect((await getStoreReportView())?.report.visitCount).toBe(6);
   });
 });
 

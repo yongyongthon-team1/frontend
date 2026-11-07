@@ -1,4 +1,4 @@
-import { computePartnershipState, type MyStore } from './model';
+import { computePartnershipState, type MyStore, type StoreReport } from './model';
 
 // 백엔드 S-01 보완 `GET /users/me/store`의 와이어 모양(키는 `request`가 camelCase로 바꾼 뒤의 것).
 
@@ -36,5 +36,25 @@ export function fromWireMyStore(w: WireMyStore, now: Date): MyStore {
           state: computePartnershipState(w.partnership, now),
         }
       : null,
+  };
+}
+
+// 백엔드 S-07 `GET /users/me/store/report`의 와이어 모양(키는 `request`가 camelCase로 바꾼 뒤의 것).
+
+export interface WireStoreReport {
+  from: string;
+  to: string;
+  visitCount: number;
+  reviewCount: number;
+  averageRating: number | null;
+}
+
+export function fromWireStoreReport(w: WireStoreReport): StoreReport {
+  return {
+    from: w.from,
+    to: w.to,
+    visitCount: w.visitCount,
+    reviewCount: w.reviewCount,
+    averageRating: w.averageRating,
   };
 }

@@ -35,7 +35,12 @@ export const TABS: Record<Role, TabItem[]> = {
     { to: '/guide/me', label: 'MY', icon: CircleUser, match: ['/guide/me', '/guide/verify'] },
   ],
   OWNER: [
-    { to: '/owner/store', label: '내 가게', icon: Store, match: ['/owner/store', '/owner/verify'] },
+    {
+      to: '/owner/store',
+      label: '내 가게',
+      icon: Store,
+      match: ['/owner/store', '/owner/verify', '/owner/report'],
+    },
     {
       to: '/owner/coupons/redeem',
       label: '쿠폰',

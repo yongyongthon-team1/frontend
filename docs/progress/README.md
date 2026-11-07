@@ -63,7 +63,7 @@
 | `owner-s01` | 사업자 인증 | `/owner/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s02` | 내 가게 · 제휴 할인 · V2(O01 가게 홈 · O01-E 미연결, 오른쪽 위 `로그아웃`. 제휴 설정 O06은 2B) | `/owner/store` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `owner-s03` | 쿠폰 사용 처리 · V2(O02 입력 · 조회, O07 사용 완료) | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `owner-s04` | 방문 · 리뷰 리포트 | `/owner/report` | P2 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
+| `owner-s04` | 방문 · 리뷰 리포트 ✅ (P2 → P1, V2 시안 없음 — V2 부품으로 그림, 디자이너 공유 메모 · O01의 `방문 · 리뷰 리포트 ›` 링크 · AI 리뷰 요약 · 최근 리뷰 합성) | `/owner/report` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `owner-s05` | 빈 시간 달력 | — | OUT | ➖ | ➖ | ➖ | ➖ | ➖ |
 | `owner-s06` | 운영자 인증 심사 | `/admin/verifications` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-a01` | 가게 후보 선택·직접 등록 | `/owner/store/connect` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -79,7 +79,7 @@
 - `hs-s08`은 목업 · 도식 지도로 확인했다. 카카오맵(실제 지도)은 JavaScript 키(팀 요청 16)가 오면 고정 도메인에서 확인한다.
 - `hs-s08` 상점 시트의 `최근 리뷰`(펼치기, 설계 5.6 · R-02)는 MVP 2B′ Task 2에서 `GET /stores/{storeId}/reviews`로 만들었다(요약 · 평균 · 수는 응답이 오면 그 값, 오기 전 · 실패하면 코스 지점 값).
 - `owner-s03`의 O07에는 V2에 없는 `이번 탐방으로 온 학생 {n}명`을 시연의 상권 효과 장면용으로 남겼다(판정 2A-R13). `owner-s02`에서 제휴가 없으면 `제휴 혜택을 설정해 주세요` 문구만 보이고(링크는 2B의 `/owner/store/partnership`이 생기면), 가게 연결은 `/owner/store/connect`(자리)로 간다.
-- `owner-a03`은 쿠폰 오류 3종(이미 사용 · 만료/다른 가게 · 없는 코드)과 "아직 사용할 수 없는 쿠폰"까지다. 리포트 빈 상태는 `owner-s04`(P2)와 함께 만든다.
+- `owner-a03`은 쿠폰 오류 3종(이미 사용 · 만료/다른 가게 · 없는 코드)과 "아직 사용할 수 없는 쿠폰"까지다. 리포트 빈 상태는 `owner-s04`(P1, MVP 2B′ Task 3)에서 만들었다.
 - `guide-s05`는 순서 · 한줄평 · 삭제까지다(V2 G03의 지점 시트). 지점 추가 · 상점 교체는 2단계(`guide-a03`)에서 만든다. 백엔드는 지점 단위 편집이 없어 전체 스팟 PUT(빌더)이다(`buildSpots`, 2C-R13). 백엔드가 지점 1곳 이상을 요구해 마지막 지점의 빼기는 사유 `지점은 1곳 이상 있어야 해요.`와 함께 잠긴다(2C-R12 ②).
 
 ## API 연동
@@ -124,7 +124,7 @@
 | stores | `PATCH /api/users/me/store` | owner-s02 가게 정보 수정 (S-01, 화면 없음 · P2) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | `GET /api/stores/nearby` | guide-a03 주변 상점 선택 (S-02) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | `PUT /api/users/me/store/partnership` | owner-s02 제휴 설정 `/owner/store/partnership` (S-03) | ⬜ | ⬜ | ⬜ | ⬜ |
-| stores | `GET /api/users/me/store/report` | owner-s04 방문 · 리뷰 리포트 (S-07, P2, 필드 미확정) | ⬜ | ⬜ | ⬜ | ⬜ |
+| stores | `GET /api/users/me/store/report` | owner-s04 방문 · 리뷰 리포트 ✅ 화면 연결 (S-07, 쿼리 없이 부른다 — 기본 기간은 서버 몫, 목업은 오늘 −30일 ~ 오늘. AI 요약 · 최근 리뷰는 `GET /users/me/store` + `GET /stores/{storeId}/reviews`로 합성, `E404` → `STORE_NOT_LINKED`면 빈 상태) | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 (U-07) | ⬜ | ⬜ | ⬜ | ⬜ |
 | reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
 | reviews | `GET /api/stores/:storeId/reviews` | hs-s08 · 가이드 확정 코스 상점 시트의 요약 · 별점 · 접힌 `최근 리뷰` ✅ 화면 연결 (R-02, `page=1&size=3` 한 쪽, 캠퍼스 지점은 부르지 않음. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
@@ -146,7 +146,7 @@
 
 | # | 대상 | 요청 | 기한 | 상태 |
 |---|---|---|---|---|
-| 1 | 기획 · 백엔드 | 사장님 방문 · 리뷰 리포트(S-07): 명세엔 있고 플로우(F-O2)에선 삭제. 처리: P2, 백엔드가 API를 주면 만든다 | 11/8 | ⬜ |
+| 1 | 기획 · 백엔드 | 사장님 방문 · 리뷰 리포트(S-07): 명세엔 있고 플로우(F-O2)에선 삭제. 처리: P1로 올려 만들었다(MVP 2B′ Task 3, 필드는 명세 예시 그대로) | 11/8 | ⬜ |
 | 2 | 기획 · 백엔드 | 회원가입 이름 필드(ERD NOT NULL ↔ 명세 입력에 없음). 처리: 이름 필드 추가 | 11/8 | ⬜ |
 | 3 | 기획 · 백엔드 | 탐방 제목 · 학과가 ERD에 없음(같은 가이드의 탐방이 같은 제목이 됨, 가이드 학년도 없음). 처리: "대학교 + 가이드 학과" + 날짜를 항상 함께 표시, T-03에 탐방 제목(주제) 필드를 추가할지 질문, 가이드 학년은 필드가 생기면 표시 | 11/8 | ⬜ |
 | 4 | 백엔드 | `tour_wishes`(희망 탐방) 대응 화면 없음. 처리: 만들지 않음, T-01 요청 기록용으로 추정 | 11/8 | ✅ 2C에서 T-01 · T-07 · T-08로 만듦 |

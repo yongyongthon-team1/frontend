@@ -163,6 +163,14 @@ function StoreHome({ store }: { store: MyStore }) {
           </li>
         ))}
       </ol>
+
+      <Link
+        to="/owner/report"
+        className="mt-2 flex min-h-11 items-center text-[13px] font-bold text-brand"
+      >
+        방문 · 리뷰 리포트
+        <span aria-hidden> ›</span>
+      </Link>
     </Page>
   );
 }

@@ -1,3 +1,4 @@
+import type { StoreReviews } from '@/features/reviews/model';
 import { seoulDateKey } from '@/shared/lib/date';
 
 /** 백엔드는 주지 않는다. 어댑터(`wire.ts`)가 오늘(서울)과 제휴 기간으로 계산한다. ERD 칼럼이 아니다. */
@@ -48,4 +49,20 @@ export function partnershipStateLabel(state: PartnershipState): string {
     case 'ENDED':
       return '제휴 종료';
   }
+}
+
+/** S-07 방문 · 리뷰 리포트. 기간(`from` ~ `to`, `YYYY-MM-DD`, 양 끝 포함) 안의 쿠폰 사용 수 · 리뷰 수 · 평균(리뷰가 없으면 null). */
+export interface StoreReport {
+  from: string;
+  to: string;
+  visitCount: number;
+  reviewCount: number;
+  averageRating: number | null;
+}
+
+/** 리포트 화면의 값. 리포트 응답에 없는 가게 · AI 요약 · 최근 리뷰를 R-02와 합성한다(2B′-R2). */
+export interface StoreReportView {
+  report: StoreReport;
+  store: MyStore;
+  reviews: StoreReviews;
 }

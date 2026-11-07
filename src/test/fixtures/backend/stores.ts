@@ -27,3 +27,16 @@ export const MY_STORE_PATCHED = {
     partnership: null,
   },
 };
+
+// `docs/api/backend-spec.md` S-07 `GET /users/me/store/report`(방문 · 리뷰 리포트 조회)의 응답 예시(한 글자도 바꾸지 않았다).
+export const STORE_REPORT = {
+  code: 'S200',
+  message: '조회 성공',
+  data: {
+    from: '2027-01-01',
+    to: '2027-01-31',
+    visit_count: 18,
+    review_count: 11,
+    average_rating: 4.5,
+  },
+};

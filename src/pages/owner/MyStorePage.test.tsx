@@ -51,6 +51,26 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     expect(screen.queryByText('아직 연결된 가게가 없어요.')).not.toBeInTheDocument();
   });
 
+  it('O01: 쿠폰 사용 방법 아래에 방문 · 리뷰 리포트 링크(› 는 장식), 쿠폰 코드 입력하기는 그대로', async () => {
+    await renderStore();
+    await screen.findByText('서천 밥상');
+    const link = screen.getByRole('link', { name: '방문 · 리뷰 리포트' });
+    expect(link).toHaveAttribute('href', '/owner/report');
+    expect(link).toHaveTextContent('방문 · 리뷰 리포트 ›');
+    const howTo = screen.getByRole('heading', { name: '쿠폰 사용 방법' });
+    expect(howTo.compareDocumentPosition(link) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    expect(screen.getByRole('link', { name: '쿠폰 코드 입력하기' })).toHaveAttribute(
+      'href',
+      '/owner/coupons/redeem',
+    );
+  });
+
+  it('O01-E: 연결된 가게가 없으면 리포트 링크가 없다', async () => {
+    await renderStore(unlink);
+    await screen.findByText('아직 연결된 가게가 없어요.');
+    expect(screen.queryByRole('link', { name: '방문 · 리뷰 리포트' })).not.toBeInTheDocument();
+  });
+
   it.each([
     ['2099-01-01', '2099-12-31', '제휴 예정'],
     ['2000-01-01', '2000-12-31', '제휴 종료'],

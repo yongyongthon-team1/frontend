@@ -41,5 +41,7 @@ export const qk = {
   courseDraft: (tourId: number) => ['courseDraft', tourId] as const,
   couponLookup: (code: string) => ['couponLookup', code] as const,
   myStore: ['myStore'] as const,
+  /** 사장님 방문 · 리뷰 리포트(S-07) — 리포트 · 내 가게 · 상점 리뷰를 합성한 값. */
+  storeReport: ['storeReport'] as const,
   health: ['health'] as const,
 };
