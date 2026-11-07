@@ -70,16 +70,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
-const ENVELOPE_CODE = /^[SE]\d{3}/;
+type EnvelopeLike = Record<string, unknown> & { code: string };
 
-/** 백엔드 봉투(2C-R2): 객체이고 `code`가 S/E 세 자리로 시작하며 `data` 키가 있다. `timestamp`는 보지 않는다. */
-function isEnvelope(value: unknown): value is Record<string, unknown> & { code: string } {
-  return (
-    isRecord(value) &&
-    typeof value.code === 'string' &&
-    ENVELOPE_CODE.test(value.code) &&
-    'data' in value
-  );
+/** 객체이고 `code`가 S/E 세 자리로 시작한다(2C-R2의 `code` 조건). 봉투 판별의 공통 부분. */
+function hasEnvelopeCode(value: unknown): value is EnvelopeLike {
+  return isRecord(value) && typeof value.code === 'string' && /^[SE]\d{3}/.test(value.code);
+}
+
+/** 성공 응답의 봉투(2C-R2): `code` 조건 + `data` 키. `timestamp`는 보지 않는다. */
+function isEnvelope(value: unknown): value is EnvelopeLike {
+  return hasEnvelopeCode(value) && 'data' in value;
 }
 
 /** `errors: [{ field, reason }]` → `{ 칸: 문구 }`(2C-R5). 같은 칸은 첫 항목, 대문자 기계값은 코드 문구로. */
@@ -104,11 +104,7 @@ function detailsOf(data: unknown): Record<string, unknown> | undefined {
   return isRecord(data) ? toCamel<Record<string, unknown>>(data) : undefined;
 }
 
-function envelopeError(
-  status: number,
-  body: Record<string, unknown> & { code: string },
-  options: RequestOptions,
-): ApiError {
+function envelopeError(status: number, body: EnvelopeLike, options: RequestOptions): ApiError {
   const code = resolveErrorCode(body.code, options.errorMap);
   return new ApiError(status, code, errorMessage(code), {
     backendCode: body.code,
@@ -127,10 +123,8 @@ function parseJson(text: string): unknown {
 
 async function toApiError(res: Response, options: RequestOptions): Promise<ApiError> {
   const parsed = parseJson(await res.text());
-  // 실패 응답은 `data` 키가 없어도 `code`가 S/E 세 자리면 봉투로 읽는다.
-  if (isRecord(parsed) && typeof parsed.code === 'string' && ENVELOPE_CODE.test(parsed.code)) {
-    return envelopeError(res.status, { ...parsed, code: parsed.code }, options);
-  }
+  // 2C-R2 해석(통제자 확정): 실패 본문은 `code`만으로 봉투다 — `data` 키는 요구하지 않는다.
+  if (hasEnvelopeCode(parsed)) return envelopeError(res.status, parsed, options);
   // 전환 기간: 옛 오류 모양 `{ code: ErrorCode, fieldErrors, details }`(Task 13이 지운다).
   if (isRecord(parsed) && typeof parsed.code === 'string') {
     const code = resolveErrorCode(parsed.code, options.errorMap);
@@ -264,7 +258,7 @@ export async function listAll<T>(
       ...options,
       method: 'GET',
     });
-    if (Array.isArray(data)) return data as T[];
+    if (Array.isArray(data)) return [...all, ...(data as T[])];
     const items: unknown = isRecord(data) ? data.items : undefined;
     if (!Array.isArray(items)) return all;
     all.push(...(items as T[]));

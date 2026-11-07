@@ -233,6 +233,11 @@ describe('봉투와 키 변환', () => {
     expect(await request('/old')).toEqual({ someKey: { innerKey: 1 } });
   });
 
+  it('배열 성공 본문도 원소의 키를 camelCase로', async () => {
+    server.use(http.get('/api/arr', () => HttpResponse.json([{ tour_id: 1 }, { tour_id: 2 }])));
+    expect(await request('/arr')).toEqual([{ tourId: 1 }, { tourId: 2 }]);
+  });
+
   it('data: null 봉투는 null, 빈 204는 undefined', async () => {
     server.use(
       http.get('/api/nul', () => wireOk(null)),
@@ -327,6 +332,77 @@ describe('오류 봉투', () => {
     const error = await request('/e', { auth: false }).catch((e: unknown) => e);
     expect(error).toBeInstanceOf(ApiError);
     expect(error).toMatchObject({ status, code, backendCode, message: errorMessage(code) });
+  });
+
+  it('data 키가 없는 오류 본문도 code만으로 봉투다', async () => {
+    server.use(
+      http.get('/api/nodata', () =>
+        HttpResponse.json({ code: 'E409_TOUR_FULL', message: 'x' }, { status: 409 }),
+      ),
+    );
+    await expect(request('/nodata')).rejects.toMatchObject({
+      code: 'TOUR_CLOSED',
+      backendCode: 'E409_TOUR_FULL',
+    });
+  });
+
+  it('2xx인데 E 봉투면 ApiError로 던진다', async () => {
+    server.use(http.get('/api/odd', () => wireFail('E409_TOUR_FULL', { status: 200 })));
+    const error = await request('/odd').catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect(error).toMatchObject({
+      status: 200,
+      code: 'TOUR_CLOSED',
+      backendCode: 'E409_TOUR_FULL',
+    });
+  });
+
+  it('명세 400 예시(재학 인증 파일 오류) 그대로: errors[] -> fieldErrors', async () => {
+    // docs/api/backend-spec.md POST /verifications body(형식·용량 오류)
+    server.use(
+      http.post('/api/verifications', () =>
+        HttpResponse.json(
+          {
+            code: 'E400',
+            message: '요청 값이 유효하지 않습니다',
+            data: null,
+            errors: [
+              { field: 'document', reason: 'jpg, png 형식의 5MB 이하 파일만 올릴 수 있어요' },
+            ],
+          },
+          { status: 400 },
+        ),
+      ),
+    );
+    await expect(request('/verifications', { method: 'POST' })).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      backendCode: 'E400',
+      fieldErrors: { document: 'jpg, png 형식의 5MB 이하 파일만 올릴 수 있어요' },
+    });
+  });
+
+  it('명세 422 예시(사업자 불일치) 그대로: 기계값 reason은 우리 문구', async () => {
+    // docs/api/backend-spec.md POST /verifications/business body(불일치 · 휴폐업)
+    server.use(
+      http.post('/api/biz', () =>
+        HttpResponse.json(
+          {
+            code: 'E422_BUSINESS_INVALID',
+            message: '사업자 정보를 확인할 수 없습니다',
+            data: null,
+            errors: [{ field: 'business_number', reason: 'MISMATCH' }],
+          },
+          { status: 422 },
+        ),
+      ),
+    );
+    await expect(request('/biz', { method: 'POST' })).rejects.toMatchObject({
+      status: 422,
+      code: 'BIZ_MISMATCH',
+      backendCode: 'E422_BUSINESS_INVALID',
+      fieldErrors: { businessNumber: errorMessage('BIZ_MISMATCH') },
+    });
   });
 
   it('호출별 errorMap이 기본 표보다 앞선다', async () => {
@@ -530,6 +606,17 @@ describe('listAll', () => {
     );
     expect(await listAll('/tours')).toHaveLength(20);
     expect(count).toBe(20);
+  });
+
+  it('맨 배열이 뒤쪽 쪽에 오면 앞서 모은 것을 버리지 않는다', async () => {
+    server.use(
+      http.get('/api/tours', ({ request: req }) =>
+        new URL(req.url).searchParams.get('page') === '1'
+          ? wirePage([item(1)], { total: 5 })
+          : HttpResponse.json([item(2)]),
+      ),
+    );
+    expect(await listAll('/tours')).toEqual([{ tourId: 1 }, { tourId: 2 }]);
   });
 
   it('오류는 그대로 던진다', async () => {
