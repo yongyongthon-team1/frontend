@@ -1,5 +1,5 @@
 import { delay, http, HttpResponse } from 'msw';
-import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { listCampuses } from '@/features/campuses/api';
 import { mutate, resetDb } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
@@ -13,17 +13,31 @@ import {
   DECISION_FULL,
   MY_TOURS_HIGH_SCHOOL,
 } from '@/test/fixtures/backend/applications';
-import { TOUR_DETAIL } from '@/test/fixtures/backend/tours';
+import { COURSE_VIEW } from '@/test/fixtures/backend/courses';
+import {
+  TOUR_CANCEL_INVALID,
+  TOUR_CANCELED,
+  TOUR_COMPLETE_INVALID,
+  TOUR_COMPLETED,
+  TOUR_CREATED,
+  TOUR_DETAIL,
+  TOUR_OUTSIDE_VACATION,
+  TOUR_PROFILE_REQUIRED,
+} from '@/test/fixtures/backend/tours';
 import { loginAs } from '@/test/loginAs';
 import { wireFail, wireOk, wirePage } from '@/test/wire';
 import {
   getApplicantsBoard,
+  getGuideTour,
   getGuideTours,
   getMyApplication,
   getMyApplications,
   patchDecision,
   postApplication,
   postCancelApplication,
+  postCancelTour,
+  postCompleteTour,
+  postTour,
 } from './api';
 
 // 명세 예시 봉투를 그대로 받았을 때의 어댑터(2C-R15 세분 · 확장 없는 대체 경로)와 합성의 병렬성(errata G6 · G13).
@@ -350,5 +364,162 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
         code: 'NOT_FOUND',
       });
     }
+  });
+});
+
+describe('탐방 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', () => {
+  beforeEach(() => {
+    resetDb({ today: new Date() });
+    loginAs(DEMO_EMAILS.guide);
+  });
+  afterEach(() => {
+    configureHttp({ getToken: () => null });
+    vi.useRealTimers();
+  });
+
+  const input = {
+    date: '2027-01-15',
+    startTime: '13:00',
+    endTime: '16:00',
+    capacity: 5,
+    introduction: '캠퍼스와 근처 맛집을 함께 둘러봐요',
+    openChatUrl: 'https://open.kakao.com/o/xxxx',
+  };
+  /** 명세 T-02 예시 상세(탐방 31)의 상태만 바꾼 응답. */
+  const detailWith = (status: string) => wireOk({ ...TOUR_DETAIL.data, status });
+
+  it('postTour: 201 { tour_id } → 새 탐방 id를 돌려준다', async () => {
+    server.use(http.post('/api/tours', () => wireOk(TOUR_CREATED.data, { status: 201 })));
+    await expect(postTour(input)).resolves.toBe(31);
+  });
+
+  it('postTour: 방학 밖 날짜 400 errors[date]의 명세 문장이 date 칸 오류로 온다', async () => {
+    server.use(
+      http.post('/api/tours', () =>
+        wireFail(TOUR_OUTSIDE_VACATION.code, { errors: TOUR_OUTSIDE_VACATION.errors }),
+      ),
+    );
+    await expect(postTour(input)).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { date: '방학 기간 안의 날짜만 선택할 수 있어요' },
+    });
+  });
+
+  it('postTour: 서버의 intro 칸 오류는 introduction 칸으로 읽는다(fieldMap)', async () => {
+    server.use(
+      http.post('/api/tours', () =>
+        wireFail('E400', { errors: [{ field: 'intro', reason: '300자 이내로 적어 주세요' }] }),
+      ),
+    );
+    await expect(postTour(input)).rejects.toMatchObject({
+      fieldErrors: { introduction: '300자 이내로 적어 주세요' },
+    });
+  });
+
+  it('postTour: E409_GUIDE_PROFILE_REQUIRED → GUIDE_PROFILE_REQUIRED', async () => {
+    server.use(
+      http.post('/api/tours', () =>
+        wireFail(TOUR_PROFILE_REQUIRED.code, { message: TOUR_PROFILE_REQUIRED.message }),
+      ),
+    );
+    await expect(postTour(input)).rejects.toMatchObject({
+      status: 409,
+      code: 'GUIDE_PROFILE_REQUIRED',
+    });
+  });
+
+  it('postCompleteTour: 명세 성공 예시를 받으면 값 없이 끝나고 탐방을 다시 읽지 않는다', async () => {
+    server.use(http.post('/api/tours/:tourId/complete', () => wireOk(TOUR_COMPLETED.data)));
+    const seen = await requestsDuring(async () => {
+      await expect(postCompleteTour(31, listCampuses())).resolves.toBeUndefined();
+    });
+    expect(seen.filter((r) => r.startsWith('GET /tours'))).toEqual([]);
+  });
+
+  it('postCancelTour: 명세 성공 예시를 받으면 값 없이 끝난다', async () => {
+    server.use(http.post('/api/tours/:tourId/cancel', () => wireOk(TOUR_CANCELED.data)));
+    await expect(postCancelTour(31, listCampuses())).resolves.toBeUndefined();
+  });
+
+  it.each([
+    ['RECRUITING', 'COMPLETE_BEFORE_TOUR_DATE'],
+    ['CLOSED', 'COMPLETE_BEFORE_TOUR_DATE'],
+    ['COMPLETED', 'TOUR_ALREADY_COMPLETED'],
+    ['CANCELED', 'ALREADY_PROCESSED'],
+  ] as const)('postCompleteTour: 409 하나를 탐방이 %s이면 %s로 세분한다', async (status, code) => {
+    server.use(
+      http.post('/api/tours/:tourId/complete', () =>
+        wireFail(TOUR_COMPLETE_INVALID.code, { message: TOUR_COMPLETE_INVALID.message }),
+      ),
+      http.get('/api/tours/:tourId', () => detailWith(status)),
+    );
+    await expect(postCompleteTour(31, listCampuses())).rejects.toMatchObject({
+      status: 409,
+      code,
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+    });
+  });
+
+  it.each([
+    ['COMPLETED', 'TOUR_ALREADY_COMPLETED'],
+    ['CANCELED', 'ALREADY_PROCESSED'],
+    ['RECRUITING', 'ALREADY_PROCESSED'],
+  ] as const)('postCancelTour: 409 하나를 탐방이 %s이면 %s로 세분한다', async (status, code) => {
+    server.use(
+      http.post('/api/tours/:tourId/cancel', () =>
+        wireFail(TOUR_CANCEL_INVALID.code, { message: TOUR_CANCEL_INVALID.message }),
+      ),
+      http.get('/api/tours/:tourId', () => detailWith(status)),
+    );
+    await expect(postCancelTour(31, listCampuses())).rejects.toMatchObject({
+      status: 409,
+      code,
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+    });
+  });
+
+  it('다른 오류(403)는 다시 읽지 않고 그대로 낸다', async () => {
+    server.use(http.post('/api/tours/:tourId/complete', () => wireFail('E403')));
+    const seen = await requestsDuring(async () => {
+      await expect(postCompleteTour(31, listCampuses())).rejects.toMatchObject({
+        status: 403,
+        code: 'FORBIDDEN',
+      });
+    });
+    expect(seen.some((r) => r.startsWith('GET /tours/31'))).toBe(false);
+  });
+
+  it('getGuideTour: 탐방 상세와 코스 지점 수를 합성하고 actions는 어댑터 시계로 계산한다', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-01-15T06:00:00Z')); // 서울 2027-01-15 15:00 — 탐방 날짜 당일
+    server.use(
+      http.get('/api/tours/:tourId', () => wireOk(TOUR_DETAIL.data)),
+      http.get('/api/tours/:tourId/course', () => wireOk(COURSE_VIEW.data)),
+    );
+    const detail = await getGuideTour(31, listCampuses());
+    expect(detail.tour).toMatchObject({ id: 31, status: 'RECRUITING' });
+    expect(detail.courseStopCount).toBe(2);
+    expect(detail.actions).toEqual({ completable: true, cancellable: true });
+  });
+
+  it('getGuideTour: 탐방 날짜 전날이면 완료 불가, 코스가 없으면(404) 0곳', async () => {
+    vi.useFakeTimers({ toFake: ['Date'] });
+    vi.setSystemTime(new Date('2027-01-14T06:00:00Z'));
+    server.use(
+      http.get('/api/tours/:tourId', () => wireOk(TOUR_DETAIL.data)),
+      http.get('/api/tours/:tourId/course', () => wireFail('E404')),
+    );
+    const detail = await getGuideTour(31, listCampuses());
+    expect(detail.courseStopCount).toBe(0);
+    expect(detail.actions).toEqual({ completable: false, cancellable: true });
+  });
+
+  it('getGuideTour: 코스가 확정 전(COURSE_NOT_READY)이어도 0곳이다', async () => {
+    server.use(
+      http.get('/api/tours/:tourId', () => wireOk(TOUR_DETAIL.data)),
+      http.get('/api/tours/:tourId/course', () => wireFail('E409_COURSE_NOT_READY')),
+    );
+    expect((await getGuideTour(31, listCampuses())).courseStopCount).toBe(0);
   });
 });

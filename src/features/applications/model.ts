@@ -1,5 +1,5 @@
 import type { CourseStatus } from '@/features/courses/model';
-import { TOUR_STATUS_LABEL, type TourSummary } from '@/features/tours/model';
+import { TOUR_STATUS_LABEL, type TourDetail, type TourSummary } from '@/features/tours/model';
 import { seoulDateKey } from '@/shared/lib/date';
 import type { Tone } from '@/shared/lib/types';
 
@@ -139,4 +139,49 @@ export function groupMyApplications(apps: MyApplication[]): MyApplicationGroups 
   pending.sort((a, b) => startsAtOf(a) - startsAtOf(b));
   past.sort((a, b) => startsAtOf(b) - startsAtOf(a));
   return { upcoming, pending, past };
+}
+
+/** 탐방 개설(T-03) 입력. 제목 칸은 없다 — 카드 제목은 파생 제목이다(명세에 제목이 없다, 9절 11번). */
+export interface CreateTourInput {
+  /** 서울 날짜 `yyyy-MM-dd`. */
+  date: string;
+  /** `HH:mm`. */
+  startTime: string;
+  endTime: string;
+  capacity: number;
+  introduction: string;
+  openChatUrl: string;
+}
+
+/** 모집 정원 상한(명세 T-03: 1~10). */
+export const TOUR_CAPACITY_MAX = 10;
+/** 탐방 소개 최대 길이(명세 T-03: 300자 이내). */
+export const TOUR_INTRO_MAX = 300;
+
+/** 가이드 탐방 상세(G09)의 버튼 활성(`computeTourActions`). */
+export interface TourActions {
+  completable: boolean;
+  cancellable: boolean;
+}
+
+/**
+ * 가이드 탐방의 완료 · 취소 버튼 활성(2B′-R13). 취소는 모집 중 · 마감일 때, 완료는 그리고 오늘(서울)이 탐방 날짜 이후일 때다
+ * (당일 허용 — 9절 23번). 어댑터 전용이다(컴포넌트는 서버가 계산해 온 `actions`를 그린다 — `computeCancellable`과 같은 원칙).
+ */
+export function computeTourActions(
+  tour: Pick<TourSummary, 'status' | 'startsAt'>,
+  now: Date,
+): TourActions {
+  const open = isUpcomingTour(tour);
+  return {
+    cancellable: open,
+    completable: open && seoulDateKey(now) >= seoulDateKey(tour.startsAt),
+  };
+}
+
+/** 가이드가 보는 탐방 상세(G09): 탐방 상세 + 확정 코스 지점 수(없으면 0) + 완료 · 취소 활성. */
+export interface GuideTourDetail {
+  tour: TourDetail;
+  courseStopCount: number;
+  actions: TourActions;
 }

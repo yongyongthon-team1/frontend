@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fieldError, MockApiError } from '@/mocks/rules/errors';
+import { backendError, fieldError, MockApiError } from '@/mocks/rules/errors';
 import { ERROR_CODES, resolveErrorCode, type ErrorCode } from '@/shared/lib/errors';
 import { wireFail, wireOk } from '@/test/wire';
 import { LOSSY_CODES, toBackendError } from './errorCodes';
@@ -120,6 +120,29 @@ describe('fail', () => {
     expect(body.data).toBeNull();
     expect(body.errors).toBeNull();
     expect(body.timestamp).toMatch(TIMESTAMP);
+  });
+
+  it('backendError는 역표 대신 명세 코드와 상태를 그대로 낸다(2B′-R4)', async () => {
+    const error = backendError(409, 'E409_CONSENT_EXISTS', 'ALREADY_PROCESSED');
+    expect([error.status, error.code, error.backendCode]).toEqual([
+      409,
+      'ALREADY_PROCESSED',
+      'E409_CONSENT_EXISTS',
+    ]);
+    const res = fail(error);
+    expect(res.status).toBe(409);
+    const body = await read(res);
+    expect(body.code).toBe('E409_CONSENT_EXISTS');
+    expect(body.message).toBe(error.message);
+    // 역표만으로는 같은 내부 코드가 `E409_ALREADY_PROCESSED`가 된다.
+    expect(fail(new MockApiError(409, 'ALREADY_PROCESSED')).status).toBe(409);
+    expect((await read(fail(new MockApiError(409, 'ALREADY_PROCESSED')))).code).toBe(
+      'E409_ALREADY_PROCESSED',
+    );
+  });
+
+  it('backendError의 상태도 error.status를 따른다', () => {
+    expect(fail(backendError(422, 'E422_X', 'ALREADY_PROCESSED')).status).toBe(422);
   });
 
   it('명세 오류 예시 그대로의 본문이다(E409 이메일 중복 · E400 errors[])', async () => {

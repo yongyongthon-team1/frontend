@@ -2,12 +2,16 @@ import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   getApplicantsBoard,
+  getGuideTour,
   getGuideTours,
   getMyApplication,
   getMyApplications,
   patchDecision,
   postApplication,
   postCancelApplication,
+  postCancelTour,
+  postCompleteTour,
+  postTour,
 } from '@/features/applications/api';
 import {
   fetchMe,
@@ -82,7 +86,17 @@ import {
   STORE_REVIEWS,
 } from '@/test/fixtures/backend/reviews';
 import { MY_STORE, STORE_REPORT } from '@/test/fixtures/backend/stores';
-import { TOUR_DETAIL, TOURS_LIST } from '@/test/fixtures/backend/tours';
+import {
+  TOUR_CANCEL_INVALID,
+  TOUR_CANCELED,
+  TOUR_COMPLETE_INVALID,
+  TOUR_COMPLETED,
+  TOUR_CREATED,
+  TOUR_DETAIL,
+  TOUR_OUTSIDE_VACATION,
+  TOUR_PROFILE_REQUIRED,
+  TOURS_LIST,
+} from '@/test/fixtures/backend/tours';
 import {
   GUIDE_WISHES,
   MY_WISHES,
@@ -1159,6 +1173,338 @@ describe('applications', () => {
       token,
     });
     expect((res.body.data as Items).items.map((t) => t.tour_id)).toEqual([7]);
+  });
+});
+
+describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete)', () => {
+  // 백엔드 T-03 · T-05 · T-06 와이어와 가이드 탐방 합성(`getGuideTour`). 409 하나를 탐방을 다시 읽어 세분한다(2B′-R13).
+  const campuses = () => listCampuses();
+  type Envelope = { code: string; data: Record<string, unknown> | null; errors?: unknown };
+  const NEW_TOUR = {
+    date: '2027-01-20',
+    startTime: '13:00',
+    endTime: '16:00',
+    capacity: 5,
+    introduction: '캠퍼스와 근처 맛집을 함께 둘러봐요',
+    openChatUrl: 'https://open.kakao.com/o/x',
+  };
+
+  it('T-03: 본문 여섯 키 그대로 보내고(intro) 새 탐방이 파생 제목 · 서울 시각으로 읽힌다', async () => {
+    await login('guide@demo.kr');
+    const bodies: unknown[] = [];
+    server.events.on('request:start', ({ request }) => {
+      if (request.method === 'POST')
+        void request
+          .clone()
+          .json()
+          .then((b) => bodies.push(b));
+    });
+    const id = await postTour(NEW_TOUR);
+    server.events.removeAllListeners('request:start');
+    expect(Object.keys(bodies[0] as object)).toEqual([
+      'date',
+      'start_time',
+      'end_time',
+      'capacity',
+      'intro',
+      'open_chat_url',
+    ]);
+    const tour = await getTour(id, campuses());
+    expect(tour).toMatchObject({
+      id,
+      title: DEMO_TOUR_TITLE,
+      startsAt: '2027-01-20T13:00:00+09:00',
+      endsAt: '2027-01-20T16:00:00+09:00',
+      status: 'RECRUITING',
+      capacity: 5,
+      introduction: NEW_TOUR.introduction,
+      openChatUrl: NEW_TOUR.openChatUrl,
+    });
+    expect((await listTours({ status: 'RECRUITING' }, campuses())).map((t) => t.id)).toContain(id);
+    expect((await getGuideTours(campuses())).map((t) => t.id)).toContain(id);
+  });
+
+  it('T-03 와이어: 201 S201, 명세 예시와 같은 모양', async () => {
+    const { token } = await login('guide@demo.kr');
+    const res = await rawFetch<Envelope>('/tours', {
+      method: 'POST',
+      token,
+      body: {
+        date: '2027-01-20',
+        start_time: '13:00',
+        end_time: '16:00',
+        capacity: 5,
+        intro: '소개',
+        open_chat_url: 'https://open.kakao.com/o/x',
+      },
+    });
+    expect([res.status, res.body.code]).toEqual([201, 'S201']);
+    expectWireShape(res.body.data, TOUR_CREATED.data);
+    expect(res.body.data).toMatchObject({ status: 'RECRUITING' });
+  });
+
+  it('T-03 검증: 칸 오류는 훅이 읽는 이름(introduction)으로 오고, 방학 밖 날짜는 명세 문장', async () => {
+    await login('guide@demo.kr');
+    await expect(postTour({ ...NEW_TOUR, introduction: '' })).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      fieldErrors: { introduction: '탐방 소개는 1~300자로 적어 주세요.' },
+    });
+    await expect(postTour({ ...NEW_TOUR, capacity: 11 })).rejects.toMatchObject({
+      fieldErrors: { capacity: '모집 정원은 1~10명으로 적어 주세요.' },
+    });
+    await expect(postTour({ ...NEW_TOUR, openChatUrl: ' ' })).rejects.toMatchObject({
+      fieldErrors: { openChatUrl: '연락 링크를 넣어 주세요.' },
+    });
+    await expect(postTour({ ...NEW_TOUR, date: '2027-03-10' })).rejects.toMatchObject({
+      status: 400,
+      fieldErrors: { date: '방학 기간 안의 날짜만 선택할 수 있어요' },
+    });
+    // 실패한 개설은 탐방을 만들지 않는다.
+    expect(getDb().tours.filter((t) => t.openChatUrl === NEW_TOUR.openChatUrl)).toEqual([]);
+  });
+
+  it('T-03 방학 밖 날짜 오류 봉투는 명세 예시와 같은 모양', async () => {
+    const { token } = await login('guide@demo.kr');
+    const res = await rawFetch<Envelope>('/tours', {
+      method: 'POST',
+      token,
+      body: {
+        date: '2027-03-10',
+        start_time: '13:00',
+        end_time: '16:00',
+        capacity: 5,
+        intro: 'a',
+        open_chat_url: 'u',
+      },
+    });
+    expect([res.status, res.body.code]).toEqual([400, TOUR_OUTSIDE_VACATION.code]);
+    expect(res.body.errors).toEqual(TOUR_OUTSIDE_VACATION.errors);
+  });
+
+  it('T-03 권한: 비로그인 401 · 고교생 403 · 인증 전 가이드 NOT_VERIFIED · 학과 없음 GUIDE_PROFILE_REQUIRED', async () => {
+    configureHttp({ getToken: () => null });
+    await expect(postTour(NEW_TOUR)).rejects.toMatchObject({ status: 401 });
+    await login('student@demo.kr');
+    await expect(postTour(NEW_TOUR)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+    await login('guide-pending@demo.kr');
+    await expect(postTour(NEW_TOUR)).rejects.toMatchObject({ status: 403, code: 'NOT_VERIFIED' });
+    mutate((db) => {
+      db.guideProfiles.find((g) => g.id === userId('guide@demo.kr'))!.major = null;
+    });
+    const { token } = await login('guide@demo.kr');
+    await expect(postTour(NEW_TOUR)).rejects.toMatchObject({
+      status: 409,
+      code: 'GUIDE_PROFILE_REQUIRED',
+      backendCode: TOUR_PROFILE_REQUIRED.code,
+    });
+    const res = await rawFetch<Envelope>('/tours', { method: 'POST', token, body: {} });
+    expect(res.body.code).toBe(TOUR_PROFILE_REQUIRED.code);
+  });
+
+  it('T-06: 탐방 1(오늘) 완료 → COMPLETED, 와이어는 명세 예시와 같은 모양', async () => {
+    const { token } = await login('guide@demo.kr');
+    const res = await rawFetch<Envelope>('/tours/1/complete', { method: 'POST', token });
+    expect([res.status, res.body.code]).toEqual([200, 'S200']);
+    expectWireShape(res.body.data, TOUR_COMPLETED.data);
+    expect(res.body.data).toEqual({ tour_id: 1, status: 'COMPLETED' });
+    expect((await getTour(1, campuses())).status).toBe('COMPLETED');
+  });
+
+  it('T-06 postCompleteTour: 성공하면 값 없이 끝나고 탐방이 COMPLETED', async () => {
+    await login('guide@demo.kr');
+    await expect(postCompleteTour(1, campuses())).resolves.toBeUndefined();
+    expect((await getTour(1, campuses())).status).toBe('COMPLETED');
+  });
+
+  it('T-06 오류 세 갈래: 날짜 전 · 이미 완료 · 취소됨 — 모두 E409_INVALID_TOUR_STATUS', async () => {
+    await login('guide@demo.kr');
+    await expect(postCompleteTour(6, campuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'COMPLETE_BEFORE_TOUR_DATE',
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+    });
+    await expect(postCompleteTour(7, campuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'TOUR_ALREADY_COMPLETED',
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+    });
+    await postCancelTour(6, campuses());
+    await expect(postCompleteTour(6, campuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+    });
+    // 와이어는 세 경우 모두 같은 코드 하나다(명세).
+    const { token } = await login('guide@demo.kr');
+    for (const tourId of [6, 7]) {
+      const res = await rawFetch<Envelope & { message: string }>(`/tours/${tourId}/complete`, {
+        method: 'POST',
+        token,
+      });
+      expect([res.status, res.body.code]).toEqual([409, TOUR_COMPLETE_INVALID.code]);
+    }
+  });
+
+  it('T-06: 서버가 E409_INVALID_TOUR_STATUS만 주면 탐방을 다시 읽어 세분한다(실서버 대리)', async () => {
+    await login('guide@demo.kr');
+    server.use(
+      http.post('/api/tours/:tourId/complete', () => wireFail('E409_INVALID_TOUR_STATUS')),
+    );
+    await expect(postCompleteTour(6, campuses())).rejects.toMatchObject({
+      code: 'COMPLETE_BEFORE_TOUR_DATE', // RECRUITING
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+    });
+    await expect(postCompleteTour(7, campuses())).rejects.toMatchObject({
+      code: 'TOUR_ALREADY_COMPLETED',
+    });
+    mutate((db) => {
+      db.tours.find((t) => t.id === 6)!.status = 'CANCELED';
+    });
+    await expect(postCompleteTour(6, campuses())).rejects.toMatchObject({
+      code: 'ALREADY_PROCESSED',
+    });
+  });
+
+  it('T-06/T-05: 다시 읽기가 실패하면 기본 표의 코드를 그대로 둔다', async () => {
+    await login('guide@demo.kr');
+    server.use(
+      http.post('/api/tours/:tourId/complete', () => wireFail('E409_INVALID_TOUR_STATUS')),
+      http.get('/api/tours/:tourId', () => wireFail('E500')),
+    );
+    await expect(postCompleteTour(6, campuses())).rejects.toMatchObject({
+      status: 409,
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+      code: 'ALREADY_PROCESSED', // 기본 표의 코드(`E409_INVALID_TOUR_STATUS`)
+    });
+  });
+
+  it('T-05 와이어: 취소하면 CANCELED, 명세 예시와 같은 모양', async () => {
+    const { token } = await login('guide@demo.kr');
+    const res = await rawFetch<Envelope>('/tours/6/cancel', { method: 'POST', token });
+    expect([res.status, res.body.code]).toEqual([200, 'S200']);
+    expectWireShape(res.body.data, TOUR_CANCELED.data);
+    expect(res.body.data).toEqual({ tour_id: 6, status: 'CANCELED' });
+  });
+
+  it('T-05 오류: 이미 완료 TOUR_ALREADY_COMPLETED · 이미 취소 ALREADY_PROCESSED(둘 다 E409_INVALID_TOUR_STATUS)', async () => {
+    await login('guide@demo.kr');
+    await expect(postCancelTour(7, campuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'TOUR_ALREADY_COMPLETED',
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+    });
+    await postCancelTour(6, campuses());
+    await expect(postCancelTour(6, campuses())).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+      backendCode: 'E409_INVALID_TOUR_STATUS',
+    });
+    const { token } = await login('guide@demo.kr');
+    const res = await rawFetch<Envelope>('/tours/7/cancel', { method: 'POST', token });
+    expect([res.status, res.body.code]).toEqual([409, TOUR_CANCEL_INVALID.code]);
+  });
+
+  it('T-05: 서버가 E409_INVALID_TOUR_STATUS만 주면 완료 → TOUR_ALREADY_COMPLETED, 그 밖 → ALREADY_PROCESSED', async () => {
+    await login('guide@demo.kr');
+    server.use(http.post('/api/tours/:tourId/cancel', () => wireFail('E409_INVALID_TOUR_STATUS')));
+    await expect(postCancelTour(7, campuses())).rejects.toMatchObject({
+      code: 'TOUR_ALREADY_COMPLETED',
+    });
+    await expect(postCancelTour(6, campuses())).rejects.toMatchObject({
+      code: 'ALREADY_PROCESSED', // RECRUITING인데도 서버가 거절 — 날짜 전/후 구분이 없는 취소는 이쪽
+    });
+  });
+
+  it('권한: 남의 탐방 · 고교생 · 비로그인은 완료 · 취소 모두 FORBIDDEN / UNAUTHORIZED', async () => {
+    await login('guide-dku@demo.kr');
+    await expect(postCancelTour(1, campuses())).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
+    await expect(postCompleteTour(1, campuses())).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
+    await login('student@demo.kr');
+    await expect(postCancelTour(1, campuses())).rejects.toMatchObject({ status: 403 });
+    configureHttp({ getToken: () => null });
+    await expect(postCompleteTour(1, campuses())).rejects.toMatchObject({ status: 401 });
+    expect(getDb().tours.find((t) => t.id === 1)!.status).toBe('RECRUITING');
+  });
+
+  it('취소는 학생 쪽에 퍼진다: 내 신청 CANCELED · 쿠폰 EXPIRED(USED는 그대로) · 남의 신청 목록에서 칩', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    redeemDemoCoupon(1); // 김민지 상점 1 쿠폰 USED
+    await login('student@demo.kr');
+    const before = await getMyApplications(campuses());
+    expect(before.find((a) => a.tour.id === 1)).toMatchObject({
+      status: 'APPROVED',
+      couponCount: 2,
+    });
+
+    await login('guide@demo.kr');
+    await postCancelTour(1, campuses());
+
+    await login('student@demo.kr');
+    const after = await getMyApplications(campuses());
+    expect(after.find((a) => a.tour.id === 1)).toMatchObject({
+      status: 'CANCELED',
+      tour: { status: 'CANCELED' },
+      cancellable: false,
+    });
+    const coupons = await getMyCoupons(undefined, campuses());
+    const ofTour1 = coupons.filter((c) => c.tourId === 1);
+    expect(ofTour1.map((c) => c.status).sort()).toEqual(['EXPIRED', 'USED']);
+    expect(ofTour1.find((c) => c.status === 'USED')!.storeId).toBe(1);
+
+    // 대기였던 유진과 승인이었던 서준 · 하은도 모두 취소됐다.
+    const apps = getDb().applications.filter((a) => a.tourId === 1);
+    expect(apps.map((a) => a.status)).toEqual(apps.map(() => 'CANCELED'));
+    expect(apps.every((a) => a.activeUserId === null)).toBe(true);
+  });
+
+  it('getGuideTour: 확정 코스 3곳 · 오늘 탐방은 완료 · 취소 모두 가능', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    await login('guide@demo.kr');
+    const detail = await getGuideTour(1, campuses());
+    expect(detail.tour).toMatchObject({ id: 1, title: DEMO_TOUR_TITLE, status: 'RECRUITING' });
+    expect(detail.courseStopCount).toBe(3);
+    expect(detail.actions).toEqual({ completable: true, cancellable: true });
+  });
+
+  it('getGuideTour: 날짜 전 탐방(6)은 완료 불가 · 취소 가능, 코스가 없으면 0곳', async () => {
+    await login('guide@demo.kr');
+    const detail = await getGuideTour(6, campuses());
+    expect(detail.courseStopCount).toBe(0);
+    expect(detail.actions).toEqual({ completable: false, cancellable: true });
+  });
+
+  it('getGuideTour: 완료 · 취소된 탐방은 둘 다 불가', async () => {
+    await login('guide@demo.kr');
+    expect((await getGuideTour(7, campuses())).actions).toEqual({
+      completable: false,
+      cancellable: false,
+    });
+    await postCancelTour(6, campuses());
+    expect((await getGuideTour(6, campuses())).actions).toEqual({
+      completable: false,
+      cancellable: false,
+    });
+  });
+
+  it('getGuideTour: 남의 탐방은 코스 조회가 403이라 FORBIDDEN을 그대로 낸다', async () => {
+    await login('guide-dku@demo.kr');
+    await expect(getGuideTour(1, campuses())).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+    });
+  });
+
+  it('getGuideTour: 탐방 상세와 코스를 함께 부른다(직렬이 아니다)', async () => {
+    await login('guide@demo.kr');
+    const seen = await requestsDuring(() => getGuideTour(6, campuses()));
+    expect(seen.sort()).toEqual(['GET /campuses', 'GET /tours/6', 'GET /tours/6/course']);
   });
 });
 

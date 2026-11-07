@@ -84,7 +84,7 @@
 
 ## API 연동
 
-도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 백엔드 명세([`../api/backend-spec.md`](../api/backend-spec.md))의 엔드포인트 46개와 목업 전용 확장 3개(`GET /health` · `POST /demo/reset` · `GET /campuses/:campusId/insight`)다. 2C에서 옛 프론트 계약([`../api/frontend-needs.md`](../api/frontend-needs.md), 기록으로만 남음)의 행을 백엔드 경로로 바꿨고, 목업은 백엔드 와이어(봉투 · snake_case · E 코드)로 응답한다. 목업 ✅는 28개 백엔드 경로와 확장 3개, 모두 31행이며 `registry.test.ts`의 `(BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS`와 같다. 나머지 18행(목업 ⬜)은 P1 화면의 API로, 2B′ 태스크가 하나씩 채운다. 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이고 묶음은 [`backend-alignment.md` 7-4](../api/backend-alignment.md)를 따른다(인사이트는 `campuses` 핸들러에 등록돼 있어 그 도메인에 적었다).
+도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 백엔드 명세([`../api/backend-spec.md`](../api/backend-spec.md))의 엔드포인트 46개와 목업 전용 확장 3개(`GET /health` · `POST /demo/reset` · `GET /campuses/:campusId/insight`)다. 2C에서 옛 프론트 계약([`../api/frontend-needs.md`](../api/frontend-needs.md), 기록으로만 남음)의 행을 백엔드 경로로 바꿨고, 목업은 백엔드 와이어(봉투 · snake_case · E 코드)로 응답한다. 목업 ✅는 32개 백엔드 경로와 확장 3개, 모두 35행이며 `registry.test.ts`의 `(BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS`와 같다. 나머지 14행(목업 ⬜)은 P1 화면의 API로, 2B′ 태스크가 하나씩 채운다. 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이고 묶음은 [`backend-alignment.md` 7-4](../api/backend-alignment.md)를 따른다(인사이트는 `campuses` 핸들러에 등록돼 있어 그 도메인에 적었다).
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
@@ -103,9 +103,9 @@
 | tours | `PATCH /api/users/me/tour-wishes/:wishId` | T-07 `/me/wishes/:wishId/edit` (본인 글만, 바뀐 칸만 `{ campus_id?, major?, wish?, date? }`, 학교 칸 오류 `campus_id` → 폼 `universityId`. 목업 확장 `campus_id` · `created_at`) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tour-wishes` | T-08 `/guide/wishes` (재학 인증을 마친 대학생만, 쿼리 `campus_id` · `major`(부분 일치) · `page` · `size`, 학교를 빼면 내 인증 학교. 이름 같은 개인정보는 없다) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours/:tourId` | hs-s05, hs-a04, hs-s06, hs-a06 (T-02, 목업 확장 `campus_id`) | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `POST /api/tours` | guide-s02 탐방 개설 (T-03) | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `POST /api/tours/:tourId/cancel` | guide-a04 탐방 취소 (T-05) | ⬜ | ⬜ | ⬜ | ⬜ |
-| applications | `POST /api/tours/:tourId/complete` | guide-s07 탐방 종료 (T-06) | ⬜ | ⬜ | ⬜ | ⬜ |
+| applications | `POST /api/tours` | guide-s02 탐방 개설 (T-03, 본문 `{ date, start_time, end_time, capacity, intro, open_chat_url }`, 칸 오류 `intro` → 폼 `introduction`. 방학 밖 날짜는 400 `errors[date]`, 프로필 없음은 `E409_GUIDE_PROFILE_REQUIRED`. 화면은 Task 5) | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/tours/:tourId/cancel` | guide-a04 탐방 취소 (T-05, 신청자 전원의 신청 취소 · 발급 쿠폰 만료, 사용한 쿠폰은 그대로. `E409_INVALID_TOUR_STATUS` 하나를 탐방을 다시 읽어 세분 — 완료됨 / 그 밖. 화면은 Task 5) | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/tours/:tourId/complete` | guide-s07 탐방 종료 (T-06, 탐방 날짜 당일부터. `E409_INVALID_TOUR_STATUS` 하나를 탐방을 다시 읽어 세분 — 완료됨 / 취소됨 / 날짜 전. 가이드 탐방 상세 = 탐방 상세 + 코스 지점 수 합성. 화면은 Task 5) | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `POST /api/tours/:tourId/applications` | hs-a04 (A-01, 본문 `{ wish }` 100자. `E403_VERIFICATION_REQUIRED`는 `GET /users/me`, `E409_TOUR_FULL`은 `GET /tours/{tourId}`를 다시 읽어 세분) | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `PATCH /api/applications/:applicationId/decision` | guide-s03 (A-02, 승인 · 거절 `{ decision }` 뒤 신청자 보드를 다시 읽는다. `E409_TOUR_FULL`은 정원 초과) | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `POST /api/applications/:applicationId/cancel` | hs-s07 (A-03, `E409_INVALID_APPLICATION_STATUS`는 신청을 다시 읽어 탐방 날짜 · 이미 처리로 세분) | ⬜ | ✅ | ⬜ | ⬜ |

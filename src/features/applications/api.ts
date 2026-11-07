@@ -1,11 +1,18 @@
 import { fetchMe } from '@/features/auth/api';
 import { listMyCouponRows } from '@/features/coupons/api';
-import { getGuideCourseStatus } from '@/features/courses/api';
-import type { TourDetail } from '@/features/tours/model';
+import { getGuideCourseStatus, getGuideCourseStopCount } from '@/features/courses/api';
+import type { TourDetail, TourStatus } from '@/features/tours/model';
 import { getTour, type CampusesInput } from '@/features/tours/api';
-import { errorMessage } from '@/shared/lib/errors';
+import { errorMessage, type ErrorCode } from '@/shared/lib/errors';
 import { ApiError, listAll, recode, request } from '@/shared/lib/http';
-import type { ApplicantsBoard, GuideTourSummary, MyApplication } from './model';
+import {
+  computeTourActions,
+  type ApplicantsBoard,
+  type CreateTourInput,
+  type GuideTourDetail,
+  type GuideTourSummary,
+  type MyApplication,
+} from './model';
 import {
   fromWireApplicants,
   fromWireGuideTourRow,
@@ -14,6 +21,7 @@ import {
   type WireApplyResult,
   type WireGuideTourRow,
   type WireMyTourRow,
+  type WireTourStatus,
 } from './wire';
 
 // 백엔드 T-04 `GET /users/me/tours`와 A. 신청(A-01~04). 응답에 탐방 요약이 없어 `GET /tours/{tourId}`로 합성하고(2C-R7),
@@ -231,4 +239,83 @@ export async function patchDecision(
     errorMap: { E409_TOUR_FULL: 'CAPACITY_EXCEEDED' },
   });
   return getApplicantsBoard(tourId, campuses);
+}
+
+/**
+ * 탐방 개설(T-03). 본문은 명세 그대로 `{ date, start_time, end_time, capacity, intro, open_chat_url }`이고(소개 칸 이름만
+ * 도메인의 `introduction`에서 바꾼다) 서버의 `intro` 칸 오류는 `introduction`으로 읽는다. 새 탐방 id를 돌려준다.
+ * 방학 밖 날짜는 400 `errors[date]`(명세 문장), 가이드 프로필이 없으면 409 `GUIDE_PROFILE_REQUIRED`다.
+ */
+export async function postTour(input: CreateTourInput): Promise<number> {
+  const created = await request<WireTourStatus>('/tours', {
+    method: 'POST',
+    body: {
+      date: input.date,
+      startTime: input.startTime,
+      endTime: input.endTime,
+      capacity: input.capacity,
+      intro: input.introduction,
+      openChatUrl: input.openChatUrl,
+    },
+    fieldMap: { intro: 'introduction' },
+  });
+  return created.tourId;
+}
+
+/**
+ * 가이드 탐방 상세(G09): 탐방 상세와 확정 코스 지점 수(코스가 없으면 0)를 함께 부르고, 완료 · 취소 활성은 어댑터의 지금 시각으로
+ * 계산한다(2B′-R13). 가이드 본인 탐방이 아니면 코스 조회가 403 FORBIDDEN이다.
+ */
+export async function getGuideTour(
+  tourId: number,
+  campuses: CampusesInput,
+): Promise<GuideTourDetail> {
+  const [tour, courseStopCount] = await Promise.all([
+    getTour(tourId, campuses),
+    getGuideCourseStopCount(tourId),
+  ]);
+  return { tour, courseStopCount, actions: computeTourActions(tour, new Date()) };
+}
+
+/**
+ * 완료 · 취소의 `E409_INVALID_TOUR_STATUS` 세분(2B′-R13, 2C-R15 방식). 하나뿐인 명세 코드가 "날짜 전 · 이미 완료 · 취소됨"을
+ * 덮으므로 탐방을 다시 읽어 고른다. 다시 읽기가 실패하면 기본 표의 코드를 그대로 둔다.
+ */
+async function refineTourStatusError(
+  error: unknown,
+  tourId: number,
+  campuses: CampusesInput,
+  codeFor: (status: TourStatus) => ErrorCode,
+): Promise<unknown> {
+  if (!(error instanceof ApiError) || error.backendCode !== 'E409_INVALID_TOUR_STATUS') {
+    return error;
+  }
+  try {
+    return recode(error, codeFor((await getTour(tourId, campuses)).status));
+  } catch {
+    return error;
+  }
+}
+
+/** 탐방 완료(T-06). 응답은 상태뿐이라 값 없이 끝난다. 날짜 전 · 이미 완료 · 취소됨은 409 하나라 탐방을 다시 읽어 나눈다. */
+export async function postCompleteTour(tourId: number, campuses: CampusesInput): Promise<void> {
+  try {
+    await request<WireTourStatus>(`/tours/${tourId}/complete`, { method: 'POST' });
+  } catch (error) {
+    throw await refineTourStatusError(error, tourId, campuses, (status) => {
+      if (status === 'COMPLETED') return 'TOUR_ALREADY_COMPLETED';
+      return status === 'CANCELED' ? 'ALREADY_PROCESSED' : 'COMPLETE_BEFORE_TOUR_DATE';
+    });
+  }
+}
+
+/** 탐방 취소(T-05). 신청자 전원의 신청이 취소된다. 이미 완료 · 취소된 탐방은 409 하나라 탐방을 다시 읽어 나눈다. */
+export async function postCancelTour(tourId: number, campuses: CampusesInput): Promise<void> {
+  try {
+    await request<WireTourStatus>(`/tours/${tourId}/cancel`, { method: 'POST' });
+  } catch (error) {
+    throw await refineTourStatusError(error, tourId, campuses, (status) =>
+      status === 'COMPLETED' ? 'TOUR_ALREADY_COMPLETED' : 'ALREADY_PROCESSED',
+    );
+  }
 }

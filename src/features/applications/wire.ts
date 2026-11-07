@@ -48,6 +48,12 @@ export interface WireApplicant {
   createdAt: string;
 }
 
+/** T-03 개설(201) · T-05 취소 · T-06 완료 응답. */
+export interface WireTourStatus {
+  tourId: number;
+  status: TourStatus;
+}
+
 /** A-01 신청 응답(201). */
 export interface WireApplyResult {
   applicationId: number;

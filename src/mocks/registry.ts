@@ -8,6 +8,7 @@ import { courseHandlers } from './handlers/courses';
 import { demoHandlers } from './handlers/demo';
 import { reviewHandlers } from './handlers/reviews';
 import { storeHandlers } from './handlers/stores';
+import { tourLifecycleHandlers } from './handlers/tourLifecycle';
 import { tourHandlers } from './handlers/tours';
 import { wishHandlers } from './handlers/wishes';
 
@@ -18,7 +19,7 @@ export const handlersByDomain: Record<MockDomain, HttpHandler[]> = {
   auth: authHandlers,
   campuses: campusHandlers,
   tours: [...tourHandlers, ...wishHandlers],
-  applications: applicationHandlers,
+  applications: [...applicationHandlers, ...tourLifecycleHandlers],
   courses: courseHandlers,
   coupons: couponHandlers,
   demo: demoHandlers,

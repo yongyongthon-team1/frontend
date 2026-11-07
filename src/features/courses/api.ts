@@ -38,6 +38,14 @@ async function guideCourseWire(tourId: number): Promise<WireCourse | null> {
   }
 }
 
+/**
+ * 가이드 탐방의 코스 지점 수(`spots.length`). 코스가 없으면(2C-R14) 0이다. 남의 탐방이면 403 FORBIDDEN을 그대로 낸다.
+ * 탐방 상세 합성(`getGuideTour`)용이라 탐방 정보는 부르지 않는다.
+ */
+export async function getGuideCourseStopCount(tourId: number): Promise<number> {
+  return (await guideCourseWire(tourId))?.spots.length ?? 0;
+}
+
 /** 가이드 본인 탐방의 코스(초안 · 확정). 아직 코스가 없으면 null이다. */
 export async function getGuideCourse(
   tourId: number,

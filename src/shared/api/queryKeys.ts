@@ -31,6 +31,8 @@ export const qk = {
   /** 상점의 AI 요약 · 평균 · 최근 리뷰(R-02). */
   storeReviews: (storeId: number) => ['storeReviews', storeId] as const,
   guideTours: ['guideTours'] as const,
+  /** 가이드 탐방 상세(G09) — `guideTours`와 따로 된 뿌리라 목록 무효화에 걸리지 않는다. */
+  guideTour: (tourId: number) => ['guideTour', tourId] as const,
   applicants: (tourId: number) => ['applicants', tourId] as const,
   /** 가이드의 신청자 보드 전부의 접두사(무효화용). */
   allApplicants: ['applicants'] as const,

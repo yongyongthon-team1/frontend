@@ -73,9 +73,14 @@ export function failRaw(
   );
 }
 
-/** 규칙이 던진 `MockApiError`를 오류 봉투와 역표(`toBackendError`)의 상태로 바꾼다. `fieldErrors` → `errors[]`, `details` → `data`. */
+/**
+ * 규칙이 던진 `MockApiError`를 오류 봉투와 역표(`toBackendError`)의 상태로 바꾼다. `backendCode`가 있으면(`backendError`, 2B′-R4)
+ * 역표 대신 그 코드와 `error.status`로 낸다. `fieldErrors` → `errors[]`, `details` → `data`.
+ */
 export function fail(error: MockApiError): Response {
-  const wire = toBackendError(error.code, error.status);
+  const wire = error.backendCode
+    ? { code: error.backendCode, status: error.status }
+    : toBackendError(error.code, error.status);
   return failRaw(wire.code, wire.status, {
     message: error.message,
     data: error.details,

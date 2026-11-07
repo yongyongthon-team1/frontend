@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import type { TourSummary } from '@/features/tours/model';
 import {
   computeCancellable,
+  computeTourActions,
   coursePathFor,
   guideCoursePath,
   groupMyApplications,
@@ -231,5 +232,43 @@ describe('computeCancellable (어댑터 전용 — 목업 isCancellable도 이 �
     const early = new Date('2026-11-01T12:00:00+09:00');
     expect(computeCancellable('REJECTED', tourStartsAt, early)).toBe(false);
     expect(computeCancellable('CANCELED', tourStartsAt, early)).toBe(false);
+  });
+});
+
+describe('computeTourActions (2B′-R13)', () => {
+  const today = new Date('2026-11-15T05:00:00Z'); // 서울 2026-11-15 14:00
+  const at = (status: TourSummary['status'], startsAt: string) =>
+    computeTourActions({ status, startsAt }, today);
+
+  it('모집 중 · 탐방이 오늘이면 완료도 취소도 할 수 있다(당일 허용)', () => {
+    expect(at('RECRUITING', '2026-11-15T14:00:00+09:00')).toEqual({
+      completable: true,
+      cancellable: true,
+    });
+  });
+
+  it('모집 중 · 탐방이 내일이면 취소만 된다', () => {
+    expect(at('RECRUITING', '2026-11-16T14:00:00+09:00')).toEqual({
+      completable: false,
+      cancellable: true,
+    });
+  });
+
+  it('마감 · 탐방이 어제였으면 둘 다 된다', () => {
+    expect(at('CLOSED', '2026-11-14T14:00:00+09:00')).toEqual({
+      completable: true,
+      cancellable: true,
+    });
+  });
+
+  it('완료 · 취소된 탐방은 둘 다 안 된다', () => {
+    expect(at('COMPLETED', '2026-11-14T14:00:00+09:00')).toEqual({
+      completable: false,
+      cancellable: false,
+    });
+    expect(at('CANCELED', '2026-11-20T14:00:00+09:00')).toEqual({
+      completable: false,
+      cancellable: false,
+    });
   });
 });

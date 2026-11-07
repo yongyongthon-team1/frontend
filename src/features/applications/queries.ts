@@ -6,18 +6,29 @@ import {
   type UseQueryResult,
 } from '@tanstack/react-query';
 import { loadCampuses } from '@/features/campuses/queries';
+import type { CampusesInput } from '@/features/tours/api';
 import { qk } from '@/shared/api/queryKeys';
 import type { ApiError } from '@/shared/lib/http';
 import {
   getApplicantsBoard,
+  getGuideTour,
   getGuideTours,
   getMyApplication,
   getMyApplications,
   patchDecision,
   postApplication,
   postCancelApplication,
+  postCancelTour,
+  postCompleteTour,
+  postTour,
 } from './api';
-import type { ApplicantsBoard, GuideTourSummary, MyApplication } from './model';
+import type {
+  ApplicantsBoard,
+  CreateTourInput,
+  GuideTourDetail,
+  GuideTourSummary,
+  MyApplication,
+} from './model';
 
 // 훅은 캠퍼스 목록을 기다리지 않고 `loadCampuses`의 약속째 넘긴다 — 캠퍼스 요청과 첫 요청이 동시에 나간다(errata G13).
 // api 함수는 마지막 인자로 캠퍼스를 받으므로 `queryFn` · `mutationFn`에 바로 넣지 않고 감싼다(errata G8).
@@ -135,4 +146,67 @@ export function useApprove(tourId: number): UseMutationResult<ApplicantsBoard, A
 
 export function useReject(tourId: number): UseMutationResult<ApplicantsBoard, ApiError, number> {
   return useBoardMutation(tourId, 'REJECTED');
+}
+
+/** 가이드 탐방 상세(G09). 탐방 상세 · 확정 코스 지점 수 · 완료/취소 활성을 합성한다. */
+export function useGuideTour(tourId: number): UseQueryResult<GuideTourDetail> {
+  const queryClient = useQueryClient();
+  return useQuery({
+    queryKey: qk.guideTour(tourId),
+    queryFn: () => getGuideTour(tourId, loadCampuses(queryClient)),
+  });
+}
+
+/**
+ * 탐방 개설(T-03). 성공하면 가이드 탐방 목록(정확히 이 키 — 신청자·코스 키는 따로 묶여 있다)과 탐방 목록 · 상세 전부를 다시
+ * 불러온다. 재학 인증이나 가이드 프로필이 모자라 거절되면(`NOT_VERIFIED` · `GUIDE_PROFILE_REQUIRED`) 내 정보가 낡았다는
+ * 뜻이라 `qk.me`를 다시 불러와 가드·안내가 맞게 한다.
+ */
+export function useCreateTour(): UseMutationResult<number, ApiError, CreateTourInput> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (input: CreateTourInput) => postTour(input),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.guideTours, exact: true });
+      void queryClient.invalidateQueries({ queryKey: qk.allTours });
+    },
+    onError: (error) => {
+      if (error.code === 'NOT_VERIFIED' || error.code === 'GUIDE_PROFILE_REQUIRED') {
+        void queryClient.invalidateQueries({ queryKey: qk.me });
+      }
+    },
+  });
+}
+
+/**
+ * 완료 · 취소가 끝나면 이 탐방 상세, 가이드 탐방 목록, 신청자 보드, 탐방 목록 · 상세 전부를 다시 불러온다. 실패하면(다른 기기에서
+ * 먼저 처리했을 수 있다) 이 탐방 상세만 다시 불러와 버튼 활성을 서버 기준으로 맞춘다.
+ */
+function useTourStatusMutation(
+  tourId: number,
+  post: (tourId: number, campuses: CampusesInput) => Promise<void>,
+): UseMutationResult<void, ApiError, void> {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: () => post(tourId, loadCampuses(queryClient)),
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.guideTour(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.guideTours });
+      void queryClient.invalidateQueries({ queryKey: qk.applicants(tourId) });
+      void queryClient.invalidateQueries({ queryKey: qk.allTours });
+    },
+    onError: () => {
+      void queryClient.invalidateQueries({ queryKey: qk.guideTour(tourId) });
+    },
+  });
+}
+
+/** 탐방 완료(T-06). */
+export function useCompleteTour(tourId: number): UseMutationResult<void, ApiError, void> {
+  return useTourStatusMutation(tourId, postCompleteTour);
+}
+
+/** 탐방 취소(T-05). 신청자 전원의 신청이 취소되고 발급된 쿠폰이 만료되므로 학생 쪽 캐시는 다음 조회 때 서버 값을 받는다. */
+export function useCancelTour(tourId: number): UseMutationResult<void, ApiError, void> {
+  return useTourStatusMutation(tourId, postCancelTour);
 }
