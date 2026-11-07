@@ -1,6 +1,11 @@
 import { http, HttpResponse } from 'msw';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
+  getAdminVerification,
+  listPendingVerifications,
+  patchAdminVerification,
+} from '@/features/admin/api';
+import {
   getApplicantsBoard,
   getGuideTour,
   getGuideTours,
@@ -46,7 +51,7 @@ import { getMyStore, getStoreReport, getStoreReportView } from '@/features/store
 import { findWishTours, getTour, listTours } from '@/features/tours/api';
 import type { TourFilter } from '@/features/tours/model';
 import { listGuideWishes, listMyWishes, patchTourWish, postTourWish } from '@/features/wishes/api';
-import { getMockFile, putMockFile } from '@/mocks/db/files';
+import { getMockFile, MOCK_DOC_SAMPLE, putMockFile } from '@/mocks/db/files';
 import { getDb, mutate, resetDb } from '@/mocks/db/store';
 import { DEMO_CONSENT_TOKENS } from '@/shared/config/demoAccounts';
 import { configureHttp, request, upload } from '@/shared/lib/http';
@@ -66,6 +71,12 @@ import {
   SIGNUP_DUPLICATE,
   SIGNUP_OK,
 } from '@/test/fixtures/backend/auth';
+import {
+  ADMIN_ALREADY_REVIEWED,
+  ADMIN_DECIDED,
+  ADMIN_VERIFICATION,
+  ADMIN_VERIFICATIONS,
+} from '@/test/fixtures/backend/admin';
 import {
   APPLICANTS_LIST,
   APPLY_OK,
@@ -3369,6 +3380,175 @@ describe('재학 인증 · 보호자 동의 (U-05 · U-06)', () => {
         expect(other.body.data).not.toHaveProperty('guardian_consent_token');
         expect(await getDemoConsentToken()).toBeNull();
       }
+    });
+  });
+});
+
+describe('운영자 인증 심사 (U-08)', () => {
+  type Envelope = {
+    code: string;
+    data: Record<string, unknown> | null;
+    errors: { field: string; reason: string }[] | null;
+  };
+  const idOf = (email: string) => getDb().users.find((u) => u.email === email)!.id;
+
+  it('목록: 운영자는 대기 3건을 오래된 순으로, 대학생은 캠퍼스 이름을 학교로 본다', async () => {
+    await login('admin@demo.kr');
+    const items = await listPendingVerifications();
+    expect(items.map((i) => i.userName)).toEqual(['한도윤', '오지호', '강하린']);
+    expect(items[0]).toMatchObject({
+      id: idOf('guide-pending@demo.kr'),
+      role: 'UNIVERSITY',
+      schoolName: '단국대학교 죽전캠퍼스',
+    });
+    expect(items[2]).toMatchObject({ role: 'HIGH_SCHOOL', schoolName: '수원영통고등학교' });
+  });
+
+  it('상세: 강하린의 사진은 정적 견본 경로, 처리 전이라 status는 PENDING', async () => {
+    await login('admin@demo.kr');
+    const detail = await getAdminVerification(idOf('waiting@demo.kr'));
+    expect(detail).toMatchObject({
+      userName: '강하린',
+      documentUrl: '/mock-docs/student-id-hs.svg',
+      status: 'PENDING',
+    });
+  });
+
+  it('상세: 방금 올린 사진은 jsdom에 object URL이 없어 견본 경로로 대체된다', async () => {
+    await login('newbie@demo.kr');
+    await postEnrollment({
+      role: 'HIGH_SCHOOL',
+      schoolName: '용인고등학교',
+      grade: 1,
+      document: testImage(),
+    });
+    const newbieId = idOf('newbie@demo.kr');
+    await login('admin@demo.kr');
+    expect((await getAdminVerification(newbieId)).documentUrl).toBe(MOCK_DOC_SAMPLE.HIGH_SCHOOL);
+    expect((await listPendingVerifications()).map((i) => i.id)).toContain(newbieId);
+  });
+
+  it('없는 id는 NOT_FOUND', async () => {
+    await login('admin@demo.kr');
+    await expect(getAdminVerification(9999)).rejects.toMatchObject({
+      status: 404,
+      code: 'NOT_FOUND',
+    });
+  });
+
+  it('학생 · 가이드 · 사장님은 셋 모두 FORBIDDEN, 토큰이 없으면 UNAUTHORIZED', async () => {
+    const id = idOf('waiting@demo.kr');
+    for (const email of ['student@demo.kr', 'guide@demo.kr', 'owner1@demo.kr']) {
+      await login(email);
+      await expect(listPendingVerifications()).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(getAdminVerification(id)).rejects.toMatchObject({ code: 'FORBIDDEN' });
+      await expect(patchAdminVerification(id, { decision: 'APPROVED' })).rejects.toMatchObject({
+        code: 'FORBIDDEN',
+      });
+    }
+    expect((await rawFetch('/admin/verifications', { method: 'GET' })).status).toBe(401);
+  });
+
+  it('?status=X는 400 VALIDATION(E400) + errors[status]', async () => {
+    const { token } = await login('admin@demo.kr');
+    const res = await rawFetch<Envelope>('/admin/verifications?status=X', {
+      method: 'GET',
+      token,
+    });
+    expect([res.status, res.body.code]).toEqual([400, 'E400']);
+    expect(res.body.errors?.map((e) => e.field)).toEqual(['status']);
+  });
+
+  it('?status=REJECTED는 처리된 건을 준다(명세 "선택")', async () => {
+    const { token } = await login('admin@demo.kr');
+    const res = await rawFetch<Envelope>('/admin/verifications?status=REJECTED', {
+      method: 'GET',
+      token,
+    });
+    expect(res.status).toBe(200);
+    const names = (res.body.data!.items as { user_name: string }[]).map((i) => i.user_name);
+    expect(names).toEqual(expect.arrayContaining(['윤서아', '서지안']));
+  });
+
+  it('승인: 학생의 인증 상태가 바뀌고 두 번째는 ALREADY_PROCESSED', async () => {
+    await login('admin@demo.kr');
+    const id = idOf('waiting@demo.kr');
+    await expect(patchAdminVerification(id, { decision: 'APPROVED' })).resolves.toBeUndefined();
+    expect((await listPendingVerifications()).map((i) => i.userName)).toEqual(['한도윤', '오지호']);
+    expect(await getAdminVerification(id)).toMatchObject({ status: 'APPROVED', documentUrl: null });
+    await expect(
+      patchAdminVerification(id, { decision: 'REJECTED', rejectReason: '다시' }),
+    ).rejects.toMatchObject({
+      status: 409,
+      code: 'ALREADY_PROCESSED',
+      backendCode: 'E409_ALREADY_REVIEWED',
+    });
+    await login('waiting@demo.kr');
+    expect((await fetchMe()).verificationStatus).toBe('APPROVED');
+  });
+
+  it('반려: 사유는 snake로 나가고 학생의 reject_reason에 보인다, 빈 사유는 fieldErrors.rejectReason', async () => {
+    await login('admin@demo.kr');
+    const id = idOf('waiting@demo.kr');
+    await expect(
+      patchAdminVerification(id, { decision: 'REJECTED', rejectReason: ' ' }),
+    ).rejects.toMatchObject({
+      code: 'VALIDATION',
+      fieldErrors: { rejectReason: '반려 사유는 1~100자로 적어 주세요.' },
+    });
+    await patchAdminVerification(id, {
+      decision: 'REJECTED',
+      rejectReason: '학교명이 보이지 않습니다',
+    });
+    await login('waiting@demo.kr');
+    expect(await fetchMe()).toMatchObject({
+      verificationStatus: 'REJECTED',
+      rejectionReason: '학교명이 보이지 않습니다',
+    });
+  });
+
+  describe('와이어', () => {
+    it('GET /admin/verifications: 명세 예시와 같은 모양(쪽 정보 포함)', async () => {
+      const { token } = await login('admin@demo.kr');
+      const res = await rawFetch<Envelope>('/admin/verifications', { method: 'GET', token });
+      expect([res.status, res.body.code]).toEqual([200, ADMIN_VERIFICATIONS.code]);
+      expectWireShape(res.body.data, ADMIN_VERIFICATIONS.data);
+      expect(res.body.data).toMatchObject({ page: 1, size: 20, total: 3 });
+    });
+
+    it('GET /admin/verifications/:id: 명세 예시와 같은 모양', async () => {
+      const { token } = await login('admin@demo.kr');
+      const res = await rawFetch<Envelope>(`/admin/verifications/${idOf('waiting@demo.kr')}`, {
+        method: 'GET',
+        token,
+      });
+      expect([res.status, res.body.code]).toEqual([200, ADMIN_VERIFICATION.code]);
+      expectWireShape(res.body.data, ADMIN_VERIFICATION.data);
+      expect(res.body.data).toMatchObject({ role: 'HIGH_SCHOOL', status: 'PENDING' });
+    });
+
+    it('PATCH: 200 + 명세 예시 모양, 다시 처리하면 명세 409 코드', async () => {
+      const { token } = await login('admin@demo.kr');
+      const path = `/admin/verifications/${idOf('waiting@demo.kr')}`;
+      const body = { decision: 'REJECTED', reject_reason: '학교명이 보이지 않습니다' };
+      const res = await rawFetch<Envelope>(path, { method: 'PATCH', token, body });
+      expect([res.status, res.body.code]).toEqual([200, ADMIN_DECIDED.code]);
+      expectWireShape(res.body.data, ADMIN_DECIDED.data);
+      expect(res.body.data).toMatchObject({ status: 'REJECTED' });
+
+      const again = await rawFetch<Envelope>(path, { method: 'PATCH', token, body });
+      expect([again.status, again.body.code]).toEqual([409, ADMIN_ALREADY_REVIEWED.code]);
+    });
+
+    it('PATCH: decision이 틀리면 400 + errors[decision]', async () => {
+      const { token } = await login('admin@demo.kr');
+      const res = await rawFetch<Envelope>(`/admin/verifications/${idOf('waiting@demo.kr')}`, {
+        method: 'PATCH',
+        token,
+        body: { decision: 'MAYBE' },
+      });
+      expect(res.status).toBe(400);
+      expect(res.body.errors?.map((e) => e.field)).toEqual(['decision']);
     });
   });
 });

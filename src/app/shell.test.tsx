@@ -198,6 +198,7 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/owner/report', 'OWNER'],
   ['/admin/verifications', 'ADMIN'],
   ['/admin/verifications/1', 'ADMIN'],
+  ['/admin/verifications/1/reject', 'ADMIN'],
 ];
 
 function accessOf(elements: ReactNode[]): Access {

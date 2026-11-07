@@ -65,9 +65,10 @@
 | `owner-s03` | 쿠폰 사용 처리 · V2(O02 입력 · 조회, O07 사용 완료) | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `owner-s04` | 방문 · 리뷰 리포트 ✅ (P2 → P1, V2 시안 없음 — V2 부품으로 그림, 디자이너 공유 메모 · O01의 `방문 · 리뷰 리포트 ›` 링크 · AI 리뷰 요약 · 최근 리뷰 합성) | `/owner/report` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `owner-s05` | 빈 시간 달력 | — | OUT | ➖ | ➖ | ➖ | ➖ | ➖ |
-| `owner-s06` | 운영자 인증 심사 | `/admin/verifications` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `owner-s06` | 운영자 인증 심사 목록 ✅(대기만 오래된 제출 순, 처리 완료 탭 없음 — 명세에 처리 내역이 없다, 오른쪽 위 `로그아웃`은 발표 배지를 비켜 선다) | `/admin/verifications` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
 | `owner-a01` | 가게 후보 선택·직접 등록 | `/owner/store/connect` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `owner-a02` | 학생증 상세 심사·반려 | `/admin/verifications/:id` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `owner-a02` | 학생증 상세 심사 ✅(사진 · 승인 확인 창, 처리된 건은 주소로만 읽기 전용) | `/admin/verifications/:id` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
+| `A03` | 인증 반려 사유 입력 ✅(1~100자, 확인 창 · 연타 1회) | `/admin/verifications/:id/reject` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
 | `owner-a03` | 쿠폰·리포트 예외 상태 · V2(O08 쿠폰 오류 · 만료) | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | — | 모집 중 탐방 둘러보기 (가이드 · 사장님 `탐색` 탭, 읽기 전용) | `/explore` | P2 | ⬜ | ⬜ | ⬜ | ⬜ | ⬜ |
 | — | 사장님 내 정보 · 로그아웃 | `/owner/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
@@ -132,9 +133,9 @@
 | verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 ✅ 화면 연결 (U-06, 거부 · 만료일 때만 다시 요청, 링크 7일) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `GET /api/guardian-consents/:consentToken` | hs-a02 보호자 동의 안내 ✅ 화면 연결 (U-06, 로그인 없이 `auth: false`. 처리된 링크는 200 + 그 상태, 만료 `E410_EXPIRED` → `CONSENT_LINK_EXPIRED`, 없는 토큰 `E404` → `CONSENT_LINK_INVALID`) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `PATCH /api/guardian-consents/:consentToken` | hs-a02 동의 · 거부 ✅ 화면 연결 (U-06, 본문 `{ agree }`, 로그인 없이 `auth: false`, 처리한 요청은 `E409_ALREADY_PROCESSED`) | ⬜ | ✅ | ⬜ | ⬜ |
-| admin | `GET /api/admin/verifications` | owner-s06 인증 심사 목록 (U-08 보완) | ⬜ | ⬜ | ⬜ | ⬜ |
-| admin | `GET /api/admin/verifications/:verificationId` | owner-a02 심사 상세 (U-08 보완) | ⬜ | ⬜ | ⬜ | ⬜ |
-| admin | `PATCH /api/admin/verifications/:verificationId` | owner-a02 승인 · 반려 사유 (U-08) | ⬜ | ⬜ | ⬜ | ⬜ |
+| admin | `GET /api/admin/verifications` | owner-s06 인증 심사 목록 ✅ 화면 연결 (U-08 보완, `status` 없이 부른다 — 서버 기본 PENDING, 오래된 제출 순. 목업은 `APPROVED` · `REJECTED`도 받고 그 밖은 400) | ⬜ | ✅ | ⬜ | ⬜ |
+| admin | `GET /api/admin/verifications/:verificationId` | owner-a02 · A03 심사 상세 ✅ 화면 연결 (U-08 보완, 사진 주소는 대기일 때만 — 처리된 건은 null이라 `파일 삭제됨`. 목업은 새로고침으로 사라진 사진을 견본 SVG로 대신한다) | ⬜ | ✅ | ⬜ | ⬜ |
+| admin | `PATCH /api/admin/verifications/:verificationId` | owner-a02 승인 · A03 반려 ✅ 화면 연결 (U-08, 본문 `{ decision, reject_reason }`, 사유는 반려일 때만 공백을 뺀 1~100자. 이미 심사된 요청 `E409_ALREADY_REVIEWED` → `ALREADY_PROCESSED`는 토스트 + 목록으로. 승인 · 반려 모두 확인 창, 연타해도 요청은 한 번) | ⬜ | ✅ | ⬜ | ⬜ |
 | demo | `GET /api/health` | 시연 패널 (확장 · 목업 전용, 봉투) | ⬜ | ✅ | ⬜ | ⬜ |
 | demo | `POST /api/demo/reset` | 시연 패널 (확장 · 목업 전용, 봉투) | ⬜ | ✅ | ⬜ | ⬜ |
 
@@ -151,7 +152,7 @@
 | 3 | 기획 · 백엔드 | 탐방 제목 · 학과가 ERD에 없음(같은 가이드의 탐방이 같은 제목이 됨, 가이드 학년도 없음). 처리: "대학교 + 가이드 학과" + 날짜를 항상 함께 표시, T-03에 탐방 제목(주제) 필드를 추가할지 질문, 가이드 학년은 필드가 생기면 표시 | 11/8 | ⬜ |
 | 4 | 백엔드 | `tour_wishes`(희망 탐방) 대응 화면 없음. 처리: 만들지 않음, T-01 요청 기록용으로 추정 | 11/8 | ✅ 2C에서 T-01 · T-07 · T-08로 만듦 |
 | 5 | 기획 · 백엔드 | 보호자 동의 수단. 처리: 이메일 링크(ERD 기준), 목업은 "보호자 페이지 열기" 시연 링크 | 11/8 | ⬜ |
-| 6 | 기획 | 운영자 심사를 시연할지. 처리: 화면은 P1로 만들되 골든 패스는 미리 승인된 계정으로 | 11/6 | ⬜ |
+| 6 | 기획 | 운영자 심사를 시연할지. 처리: 화면은 P1로 만들되 골든 패스는 미리 승인된 계정으로 | 11/6 | ⬜ 화면 완료 · 대기 목록만(처리 내역은 9절 34번) |
 | 7 | 기획 · 디자인 | 추천 0건 + 학교 미선택 시 대체 목록 기준(와이어 "팀 협의 필요"). 처리: 전체 모집 중 탐방을 날짜 · 남은 자리 순으로 + "조건을 넓혀서 보여 드려요" | 11/8 | ➖ T-01은 0건이면 같은 학교 탐방(기능 명세) |
 | 8 | 기획 · 백엔드 | 리뷰 중복 기준: 명세 "상점당 1건" ↔ ERD "탐방 × 상점(쿠폰)당 1건". 처리: ERD 기준, 문구는 "이 탐방에서 방문한 상점마다 한 번" | 11/8 | ⬜ |
 | 9 | 기획 · 백엔드 | 거절된 탐방에 재신청 허용 여부. 처리: 불가("거절됨" 표시), 취소 이력은 재신청 허용 | 11/8 | ⬜ |

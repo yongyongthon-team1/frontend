@@ -53,5 +53,8 @@ export const qk = {
   consent: (token: string) => ['consent', token] as const,
   /** 시연 도구용 보호자 링크 토큰(목업 확장 `guardian_consent_token`, 2B′-R10). */
   demoConsentToken: ['demoConsentToken'] as const,
+  /** 운영자 심사 대기 목록(U-08). 상세 키의 접두사라 무효화하면 상세도 다시 읽는다. */
+  adminVerifications: ['adminVerifications'] as const,
+  adminVerification: (id: number) => ['adminVerifications', id] as const,
   health: ['health'] as const,
 };

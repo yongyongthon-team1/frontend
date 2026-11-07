@@ -1,4 +1,7 @@
 import { Navigate, type RouteObject } from 'react-router';
+import { VerificationListPage } from '@/pages/admin/VerificationListPage';
+import { VerificationRejectPage } from '@/pages/admin/VerificationRejectPage';
+import { VerificationReviewPage } from '@/pages/admin/VerificationReviewPage';
 import { ApplicantsPage } from '@/pages/guide/ApplicantsPage';
 import { CourseConfirmPage } from '@/pages/guide/CourseConfirmPage';
 import { CourseDraftPage } from '@/pages/guide/CourseDraftPage';
@@ -273,16 +276,9 @@ export const routes: RouteObject[] = [
               {
                 element: <RequireRole role="ADMIN" />,
                 children: [
-                  {
-                    path: '/admin/verifications',
-                    element: (
-                      <PlaceholderPage title="인증 요청 목록" wireframe="owner-s06" showLogout />
-                    ),
-                  },
-                  {
-                    path: '/admin/verifications/:id',
-                    element: <PlaceholderPage title="학생증 상세 심사" wireframe="owner-a02" />,
-                  },
+                  { path: '/admin/verifications', element: <VerificationListPage /> },
+                  { path: '/admin/verifications/:id', element: <VerificationReviewPage /> },
+                  { path: '/admin/verifications/:id/reject', element: <VerificationRejectPage /> },
                 ],
               },
             ],
