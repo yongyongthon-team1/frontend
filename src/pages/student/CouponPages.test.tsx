@@ -1,5 +1,5 @@
 import { act, screen, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { beforeEach, describe, expect, it } from 'vitest';
 import { useDemoStore } from '@/demo/demoStore';
 import { getDb, mutate } from '@/mocks/db/store';
@@ -8,6 +8,7 @@ import { redeemCoupon as redeemCouponRule } from '@/mocks/rules/coupons';
 import { DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { formatDotDate } from '@/shared/lib/date';
 import { findApplicationId, renderApp } from '@/test/renderApp';
+import { wireFail } from '@/test/wire';
 
 const STUDENT = 'student@demo.kr';
 
@@ -140,11 +141,7 @@ describe('쿠폰 목록 · 상세 (hs-s09)', () => {
     await router.navigate(`/coupons/${id}`);
     const shown = (await screen.findByTestId('coupon-code')).textContent;
 
-    server.use(
-      http.get('/api/me/coupons/:id', () =>
-        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
-      ),
-    );
+    server.use(http.get('/api/users/me/coupons', () => wireFail('E403')));
     // 쿼리 관찰자는 상태 변화를 한 틱 뒤에 화면에 알린다 — act 안에서 그 틱까지 기다린 뒤 확인한다.
     await act(async () => {
       await queryClient.refetchQueries({ queryKey: ['myCoupons', 'detail', id] });

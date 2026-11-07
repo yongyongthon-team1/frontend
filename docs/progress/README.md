@@ -113,10 +113,10 @@
 | courses | #18 `GET /api/guide/tours/:id/course/store-candidates` | guide-a03 주변 상점 선택 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | courses | #19 `POST /api/guide/tours/:id/course/stops` | guide-a03 (지점 추가) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | courses | #20 `POST /api/guide/tours/:id/course/stops/:stopId/replace` | guide-a03 (지점 교체) (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
-| coupons | `GET /api/me/coupons?applicationId=` | hs-s09 (목록) | ⬜ | ✅ | ⬜ | ⬜ |
-| coupons | `GET /api/me/coupons/:id` | hs-s09 (상세) | ⬜ | ✅ | ⬜ | ⬜ |
-| coupons | `GET /api/owner/coupons/:code` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
-| coupons | `POST /api/owner/coupons/:code/redeem` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
+| coupons | `GET /api/users/me/coupons` (S-05, 백엔드 와이어 · 쪽 없는 목록, `tour_id` · `store_id`로 거른다. 쿠폰 상태는 어댑터가 `computeCouponState`로 계산하고, 탐방 요약은 `GET /tours/{tourId}`, 신청 id는 `GET /users/me/tours` 행(같은 탐방의 승인된 신청)으로 합성한다. 신청 id를 주면 그 신청의 `tourId`로 좁혀 부른다. 확장 `store.category`) | hs-s09 (목록), 코스 지도의 상점 시트 | ⬜ | ✅ | ⬜ | ⬜ |
+| coupons | 내 쿠폰 상세 — 단건 경로가 없어 `GET /api/users/me/coupons` 목록에서 찾는다(없으면 `NOT_FOUND`). 5초 폴링은 그대로 | hs-s09 (상세) | ⬜ | ✅ | ⬜ | ⬜ |
+| coupons | `GET /api/coupons/:couponCode` (S-06 쿠폰 확인, 백엔드 와이어 · 가게 이름은 `GET /users/me/store`로 합성, `E404` → `COUPON_NOT_FOUND`, 확장 `used_at` · `tour_title` · `student_name`) | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
+| coupons | `POST /api/coupons/:couponCode/redeem` (S-06 사용 처리, 뒤에 코드를 다시 확인해 카드를 만든다. `E409_ALREADY_USED`(확장 `data.used_at`) · `E410_EXPIRED` · `E409_DAILY_LIMIT`(클라이언트만 — 목업에는 하루 한 장 규칙이 없다, 2C-R11). 확장 `tour_visitor_count` · `total_visitor_count`가 없으면 O07의 `이번 탐방으로 온 학생 {n}명`을 숨긴다) | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | `GET /api/users/me/store` (S-01 보완, 백엔드 와이어) | owner-s02 (O01 · O01-E), 쿠폰 사용 처리 | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | #22 `POST /api/me/business-verification` | owner-s01 사업자 인증 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | #23 `GET /api/owner/store-candidates` | owner-a01 가게 후보 선택 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |

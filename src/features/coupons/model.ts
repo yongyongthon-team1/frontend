@@ -2,7 +2,7 @@ import { formatTime, seoulDateKey } from '@/shared/lib/date';
 import type { Tone } from '@/shared/lib/types';
 
 export type CouponStatus = 'ISSUED' | 'USED' | 'EXPIRED';
-/** 서버가 계산해서 준다. */
+/** 어댑터가 쿠폰 상태와 지금 시각으로 계산한다(`computeCouponState`). */
 export type CouponState = 'BEFORE_DAY' | 'USABLE' | 'EXPIRED' | 'USED';
 
 export interface Coupon {
@@ -36,12 +36,13 @@ export interface CouponLookup {
 
 export interface RedeemResult {
   coupon: CouponLookup;
-  tourVisitorCount: number;
-  totalVisitorCount: number;
+  /** 이 가게의 사용 쿠폰 중 이번 탐방 것. 실서버는 주지 않아(null) 화면이 캡션을 숨긴다(2C-R12 ⑤). */
+  tourVisitorCount: number | null;
+  totalVisitorCount: number | null;
 }
 
 /**
- * 목업 서버 · API 어댑터 전용. 컴포넌트는 서버가 준 `Coupon.state`를 그린다.
+ * 목업 서버 · API 어댑터 전용. 컴포넌트는 어댑터가 계산한 `Coupon.state`를 그린다.
  * 사용 완료 → 만료(상태 또는 기한 경과) → 탐방 당일 전 → 사용 가능 순으로 검사한다.
  */
 export function computeCouponState(
@@ -97,6 +98,7 @@ export function couponNotice(input: {
   if (errorCode === 'COUPON_EXPIRED' || errorCode === 'COUPON_OTHER_STORE') return EXPIRED_NOTICE;
   if (errorCode === 'COUPON_NOT_FOUND') return NOT_FOUND_NOTICE;
   if (errorCode === 'COUPON_NOT_YET') return NOT_YET_NOTICE;
+  if (errorCode === 'COUPON_DAILY_LIMIT') return DAILY_LIMIT_NOTICE;
   if (state === 'USED') return usedNotice(usedAt);
   if (state === 'EXPIRED') return EXPIRED_NOTICE;
   if (state === 'BEFORE_DAY') return NOT_YET_NOTICE;
@@ -114,6 +116,10 @@ const NOT_FOUND_NOTICE: CouponNotice = {
 const NOT_YET_NOTICE: CouponNotice = {
   title: '아직 사용할 수 없는 쿠폰',
   description: '탐방 당일에만 사용할 수 있어요.',
+};
+const DAILY_LIMIT_NOTICE: CouponNotice = {
+  title: '오늘 이미 쿠폰을 처리한 가게',
+  description: '같은 날 한 가게에서는 쿠폰 한 장만 사용할 수 있어요.',
 };
 
 function usedNotice(usedAt: string | null | undefined): CouponNotice {

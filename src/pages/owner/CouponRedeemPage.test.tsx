@@ -1,5 +1,5 @@
 import { act, screen, waitFor, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 import { useDemoStore } from '@/demo/demoStore';
 import { mutate } from '@/mocks/db/store';
@@ -9,6 +9,7 @@ import { redeemCoupon as redeemCouponRule } from '@/mocks/rules/coupons';
 import { qk } from '@/shared/api/queryKeys';
 import { DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { demoCouponCode, renderApp } from '@/test/renderApp';
+import { wireFail, wireOk } from '@/test/wire';
 
 beforeEach(() => {
   // setup.ts는 목업 DB와 localStorage만 비운다 — zustand의 메모리 상태는 직접 되돌린다.
@@ -220,6 +221,95 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     expect(count).toBe(1);
   });
 
+  it('사용 처리 응답에 방문 수가 없으면(실서버) 캡션을 숨긴다', async () => {
+    const { user } = await renderApp('/owner/coupons/redeem', {
+      as: 'owner',
+      checkpoint: 'CONFIRMED',
+    });
+    const code = demoCouponCode(1);
+    // 명세 S-06 사용 처리 예시 그대로: 확장 tour_visitor_count · total_visitor_count 없음.
+    server.use(
+      http.post('/api/coupons/:couponCode/redeem', () =>
+        wireOk({ coupon_id: 501, status: 'USED', used_at: '2027-01-15T13:40:00+09:00' }),
+      ),
+    );
+    await user.type(await screen.findByLabelText(CODE_LABEL), code);
+    await screen.findByText('사용 가능');
+    await user.click(screen.getByRole('button', { name: '사용 처리하기' }));
+    expect(await screen.findByText('쿠폰 사용이 완료됐어요.')).toBeInTheDocument();
+    expect(screen.getByText('쿠폰 처리 성공')).toBeInTheDocument();
+    expect(screen.getByText(/^01\.15 \(금\) · 13:40 사용$/)).toBeInTheDocument();
+    expect(screen.queryByText(/이번 탐방으로 온 학생/)).not.toBeInTheDocument();
+  });
+
+  it('하루 한 장 오류는 O08 카드에 안내', async () => {
+    const { user } = await renderApp('/owner/coupons/redeem', {
+      as: 'owner',
+      checkpoint: 'CONFIRMED',
+    });
+    const code = demoCouponCode(1);
+    server.use(http.post('/api/coupons/:couponCode/redeem', () => wireFail('E409_DAILY_LIMIT')));
+    await user.type(await screen.findByLabelText(CODE_LABEL), code);
+    await screen.findByText('사용 가능');
+    await user.click(screen.getByRole('button', { name: '사용 처리하기' }));
+    expect(await screen.findByText('오늘 이미 쿠폰을 처리한 가게')).toBeInTheDocument();
+    expect(
+      screen.getByText('같은 날 한 가게에서는 쿠폰 한 장만 사용할 수 있어요.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '코드를 다시 확인해 주세요.' })).toBeInTheDocument();
+    expect(screen.queryByText(/이번 탐방으로 온 학생/)).not.toBeInTheDocument();
+  });
+
+  it.each([
+    [
+      '이미 사용됨(사용 시각 있음, 확장 data.used_at)',
+      () => wireFail('E409_ALREADY_USED', { data: { used_at: '2027-01-15T13:40:00+09:00' } }),
+      '이미 사용된 쿠폰',
+      '재사용 불가 · 사용 시각 13:40',
+    ],
+    [
+      '이미 사용됨(사용 시각 없음, 실서버)',
+      () => wireFail('E409_ALREADY_USED'),
+      '이미 사용된 쿠폰',
+      '재사용 불가',
+    ],
+    [
+      '만료됨',
+      () => wireFail('E410_EXPIRED'),
+      '만료되었거나 다른 가게 쿠폰',
+      '코드를 다시 확인해 주세요.',
+    ],
+    [
+      '다른 가게',
+      () => wireFail('E403_OTHER_STORE'),
+      '만료되었거나 다른 가게 쿠폰',
+      '코드를 다시 확인해 주세요.',
+    ],
+    [
+      '탐방 당일 전(목업 확장 코드)',
+      () => wireFail('E409_COUPON_NOT_YET'),
+      '아직 사용할 수 없는 쿠폰',
+      '탐방 당일에만 사용할 수 있어요.',
+    ],
+    [
+      '없는 코드',
+      () => wireFail('E404'),
+      '존재하지 않는 6자리 코드',
+      '입력값을 다시 확인해 주세요.',
+    ],
+  ])('사용 처리 오류 O08: %s', async (_name, response, title, description) => {
+    const { user } = await renderApp('/owner/coupons/redeem', {
+      as: 'owner',
+      checkpoint: 'CONFIRMED',
+    });
+    server.use(http.post('/api/coupons/:couponCode/redeem', response));
+    await user.type(await screen.findByLabelText(CODE_LABEL), demoCouponCode(1));
+    await screen.findByText('사용 가능');
+    await user.click(screen.getByRole('button', { name: '사용 처리하기' }));
+    expect(await screen.findByRole('heading', { name: title })).toBeInTheDocument();
+    expect(screen.getByText(description, { selector: 'p' })).toBeInTheDocument();
+  });
+
   it('다른 쿠폰 확인하기는 입력과 결과를 모두 지운다', async () => {
     const { user } = await renderApp('/owner/coupons/redeem', {
       as: 'owner',
@@ -249,11 +339,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
       checkpoint: 'CONFIRMED',
     });
     const code = demoCouponCode(1);
-    server.use(
-      http.get('/api/owner/coupons/:code', () =>
-        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
-      ),
-    );
+    server.use(http.get('/api/coupons/:couponCode', () => wireFail('E403')));
     await user.type(await screen.findByLabelText(CODE_LABEL), code);
     expect(await screen.findByRole('alert')).toBeInTheDocument();
     expect(screen.queryByText('만료되었거나 다른 가게 쿠폰')).not.toBeInTheDocument();
@@ -272,11 +358,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     const code = demoCouponCode(1);
     await user.type(await screen.findByLabelText(CODE_LABEL), code);
     await screen.findByText('사용 가능');
-    server.use(
-      http.get('/api/owner/coupons/:code', () =>
-        HttpResponse.json({ code: 'FORBIDDEN', message: 'x' }, { status: 403 }),
-      ),
-    );
+    server.use(http.get('/api/coupons/:couponCode', () => wireFail('E403')));
     await act(async () => {
       await queryClient.refetchQueries({ queryKey: qk.couponLookup(code) });
       await new Promise((resolve) => setTimeout(resolve, 20));

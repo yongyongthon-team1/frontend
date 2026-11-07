@@ -125,7 +125,7 @@ describe('신청 취소 확인 (H11)', () => {
     const { user, router, id } = await openCancelPage();
     let couponGets = 0;
     server.events.on('request:start', ({ request }) => {
-      if (request.method === 'GET' && new URL(request.url).pathname === '/api/me/coupons') {
+      if (request.method === 'GET' && new URL(request.url).pathname === '/api/users/me/coupons') {
         couponGets++;
       }
     });

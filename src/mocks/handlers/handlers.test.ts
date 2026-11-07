@@ -18,7 +18,7 @@ import {
   putGuideProfile,
 } from '@/features/auth/api';
 import { getInsight, listCampuses } from '@/features/campuses/api';
-import type { Coupon, CouponLookup, RedeemResult } from '@/features/coupons/model';
+import { getCouponLookup, getMyCoupon, getMyCoupons, postRedeem } from '@/features/coupons/api';
 import {
   getCourse,
   getGuideCourse,
@@ -64,6 +64,14 @@ import {
   COURSE_SPOTS_OK,
   COURSE_VIEW,
 } from '@/test/fixtures/backend/courses';
+import {
+  COUPON_LOOKUP,
+  COUPON_OTHER_STORE,
+  MY_COUPONS,
+  REDEEM_ALREADY_USED,
+  REDEEM_EXPIRED,
+  REDEEM_OK,
+} from '@/test/fixtures/backend/coupons';
 import { MY_STORE } from '@/test/fixtures/backend/stores';
 import { TOUR_DETAIL, TOURS_LIST } from '@/test/fixtures/backend/tours';
 import { expectWireShape, rawFetch, wireFail } from '@/test/wire';
@@ -1173,11 +1181,15 @@ describe('courses', () => {
 });
 
 describe('coupons', () => {
-  it('내 쿠폰: id 순서, 신청으로 거르기, 상태는 서버가 계산', async () => {
+  // 백엔드 와이어 + 합성 어댑터(`features/coupons/api`)를 목업 끝까지 부른다(2C-R25 ③). 캠퍼스는 약속째 넘긴다.
+  const campuses = () => listCampuses();
+  type Envelope = { code: string; data: Record<string, unknown> | null };
+
+  it('내 쿠폰: id 순서, 신청으로 거르기, 상태는 어댑터가 계산', async () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
     await login('student@demo.kr');
     const app = applicationOf('student@demo.kr', 1);
-    const list = await request<Coupon[]>('/me/coupons');
+    const list = await getMyCoupons(undefined, campuses());
     expect(list.map((c) => c.storeName)).toEqual(['서천 밥상', '카페 모래시계']);
     expect(list[0].id).toBeLessThan(list[1].id);
     expect(list[0]).toEqual({
@@ -1197,15 +1209,15 @@ describe('coupons', () => {
       usedAt: null,
       reviewWritten: false,
     });
-    expect(await request<Coupon[]>(`/me/coupons?applicationId=${app.id}`)).toEqual(list);
-    expect(await request<Coupon[]>('/me/coupons?applicationId=999999')).toEqual([]);
-    expect(await request<Coupon>(`/me/coupons/${list[1].id}`)).toEqual(list[1]);
-    expect((await getMyApplication(app.id, listCampuses())).couponCount).toBe(2);
+    expect(await getMyCoupons(app.id, campuses())).toEqual(list);
+    expect(await getMyCoupons(999999, campuses())).toEqual([]);
+    expect(await getMyCoupon(list[1].id, campuses())).toEqual(list[1]);
+    expect((await getMyApplication(app.id, campuses())).couponCount).toBe(2);
   });
 
-  it('지난 탐방 쿠폰은 사용 완료 · 리뷰 작성, 남의 쿠폰은 404', async () => {
+  it('지난 탐방 쿠폰은 사용 완료 · 리뷰 작성, 남의 쿠폰은 NOT_FOUND', async () => {
     await login('seojun@demo.kr');
-    const list = await request<Coupon[]>('/me/coupons');
+    const list = await getMyCoupons(undefined, campuses());
     expect(list.map((c) => [c.tourId, c.storeId, c.state, c.reviewWritten])).toEqual([
       [7, 1, 'USED', true],
       [7, 2, 'USED', true],
@@ -1213,66 +1225,195 @@ describe('coupons', () => {
     const others = getDb().coupons.find(
       (c) => c.applicationId === applicationOf('haeun@demo.kr', 7).id,
     )!;
-    await expect(request(`/me/coupons/${others.id}`)).rejects.toMatchObject({
+    await expect(getMyCoupon(others.id, campuses())).rejects.toMatchObject({
       status: 404,
       code: 'NOT_FOUND',
     });
   });
 
-  it('사장님 쿠폰 조회: 내 가게 쿠폰, 다른 가게 403, 없는 코드 404', async () => {
-    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
-    const code = demoCouponCode('student@demo.kr', 1);
+  it('쿠폰 목록은 고교생만 — 다른 역할은 403', async () => {
     await login('owner1@demo.kr');
-    expect(await request<CouponLookup>(`/owner/coupons/${code}`)).toEqual({
-      code,
-      state: 'USABLE',
-      discount: '식사 금액 10% 할인',
-      storeName: '서천 밥상',
-      tourTitle: DEMO_TOUR_TITLE,
-      tourStartsAt: expect.stringMatching(/T14:00:00\+09:00$/),
-      studentName: '김민지',
-      usedAt: null,
-    });
-    await expect(
-      request(`/owner/coupons/${demoCouponCode('student@demo.kr', 2)}`),
-    ).rejects.toMatchObject({ status: 403, code: 'COUPON_OTHER_STORE' });
-    await expect(request(`/owner/coupons/${unusedCode()}`)).rejects.toMatchObject({
-      status: 404,
-      code: 'COUPON_NOT_FOUND',
-    });
-    await login('student@demo.kr');
-    await expect(request(`/owner/coupons/${code}`)).rejects.toMatchObject({
+    await expect(getMyCoupons(undefined, campuses())).rejects.toMatchObject({
       status: 403,
       code: 'FORBIDDEN',
     });
   });
 
-  it('사장님 쿠폰 사용 · 이미 사용', async () => {
+  it('S-05 목록 와이어: 명세 예시와 같은 모양, tour_id · store_id로 거른다, 확장 store.category가 나간다', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    const student = await login('student@demo.kr');
+    const all = await rawFetch<Envelope>('/users/me/coupons', {
+      method: 'GET',
+      token: student.token,
+    });
+    expect([all.status, all.body.code]).toEqual([200, 'S200']);
+    expectWireShape(all.body.data, MY_COUPONS.data, ['category']);
+    const items = (all.body.data as { items: { store: { category?: string } }[] }).items;
+    expect(items).toHaveLength(2);
+    expect(items[0].store.category).toBe('한식');
+    expect(all.body.data).not.toHaveProperty('total'); // 쪽 없는 목록(명세)
+
+    const filtered = await rawFetch<Envelope>('/users/me/coupons?tour_id=1&store_id=2', {
+      method: 'GET',
+      token: student.token,
+    });
+    expect((filtered.body.data as { items: { store: { store_id: number } }[] }).items).toEqual([
+      expect.objectContaining({ tour_id: 1, store: expect.objectContaining({ store_id: 2 }) }),
+    ]);
+    const none = await rawFetch<Envelope>('/users/me/coupons?tour_id=2', {
+      method: 'GET',
+      token: student.token,
+    });
+    expect((none.body.data as { items: unknown[] }).items).toEqual([]);
+  });
+
+  it('사장님 쿠폰 확인: 내 가게 쿠폰, 다른 가게 COUPON_OTHER_STORE, 없는 코드 COUPON_NOT_FOUND', async () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
     const code = demoCouponCode('student@demo.kr', 1);
     await login('owner1@demo.kr');
-    const result = await request<RedeemResult>(`/owner/coupons/${code}/redeem`, {
-      method: 'POST',
+    expect(await getCouponLookup(code)).toEqual({
+      code,
+      state: 'USABLE',
+      discount: '식사 금액 10% 할인',
+      storeName: '서천 밥상',
+      tourTitle: DEMO_TOUR_TITLE,
+      tourStartsAt: expect.stringMatching(/T00:00:00\+09:00$/), // 응답에는 탐방 날짜뿐이다
+      studentName: '김민지',
+      usedAt: null,
     });
+    await expect(getCouponLookup(demoCouponCode('student@demo.kr', 2))).rejects.toMatchObject({
+      status: 403,
+      code: 'COUPON_OTHER_STORE',
+      backendCode: 'E403_OTHER_STORE',
+    });
+    await expect(getCouponLookup(unusedCode())).rejects.toMatchObject({
+      status: 404,
+      code: 'COUPON_NOT_FOUND',
+    });
+    await login('student@demo.kr');
+    await expect(getCouponLookup(code)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+  });
+
+  it('S-06 확인 · 사용 처리 와이어: 명세 예시와 같은 모양이고 확장이 실제로 나간다', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    const code = demoCouponCode('student@demo.kr', 1);
+    const owner = await login('owner1@demo.kr');
+    const lookup = await rawFetch<Envelope>(`/coupons/${code}`, {
+      method: 'GET',
+      token: owner.token,
+    });
+    expect([lookup.status, lookup.body.code]).toEqual([200, 'S200']);
+    expectWireShape(lookup.body.data, COUPON_LOOKUP.data, [
+      'used_at',
+      'tour_title',
+      'student_name',
+    ]);
+    expect(lookup.body.data).toMatchObject({
+      status: 'ISSUED',
+      tour_date: expect.stringMatching(/^\d{4}-\d\d-\d\d$/),
+      used_at: null,
+      tour_title: DEMO_TOUR_TITLE,
+      student_name: '김민지',
+    });
+
+    const redeem = await rawFetch<Envelope>(`/coupons/${code}/redeem`, {
+      method: 'POST',
+      token: owner.token,
+    });
+    expect([redeem.status, redeem.body.code]).toEqual([200, 'S200']);
+    expectWireShape(redeem.body.data, REDEEM_OK.data, [
+      'tour_visitor_count',
+      'total_visitor_count',
+    ]);
+    expect(redeem.body.data).toMatchObject({
+      status: 'USED',
+      used_at: expect.stringMatching(/\+09:00$/),
+      tour_visitor_count: 1,
+      total_visitor_count: 6, // 지난 탐방(7)의 사용 쿠폰 5장 + 1
+    });
+
+    // 이미 사용: 409 E409_ALREADY_USED, 확장 data.used_at
+    const again = await rawFetch<Envelope>(`/coupons/${code}/redeem`, {
+      method: 'POST',
+      token: owner.token,
+    });
+    expect([again.status, again.body.code]).toEqual([409, 'E409_ALREADY_USED']);
+    expect(again.body.data).toEqual({ used_at: (redeem.body.data as { used_at: string }).used_at });
+    expect(again.body.code).toBe(REDEEM_ALREADY_USED.code);
+  });
+
+  it('S-06 오류 와이어: 다른 가게 403 · 없는 코드 404 · 만료 410(데이터 없음)', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    const owner = await login('owner1@demo.kr');
+    const other = await rawFetch<Envelope>(`/coupons/${demoCouponCode('student@demo.kr', 2)}`, {
+      method: 'GET',
+      token: owner.token,
+    });
+    expect([other.status, other.body.code, other.body.data]).toEqual([
+      403,
+      COUPON_OTHER_STORE.code,
+      null,
+    ]);
+    const missing = await rawFetch<Envelope>(`/coupons/${unusedCode()}/redeem`, {
+      method: 'POST',
+      token: owner.token,
+    });
+    expect([missing.status, missing.body.code]).toEqual([404, 'E404']);
+
+    const code = demoCouponCode('student@demo.kr', 1);
+    mutate((db) => {
+      db.coupons.find((c) => c.code === code)!.status = 'EXPIRED';
+    });
+    const expired = await rawFetch<Envelope>(`/coupons/${code}/redeem`, {
+      method: 'POST',
+      token: owner.token,
+    });
+    expect([expired.status, expired.body.code, expired.body.data]).toEqual([
+      410,
+      REDEEM_EXPIRED.code,
+      null,
+    ]);
+  });
+
+  it('사장님 쿠폰 사용 · 이미 사용 · 학생 쪽 반영', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    const code = demoCouponCode('student@demo.kr', 1);
+    await login('owner1@demo.kr');
+    const result = await postRedeem(code);
     expect(result).toMatchObject({
       coupon: { code, state: 'USED', usedAt: expect.any(String) },
       tourVisitorCount: 1,
       totalVisitorCount: 6, // 지난 탐방(7)의 사용 쿠폰 5장 + 1
     });
-    await expect(
-      request(`/owner/coupons/${code}/redeem`, { method: 'POST' }),
-    ).rejects.toMatchObject({
+    await expect(postRedeem(code)).rejects.toMatchObject({
       status: 409,
       code: 'COUPON_ALREADY_USED',
       details: { usedAt: result.coupon.usedAt },
     });
 
     await login('student@demo.kr');
-    expect((await request<Coupon[]>('/me/coupons'))[0]).toMatchObject({
+    expect((await getMyCoupons(undefined, campuses()))[0]).toMatchObject({
       code,
       status: 'USED',
       state: 'USED',
       usedAt: result.coupon.usedAt,
+    });
+  });
+
+  it('하루 한 장 규칙은 목업에 없다 — 같은 날 같은 가게의 두 번째 쿠폰도 쓸 수 있다(2C-R11)', async () => {
+    resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
+    const mine = demoCouponCode('student@demo.kr', 1);
+    const second = getDb().coupons.find(
+      (c) => c.storeId === 1 && c.status === 'ISSUED' && c.code !== mine,
+    )!.code;
+    await login('owner1@demo.kr');
+    await postRedeem(mine);
+    await expect(postRedeem(second)).resolves.toMatchObject({ coupon: { state: 'USED' } });
+    // 클라이언트는 코드와 문구만 갖춘다.
+    server.use(http.post('/api/coupons/:couponCode/redeem', () => wireFail('E409_DAILY_LIMIT')));
+    await expect(postRedeem(mine)).rejects.toMatchObject({
+      status: 409,
+      code: 'COUPON_DAILY_LIMIT',
     });
   });
 });
@@ -1288,12 +1429,12 @@ describe('demo', () => {
 
   it('시연 초기화는 체크포인트를 적용', async () => {
     await login('student@demo.kr');
-    expect(await request<Coupon[]>('/me/coupons')).toEqual([]);
+    expect(await getMyCoupons(undefined, listCampuses())).toEqual([]);
     expect(
       await request('/demo/reset', { method: 'POST', body: { checkpoint: 'CONFIRMED' } }),
     ).toEqual({ ok: true });
     // 세션을 새 DB로 옮기므로 같은 토큰으로 계속 부른다
-    expect(await request<Coupon[]>('/me/coupons')).toHaveLength(2);
+    expect(await getMyCoupons(undefined, listCampuses())).toHaveLength(2);
   });
 
   it('시연 초기화는 올려 둔 목업 파일도 지운다', async () => {

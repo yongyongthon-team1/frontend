@@ -95,7 +95,7 @@ function stateOf(db: DB, coupon: CouponRow, now: Date): CouponState {
 }
 
 /** 코드로 쿠폰을 찾고, 요청한 사장님 가게의 쿠폰인지 확인한다(코드 없음 404 → 다른 가게 403). */
-function findOwnCoupon(db: DB, ownerId: number, code: string): CouponRow {
+export function findOwnCoupon(db: DB, ownerId: number, code: string): CouponRow {
   const coupon = db.coupons.find((c) => c.code === code);
   if (!coupon) throw new MockApiError(404, 'COUPON_NOT_FOUND');
   const store = db.stores.find((s) => s.ownerId === ownerId);
@@ -125,11 +125,14 @@ export function lookupCoupon(db: DB, ownerId: number, code: string, now: Date): 
   return toLookup(db, findOwnCoupon(db, ownerId, code), now);
 }
 
+/** 목업은 방문 수를 늘 계산해 준다(실서버는 주지 않아 도메인 타입은 null을 허용한다, 2C-R12 ⑤). */
+type MockRedeemResult = RedeemResult & { tourVisitorCount: number; totalVisitorCount: number };
+
 /**
  * 쿠폰 사용 처리. 사용 가능(USABLE)할 때만 USED와 사용 시각을 남긴다. 방문 수는 이 상점의 USED 쿠폰 수다 —
  * 이 쿠폰과 같은 탐방 것만(`tourVisitorCount`), 탐방과 상관없이 전부(`totalVisitorCount`).
  */
-export function redeemCoupon(db: DB, ownerId: number, code: string, now: Date): RedeemResult {
+export function redeemCoupon(db: DB, ownerId: number, code: string, now: Date): MockRedeemResult {
   const coupon = findOwnCoupon(db, ownerId, code);
   const state = stateOf(db, coupon, now);
   if (state === 'USED') {

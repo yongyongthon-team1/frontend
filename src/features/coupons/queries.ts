@@ -5,6 +5,7 @@ import {
   type UseMutationResult,
   type UseQueryResult,
 } from '@tanstack/react-query';
+import { loadCampuses } from '@/features/campuses/queries';
 import { qk } from '@/shared/api/queryKeys';
 import type { ApiError } from '@/shared/lib/http';
 import { getCouponLookup, getMyCoupon, getMyCoupons, postRedeem } from './api';
@@ -13,18 +14,21 @@ import type { Coupon, CouponLookup, RedeemResult } from './model';
 const COUPON_POLL_MS = 5000;
 const COUPON_CODE = /^\d{6}$/;
 
+// 캠퍼스 목록은 기다리지 않고 `loadCampuses`의 약속째 넘긴다(errata G13). api 함수는 마지막 인자로 캠퍼스를 받으므로 감싼다(errata G8).
 export function useMyCoupons(applicationId?: number): UseQueryResult<Coupon[]> {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: qk.myCoupons(applicationId),
-    queryFn: () => getMyCoupons(applicationId),
+    queryFn: () => getMyCoupons(applicationId, loadCampuses(queryClient)),
   });
 }
 
 /** 쿠폰 상세. 아직 쓸 수 있는 쿠폰(BEFORE_DAY · USABLE)은 5초마다 다시 불러와 사장님의 사용 처리를 반영한다. */
 export function useMyCoupon(id: number): UseQueryResult<Coupon> {
+  const queryClient = useQueryClient();
   return useQuery({
     queryKey: qk.coupon(id),
-    queryFn: () => getMyCoupon(id),
+    queryFn: () => getMyCoupon(id, loadCampuses(queryClient)),
     refetchInterval: (query) => {
       const state = query.state.data?.state;
       return state === 'BEFORE_DAY' || state === 'USABLE' ? COUPON_POLL_MS : false;

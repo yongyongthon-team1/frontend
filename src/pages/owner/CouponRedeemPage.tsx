@@ -185,7 +185,7 @@ function LookupCard({ lookup }: { lookup: CouponLookup }) {
   );
 }
 
-/** O07: 사용 처리 성공. 2A-R13 — 시연의 상권 효과 장면이라 `이번 탐방으로 온 학생 {n}명`을 카드 아래에 남긴다. */
+/** O07: 사용 처리 성공. 2A-R13 — 시연의 상권 효과 장면이라 `이번 탐방으로 온 학생 {n}명`을 카드 아래에 남긴다(실서버는 방문 수를 주지 않아 null이면 숨긴다, 2C-R12 ⑤). */
 function Redeemed({ result, onReset }: { result: RedeemResult; onReset(): void }) {
   const { coupon } = result;
   return (
@@ -224,9 +224,11 @@ function Redeemed({ result, onReset }: { result: RedeemResult; onReset(): void }
             </p>
           ) : null}
         </section>
-        <p className="mt-4 px-1 text-[13px] font-bold text-ink">
-          이번 탐방으로 온 학생 {result.tourVisitorCount}명
-        </p>
+        {result.tourVisitorCount !== null ? (
+          <p className="mt-4 px-1 text-[13px] font-bold text-ink">
+            이번 탐방으로 온 학생 {result.tourVisitorCount}명
+          </p>
+        ) : null}
 
         <BottomAction>
           <Button onClick={onReset}>다른 쿠폰 확인하기</Button>

@@ -80,9 +80,6 @@ const NOT_MOCKED: string[] = [
   'PATCH /users/me/store',
   'GET /stores/nearby',
   'PUT /users/me/store/partnership',
-  'GET /users/me/coupons',
-  'GET /coupons/:couponCode',
-  'POST /coupons/:couponCode/redeem',
   'GET /users/me/store/report',
   'POST /stores/:storeId/reviews',
   'GET /stores/:storeId/reviews',
@@ -90,13 +87,7 @@ const NOT_MOCKED: string[] = [
 ];
 
 /** 아직 바꾸지 않은 옛 경로(전환 기간). 도메인 태스크가 자기 줄을 지운다. */
-const LEGACY: string[] = [
-  'POST /recommendations',
-  'GET /me/coupons',
-  'GET /me/coupons/:id',
-  'GET /owner/coupons/:code',
-  'POST /owner/coupons/:code/redeem',
-];
+const LEGACY: string[] = ['POST /recommendations'];
 
 const label = (h: { info: { method: unknown; path: unknown } }) =>
   `${String(h.info.method)} ${String(h.info.path)}`.replace(' /api/', ' /');

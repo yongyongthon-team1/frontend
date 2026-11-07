@@ -79,6 +79,13 @@ describe('couponNotice (사장님 쿠폰 오류 카드)', () => {
     ['COUPON_OTHER_STORE', expired],
     ['COUPON_NOT_FOUND', notFound],
     ['COUPON_NOT_YET', notYet],
+    [
+      'COUPON_DAILY_LIMIT',
+      {
+        title: '오늘 이미 쿠폰을 처리한 가게',
+        description: '같은 날 한 가게에서는 쿠폰 한 장만 사용할 수 있어요.',
+      },
+    ],
   ])('오류 코드 %s', (code, notice) =>
     expect(couponNotice({ errorCode: code, usedAt: USED_AT })).toEqual(notice),
   );
