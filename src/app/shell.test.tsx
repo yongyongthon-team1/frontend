@@ -186,6 +186,7 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/guide/tours/1/complete', 'UNIVERSITY'],
   ['/guide/tours/1/cancel', 'UNIVERSITY'],
   ['/guide/me', 'UNIVERSITY'],
+  ['/guide/me/profile', 'UNIVERSITY'],
   ['/guide/verify', 'UNIVERSITY'],
   ['/guide/wishes', 'UNIVERSITY'],
   ['/explore', 'ANY'],

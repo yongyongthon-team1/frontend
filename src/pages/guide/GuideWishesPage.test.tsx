@@ -118,7 +118,7 @@ describe('고교생 희망 사항 (T-08 · 가이드)', () => {
 
   it('내 학교를 모르면 첫 선택지 `내 학교`로 시작하고 학교 조건 없이 부른다(서버 기본 = 내 인증 학교)', async () => {
     const urls = watchGuideWishRequests();
-    const app = await renderApp('/guide/tours/new', { as: 'guide' });
+    const app = await renderApp('/explore', { as: 'guide' });
     mutate((db) => {
       const me = db.users.find((u) => u.email === 'guide@demo.kr')!;
       db.guideProfiles = db.guideProfiles.filter((g) => g.id !== me.id);

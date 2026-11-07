@@ -71,7 +71,13 @@ function TourCard({ tour }: { tour: GuideTourSummary }) {
         <SoftLink to={`/guide/tours/${tour.id}/applicants`}>신청자 관리하기</SoftLink>
       )}
       {past ? null : (
-        <div className="mt-1 flex justify-end">
+        <div className="mt-1 flex justify-end gap-3">
+          <Link
+            to={`/guide/tours/${tour.id}/complete`}
+            className="inline-flex min-h-11 items-center px-1 text-xs text-muted underline underline-offset-2"
+          >
+            탐방 완료
+          </Link>
           <Link
             to={`/guide/tours/${tour.id}/cancel`}
             className="inline-flex min-h-11 items-center px-1 text-xs text-muted underline underline-offset-2"

@@ -117,6 +117,7 @@ describe('탐방 생애 훅', () => {
   it.each([
     ['E403_VERIFICATION_REQUIRED', 'NOT_VERIFIED'],
     ['E409_GUIDE_PROFILE_REQUIRED', 'GUIDE_PROFILE_REQUIRED'],
+    ['E403', 'FORBIDDEN'],
   ])('useCreateTour 실패 %s(%s)면 내 정보(qk.me)를 다시 받는다', async (backendCode, code) => {
     server.use(
       ...baseHandlers(),

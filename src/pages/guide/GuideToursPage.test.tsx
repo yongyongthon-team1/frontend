@@ -17,7 +17,7 @@ async function renderPatched(
   opts: Parameters<typeof renderApp>[1],
   patch: Parameters<typeof mutate>[0],
 ) {
-  const app = await renderApp('/guide/tours/new', opts);
+  const app = await renderApp('/explore', opts);
   mutate(patch);
   await app.router.navigate(path);
   return app;
@@ -48,6 +48,10 @@ describe('내가 개설한 탐방 (G06 · guide-a02)', () => {
     expect(within(first).getByRole('link', { name: '탐방 취소' })).toHaveAttribute(
       'href',
       '/guide/tours/1/cancel',
+    );
+    expect(within(first).getByRole('link', { name: '탐방 완료' })).toHaveAttribute(
+      'href',
+      '/guide/tours/1/complete',
     );
     // 새 탐방 개설하기 카드
     expect(screen.getByRole('link', { name: /새 탐방 개설하기/ })).toHaveAttribute(
@@ -86,7 +90,7 @@ describe('내가 개설한 탐방 (G06 · guide-a02)', () => {
   });
 
   it('진행 중 탐방은 API 순서와 상관없이 시작 시각이 이른 것부터 (판정 35)', async () => {
-    const { router } = await renderApp('/guide/tours/new', { as: 'guide' });
+    const { router } = await renderApp('/explore', { as: 'guide' });
     // 탐방 1을 탐방 6(60일 뒤)보다 하루 늦게 옮기고, API는 id 순서(탐방 1이 맨 앞)로 준다.
     mutate((db) => {
       const tour1 = db.tours.find((t) => t.id === 1)!;
@@ -146,6 +150,7 @@ describe('내가 개설한 탐방 (G06 · guide-a02)', () => {
       expect(within(panel).getAllByRole('article')).toHaveLength(1); // 탐방 7(완료)
       expect(within(panel).getByText('완료')).toBeInTheDocument();
       expect(within(panel).queryByRole('link', { name: '탐방 취소' })).not.toBeInTheDocument();
+      expect(within(panel).queryByRole('link', { name: '탐방 완료' })).not.toBeInTheDocument();
       expect(within(panel).queryByRole('link')).not.toBeInTheDocument();
       expect(screen.queryByRole('link', { name: /새 탐방 개설하기/ })).not.toBeInTheDocument();
     });

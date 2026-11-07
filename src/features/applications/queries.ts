@@ -149,7 +149,7 @@ export function useReject(tourId: number): UseMutationResult<ApplicantsBoard, Ap
 }
 
 /** 가이드 탐방 상세(G09). 탐방 상세 · 확정 코스 지점 수 · 완료/취소 활성을 합성한다. */
-export function useGuideTour(tourId: number): UseQueryResult<GuideTourDetail> {
+export function useGuideTour(tourId: number): UseQueryResult<GuideTourDetail, ApiError> {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: qk.guideTour(tourId),
@@ -159,7 +159,7 @@ export function useGuideTour(tourId: number): UseQueryResult<GuideTourDetail> {
 
 /**
  * 탐방 개설(T-03). 성공하면 가이드 탐방 목록(정확히 이 키 — 신청자·코스 키는 따로 묶여 있다)과 탐방 목록 · 상세 전부를 다시
- * 불러온다. 재학 인증이나 가이드 프로필이 모자라 거절되면(`NOT_VERIFIED` · `GUIDE_PROFILE_REQUIRED`) 내 정보가 낡았다는
+ * 불러온다. 재학 인증이나 가이드 프로필이 모자라거나 권한이 없어 거절되면(`NOT_VERIFIED` · `GUIDE_PROFILE_REQUIRED` · `FORBIDDEN`) 내 정보가 낡았다는
  * 뜻이라 `qk.me`를 다시 불러와 가드·안내가 맞게 한다.
  */
 export function useCreateTour(): UseMutationResult<number, ApiError, CreateTourInput> {
@@ -171,7 +171,11 @@ export function useCreateTour(): UseMutationResult<number, ApiError, CreateTourI
       void queryClient.invalidateQueries({ queryKey: qk.allTours });
     },
     onError: (error) => {
-      if (error.code === 'NOT_VERIFIED' || error.code === 'GUIDE_PROFILE_REQUIRED') {
+      if (
+        error.code === 'NOT_VERIFIED' ||
+        error.code === 'GUIDE_PROFILE_REQUIRED' ||
+        error.code === 'FORBIDDEN'
+      ) {
         void queryClient.invalidateQueries({ queryKey: qk.me });
       }
     },

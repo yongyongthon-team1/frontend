@@ -50,16 +50,16 @@
 | `G01` | 가이드 홈 (V2, 신청자 없음 G11 포함) | `/guide` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | — | 코스 편집 탭 (다가오는 탐방의 코스로 이동) | `/guide/course` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s01` | 가이드 프로필 | `/guide/me` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-s02` | 탐방 개설 | `/guide/tours/new` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-s02` | 탐방 개설 · V2(G04 — 탐방 이름 칸 없음, 방학 안내 · 차단) | `/guide/tours/new` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s03` | 신청자 관리 · V2(G02 신청자 승인) | `/guide/tours/:tourId/applicants` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s04` | AI 추천 코스 생성 · V2(생성 중 로딩 뒤 G03 코스 완성 `edit`로 replace) | `/guide/tours/:tourId/course/draft` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s05` | 코스 편집 · 상점 교체 · V2(G03 코스 완성: AI 초안 + 편집 한 화면, 카드 `≡` → 지점 시트) | `/guide/tours/:tourId/course/edit` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s06` | 코스 확정 · 쿠폰 발급 · V2(G08 확정 전 점검 → 같은 화면의 완료 상태, 옛 `/confirmed`는 이리로) | `/guide/tours/:tourId/course/confirm` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `guide-s07` | 탐방 종료 · 완료 | `/guide/tours/:tourId/complete` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-s07` | 탐방 종료 · 완료 · V2(G09, 확인 창 없음) | `/guide/tours/:tourId/complete` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a01` | 대학생 재학 인증 | `/guide/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `guide-a02` | 내가 개설한 탐방 · V2(G06, `?tab=past`) | `/guide/tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a03` | 주변 상점 교체 | `/guide/tours/:tourId/course/stops/pick` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
-| `guide-a04` | 탐방 취소 확인 | `/guide/tours/:tourId/cancel` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
+| `guide-a04` | 탐방 취소 확인 · V2(G10, 확인 창 대체) | `/guide/tours/:tourId/cancel` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `owner-s01` | 사업자 인증 | `/owner/verify` | P1 | 자리 | ⬜ | ⬜ | ⬜ | ⬜ |
 | `owner-s02` | 내 가게 · 제휴 할인 · V2(O01 가게 홈 · O01-E 미연결, 오른쪽 위 `로그아웃`. 제휴 설정 O06은 2B) | `/owner/store` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `owner-s03` | 쿠폰 사용 처리 · V2(O02 입력 · 조회, O07 사용 완료) | `/owner/coupons/redeem` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -103,9 +103,9 @@
 | tours | `PATCH /api/users/me/tour-wishes/:wishId` | T-07 `/me/wishes/:wishId/edit` (본인 글만, 바뀐 칸만 `{ campus_id?, major?, wish?, date? }`, 학교 칸 오류 `campus_id` → 폼 `universityId`. 목업 확장 `campus_id` · `created_at`) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tour-wishes` | T-08 `/guide/wishes` (재학 인증을 마친 대학생만, 쿼리 `campus_id` · `major`(부분 일치) · `page` · `size`, 학교를 빼면 내 인증 학교. 이름 같은 개인정보는 없다) | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours/:tourId` | hs-s05, hs-a04, hs-s06, hs-a06 (T-02, 목업 확장 `campus_id`) | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `POST /api/tours` | guide-s02 탐방 개설 (T-03, 본문 `{ date, start_time, end_time, capacity, intro, open_chat_url }`, 칸 오류 `intro` → 폼 `introduction`. 방학 밖 날짜는 400 `errors[date]`, 프로필 없음은 `E409_GUIDE_PROFILE_REQUIRED`. 화면은 Task 5) | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `POST /api/tours/:tourId/cancel` | guide-a04 탐방 취소 (T-05, 신청자 전원의 신청 취소 · 발급 쿠폰 만료, 사용한 쿠폰은 그대로. `E409_INVALID_TOUR_STATUS` 하나를 탐방을 다시 읽어 세분 — 완료됨 / 그 밖. 화면은 Task 5) | ⬜ | ✅ | ⬜ | ⬜ |
-| applications | `POST /api/tours/:tourId/complete` | guide-s07 탐방 종료 (T-06, 탐방 날짜 당일부터. `E409_INVALID_TOUR_STATUS` 하나를 탐방을 다시 읽어 세분 — 완료됨 / 취소됨 / 날짜 전. 가이드 탐방 상세 = 탐방 상세 + 코스 지점 수 합성. 화면은 Task 5) | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/tours` | guide-s02 탐방 개설 (T-03, 본문 `{ date, start_time, end_time, capacity, intro, open_chat_url }`, 칸 오류 `intro` → 폼 `introduction`. 방학 밖 날짜는 400 `errors[date]`, 프로필 없음은 `E409_GUIDE_PROFILE_REQUIRED`. 화면은 MVP 2B′ Task 5의 G04 · G09 · G10) | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/tours/:tourId/cancel` | guide-a04 탐방 취소 (T-05, 신청자 전원의 신청 취소 · 발급 쿠폰 만료, 사용한 쿠폰은 그대로. `E409_INVALID_TOUR_STATUS` 하나를 탐방을 다시 읽어 세분 — 완료됨 / 그 밖. 화면은 MVP 2B′ Task 5의 G04 · G09 · G10) | ⬜ | ✅ | ⬜ | ⬜ |
+| applications | `POST /api/tours/:tourId/complete` | guide-s07 탐방 종료 (T-06, 탐방 날짜 당일부터. `E409_INVALID_TOUR_STATUS` 하나를 탐방을 다시 읽어 세분 — 완료됨 / 취소됨 / 날짜 전. 가이드 탐방 상세 = 탐방 상세 + 코스 지점 수 합성. 화면은 MVP 2B′ Task 5의 G04 · G09 · G10) | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `POST /api/tours/:tourId/applications` | hs-a04 (A-01, 본문 `{ wish }` 100자. `E403_VERIFICATION_REQUIRED`는 `GET /users/me`, `E409_TOUR_FULL`은 `GET /tours/{tourId}`를 다시 읽어 세분) | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `PATCH /api/applications/:applicationId/decision` | guide-s03 (A-02, 승인 · 거절 `{ decision }` 뒤 신청자 보드를 다시 읽는다. `E409_TOUR_FULL`은 정원 초과) | ⬜ | ✅ | ⬜ | ⬜ |
 | applications | `POST /api/applications/:applicationId/cancel` | hs-s07 (A-03, `E409_INVALID_APPLICATION_STATUS`는 신청을 다시 읽어 탐방 날짜 · 이미 처리로 세분) | ⬜ | ✅ | ⬜ | ⬜ |

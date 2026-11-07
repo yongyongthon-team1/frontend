@@ -12,7 +12,7 @@ async function renderPatched(
   opts: Parameters<typeof renderApp>[1],
   patch: Parameters<typeof mutate>[0],
 ) {
-  const app = await renderApp('/guide/tours/new', opts);
+  const app = await renderApp('/explore', opts);
   mutate(patch);
   await app.router.navigate(path);
   return app;

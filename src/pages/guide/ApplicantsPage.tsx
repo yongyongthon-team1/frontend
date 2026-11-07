@@ -1,9 +1,10 @@
 import { useId, useState } from 'react';
-import { useNavigate, useParams } from 'react-router';
+import { Link, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import {
   APPLICATION_STATUS_LABEL,
   coursePathFor,
+  isUpcomingTour,
   type Applicant,
 } from '@/features/applications/model';
 import { useApplicantsBoard, useApprove, useReject } from '@/features/applications/queries';
@@ -22,7 +23,8 @@ import { TopBar } from '@/shared/ui/TopBar';
 
 const BACK = '/guide';
 
-const STATUS_TONE: Record<Exclude<Applicant['status'], 'PENDING'>, Tone> = {
+const STATUS_TONE: Record<Applicant['status'], Tone> = {
+  PENDING: 'neutral',
   APPROVED: 'success',
   REJECTED: 'neutral',
   CANCELED: 'neutral',
@@ -63,6 +65,8 @@ export function ApplicantsPage() {
   const { tour, counts, applicants, course } = board;
   const busy = approve.isPending || reject.isPending;
   const noSeats = counts.remaining === 0;
+  // 모집 중 · 마감이 아닌(완료 · 취소된) 탐방의 신청자 보드는 읽기 전용이다.
+  const editable = isUpcomingTour(tour);
   const coursePath = coursePathFor(tour.id, course?.status ?? null, counts.approved);
 
   function onApprove(applicantId: number) {
@@ -110,6 +114,7 @@ export function ApplicantsPage() {
                 applicant={applicant}
                 busy={busy}
                 noSeats={noSeats}
+                editable={editable}
                 onApprove={() => onApprove(applicant.id)}
                 onReject={() => setRejectTarget(applicant.id)}
               />
@@ -134,6 +139,12 @@ export function ApplicantsPage() {
               {course.status === 'CONFIRMED' ? '확정 코스 보기' : '코스 이어서 편집'}
             </Button>
           )}
+          {editable ? (
+            <div className="mt-1 flex justify-center gap-4">
+              <TextLink to={`/guide/tours/${tour.id}/complete`}>탐방 완료</TextLink>
+              <TextLink to={`/guide/tours/${tour.id}/cancel`}>탐방 취소</TextLink>
+            </div>
+          ) : null}
         </BottomAction>
       </Page>
 
@@ -152,21 +163,36 @@ export function ApplicantsPage() {
   );
 }
 
+/** 하단 버튼 아래의 작은 텍스트 링크(터치 44). */
+function TextLink({ to, children }: { to: string; children: string }) {
+  return (
+    <Link
+      to={to}
+      className="inline-flex min-h-11 items-center px-1 text-xs text-muted underline underline-offset-2"
+    >
+      {children}
+    </Link>
+  );
+}
+
 function ApplicantCard({
   applicant,
   busy,
   noSeats,
+  editable,
   onApprove,
   onReject,
 }: {
   applicant: Applicant;
   busy: boolean;
   noSeats: boolean;
+  /** false면 승인 · 거절 버튼 없이 상태만 보인다. */
+  editable: boolean;
   onApprove(): void;
   onReject(): void;
 }) {
   const noSeatsId = useId();
-  const pending = applicant.status === 'PENDING';
+  const pending = applicant.status === 'PENDING' && editable;
   const quote = `“ ${applicant.grade ? `고${applicant.grade} · ` : ''}${applicant.motivation} ”`;
   return (
     <article className="rounded-xl bg-surface p-5">
@@ -185,7 +211,7 @@ function ApplicantCard({
             </StatusChip>
           ) : null}
         </div>
-        {applicant.status === 'PENDING' ? (
+        {pending ? (
           <div className="w-[104px] shrink-0">
             <Button
               variant="soft"

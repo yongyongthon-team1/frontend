@@ -1,7 +1,7 @@
 import type { CourseStatus } from '@/features/courses/model';
 import { TOUR_STATUS_LABEL, type TourDetail, type TourSummary } from '@/features/tours/model';
-import { seoulDateKey } from '@/shared/lib/date';
-import type { Tone } from '@/shared/lib/types';
+import { formatShortDate, seoulDateKey } from '@/shared/lib/date';
+import type { ActionLink, Tone } from '@/shared/lib/types';
 
 export type ApplicationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CANCELED';
 
@@ -184,4 +184,52 @@ export interface GuideTourDetail {
   tour: TourDetail;
   courseStopCount: number;
   actions: TourActions;
+}
+
+/** 완료 · 취소 버튼(G09 · G10)의 상태: 켜짐, 아니면 사유 + 다음 행동. */
+export interface TourActionState {
+  enabled: boolean;
+  reason: string | null;
+  action: ActionLink | null;
+}
+
+const MY_TOURS_LINK: ActionLink = { label: '내가 개설한 탐방', to: '/guide/tours' };
+const ENABLED: TourActionState = { enabled: true, reason: null, action: null };
+
+const blocked = (reason: string, action: ActionLink = MY_TOURS_LINK): TourActionState => ({
+  enabled: false,
+  reason,
+  action,
+});
+
+/**
+ * G09 `탐방 완료 처리` 버튼. 가능 판정은 어댑터가 계산한 `actions.completable`뿐이고(화면은 시계를 보지 않는다), 불가일 때 탐방
+ * 상태로 사유를 고른다: 완료 → 이미 완료, 취소 → 취소된 탐방, 그 밖 → 탐방 날짜 전(신청자 관리로 보낸다).
+ */
+export function completeActionState(d: GuideTourDetail): TourActionState {
+  if (d.actions.completable) return ENABLED;
+  switch (d.tour.status) {
+    case 'COMPLETED':
+      return blocked('이미 완료된 탐방이에요.');
+    case 'CANCELED':
+      return blocked('취소된 탐방은 완료할 수 없어요.');
+    default:
+      return blocked(`탐방 날짜(${formatShortDate(d.tour.startsAt)}) 이후에 완료할 수 있어요.`, {
+        label: '신청자 관리로 이동',
+        to: `/guide/tours/${d.tour.id}/applicants`,
+      });
+  }
+}
+
+/** G10 `탐방 취소 확정` 버튼. 가능 판정은 `actions.cancellable`뿐이고, 불가일 때 탐방 상태로 사유를 고른다. */
+export function cancelActionState(d: GuideTourDetail): TourActionState {
+  if (d.actions.cancellable) return ENABLED;
+  switch (d.tour.status) {
+    case 'COMPLETED':
+      return blocked('완료된 탐방은 취소할 수 없습니다.');
+    case 'CANCELED':
+      return blocked('이미 취소된 탐방이에요.');
+    default:
+      return blocked('지금은 취소할 수 없어요.');
+  }
 }

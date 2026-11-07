@@ -43,7 +43,7 @@ describe('신청자 관리 (guide-s03)', () => {
   });
 
   it('신청자는 모두 `인증` 칩이 이름 옆에 붙는다 — 신청은 재학 인증 APPROVED만 받는다(A-01, 2C-R27)', async () => {
-    const { router } = await renderApp('/guide/tours/new', {
+    const { router } = await renderApp('/explore', {
       as: 'guide',
       checkpoint: 'APPLIED',
     });
@@ -63,7 +63,7 @@ describe('신청자 관리 (guide-s03)', () => {
   });
 
   it('학년이 없으면 따옴표 줄에 `고N · ` 없이 동기만 나온다', async () => {
-    const { router } = await renderApp('/guide/tours/new', {
+    const { router } = await renderApp('/explore', {
       as: 'guide',
       checkpoint: 'APPLIED',
     });
@@ -251,5 +251,58 @@ describe('신청자 관리 (guide-s03)', () => {
     expect(within(card).getByText('남은 자리가 없어요.')).toBeInTheDocument();
     expect(approve).toHaveAccessibleDescription('남은 자리가 없어요.');
     expect(within(card).getByRole('button', { name: '거절하기' })).toBeEnabled();
+  });
+
+  describe('탐방 완료 · 탐방 취소 진입 링크 (T-05 · T-06)', () => {
+    it('모집 중 탐방의 하단 링크 줄에 `탐방 완료` · `탐방 취소`가 있다(승인 버튼 로케이터는 그대로)', async () => {
+      await renderApp('/guide/tours/1/applicants', { as: 'guide', checkpoint: 'APPLIED' });
+      await screen.findByRole('heading', waiting(2));
+      expect(screen.getByRole('link', { name: '탐방 완료' })).toHaveAttribute(
+        'href',
+        '/guide/tours/1/complete',
+      );
+      expect(screen.getByRole('link', { name: '탐방 취소' })).toHaveAttribute(
+        'href',
+        '/guide/tours/1/cancel',
+      );
+      // 골든 패스가 지나는 버튼은 이름 그대로 대기 신청마다 하나씩이다.
+      expect(screen.getAllByRole('button', { name: '승인하기' })).toHaveLength(2);
+      expect(screen.getByRole('button', { name: '승인 완료 후 코스 만들기' })).toBeInTheDocument();
+    });
+
+    it('마감된 탐방에도 링크가 있다', async () => {
+      const { router } = await renderApp('/explore', { as: 'guide', checkpoint: 'APPLIED' });
+      mutate((db) => {
+        db.tours.find((t) => t.id === 1)!.status = 'CLOSED';
+      });
+      await router.navigate('/guide/tours/1/applicants');
+      await screen.findByRole('heading', waiting(2));
+      expect(screen.getByRole('link', { name: '탐방 완료' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: '탐방 취소' })).toBeInTheDocument();
+    });
+
+    it('완료된 탐방(7)은 링크 줄이 없다', async () => {
+      await renderApp('/guide/tours/7/applicants', { as: 'guide' });
+      await screen.findByRole('heading', { level: 2, name: '신청자를 모두 확인했어요.' });
+      expect(screen.queryByRole('link', { name: '탐방 완료' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: '탐방 취소' })).not.toBeInTheDocument();
+    });
+
+    it.each(['COMPLETED', 'CANCELED'] as const)(
+      '%s 탐방은 대기 신청에도 승인하기 · 거절하기가 없고 상태만 보인다',
+      async (status) => {
+        const { router } = await renderApp('/explore', { as: 'guide', checkpoint: 'APPLIED' });
+        mutate((db) => {
+          db.tours.find((t) => t.id === 1)!.status = status;
+        });
+        await router.navigate('/guide/tours/1/applicants');
+        const yujin = (await screen.findByRole('heading', { name: '최유진' })).closest('article')!;
+        expect(within(yujin).getByText('승인 대기')).toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '승인하기' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('button', { name: '거절하기' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: '탐방 완료' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: '탐방 취소' })).not.toBeInTheDocument();
+      },
+    );
   });
 });

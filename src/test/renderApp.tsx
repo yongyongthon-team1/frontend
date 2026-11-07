@@ -1,5 +1,5 @@
 import type { QueryClient } from '@tanstack/react-query';
-import { render } from '@testing-library/react';
+import { act, render } from '@testing-library/react';
 import { userEvent, type UserEvent } from '@testing-library/user-event';
 import { createMemoryRouter } from 'react-router';
 import { App } from '@/app/App';
@@ -71,6 +71,23 @@ export async function renderApp(
   const user = userEvent.setup();
   render(<App router={router} queryClient={queryClient} />);
   return { user, router, queryClient };
+}
+
+/**
+ * 같은 목업 DB에서 다른 계정으로 바꾼다(화면 테스트용 — `loginAs`는 API 테스트용). 캐시를 비우고 새 내 정보를 받은 뒤 끝난다.
+ * 호출한 뒤 `router.navigate`로 화면을 옮긴다.
+ */
+export async function switchAccount(
+  queryClient: QueryClient,
+  as: DemoRole | (string & {}),
+): Promise<void> {
+  const email = emailOf(as);
+  const token = mutate((db) => createSession(db, userIdOf(db, email)));
+  await act(async () => {
+    queryClient.clear();
+    useSession.setState({ token });
+    await queryClient.fetchQuery(meQueryOptions());
+  });
 }
 
 /** 목업 DB에서 그 학생의 그 탐방 신청 id(여러 번 신청했으면 마지막). 테스트가 `router.navigate('/my-tours/' + id)`로 쓴다. */

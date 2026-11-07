@@ -8,6 +8,9 @@ import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
 import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
 import { GuideWishesPage } from '@/pages/guide/GuideWishesPage';
+import { TourCancelPage } from '@/pages/guide/TourCancelPage';
+import { TourCompletePage } from '@/pages/guide/TourCompletePage';
+import { TourCreatePage } from '@/pages/guide/TourCreatePage';
 import { LoginPage } from '@/pages/auth/LoginPage';
 import { CouponRedeemPage } from '@/pages/owner/CouponRedeemPage';
 import { MyStorePage } from '@/pages/owner/MyStorePage';
@@ -174,7 +177,7 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/tours/new',
-                    element: <PlaceholderPage title="탐방 개설" wireframe="guide-s02" />,
+                    element: <TourCreatePage />, // T-03 G04
                   },
                   {
                     path: '/guide/tours/:tourId/applicants',
@@ -207,17 +210,22 @@ export const routes: RouteObject[] = [
                   },
                   {
                     path: '/guide/tours/:tourId/complete',
-                    element: <PlaceholderPage title="탐방 종료 · 완료" wireframe="guide-s07" />,
+                    element: <TourCompletePage />, // T-06 G09
                   },
                   {
                     path: '/guide/tours/:tourId/cancel',
-                    element: <PlaceholderPage title="탐방 취소 확인" wireframe="guide-a04" />,
+                    element: <TourCancelPage />, // T-05 G10
                   },
                   {
                     path: '/guide/me',
                     element: (
                       <PlaceholderPage title="가이드 프로필" wireframe="guide-s01" showLogout />
                     ),
+                  },
+                  {
+                    // 자리 — G04 차단의 `가이드 프로필 작성하기`가 가는 곳이라 먼저 둔다(Task 11이 실제 화면으로 바꾼다).
+                    path: '/guide/me/profile',
+                    element: <PlaceholderPage title="가이드 프로필 등록" wireframe="guide-s01" />,
                   },
                   {
                     path: '/guide/verify',

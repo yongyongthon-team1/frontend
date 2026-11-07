@@ -1,6 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import type { TourSummary } from '@/features/tours/model';
 import {
+  cancelActionState,
+  completeActionState,
   computeCancellable,
   computeTourActions,
   coursePathFor,
@@ -10,6 +12,7 @@ import {
   isUpcomingTour,
   pickFocusTour,
   STUDENT_APPLICATION_STATUS,
+  type GuideTourDetail,
   type GuideTourSummary,
   type MyApplication,
 } from './model';
@@ -269,6 +272,81 @@ describe('computeTourActions (2B′-R13)', () => {
     expect(at('CANCELED', '2026-11-20T14:00:00+09:00')).toEqual({
       completable: false,
       cancellable: false,
+    });
+  });
+});
+
+describe('completeActionState · cancelActionState (G09 · G10)', () => {
+  const detail = (
+    status: TourSummary['status'],
+    actions: GuideTourDetail['actions'],
+    startsAt = '2026-12-02T14:00:00+09:00',
+  ): GuideTourDetail => ({
+    tour: {
+      ...tour,
+      id: 6,
+      status,
+      startsAt,
+      introduction: '',
+      guideIntroduction: null,
+      openChatUrl: null,
+      myApplication: null,
+    },
+    courseStopCount: 0,
+    actions,
+  });
+  const MY_TOURS = { label: '내가 개설한 탐방', to: '/guide/tours' };
+
+  it('서버가 가능이라 하면 켜지고 사유 · 행동이 없다', () => {
+    const open = detail('RECRUITING', { completable: true, cancellable: true });
+    expect(completeActionState(open)).toEqual({ enabled: true, reason: null, action: null });
+    expect(cancelActionState(open)).toEqual({ enabled: true, reason: null, action: null });
+  });
+
+  it('완료된 탐방: 완료는 이미 완료됐다고, 취소는 완료된 탐방은 취소할 수 없다고 한다', () => {
+    const done = detail('COMPLETED', { completable: false, cancellable: false });
+    expect(completeActionState(done)).toEqual({
+      enabled: false,
+      reason: '이미 완료된 탐방이에요.',
+      action: MY_TOURS,
+    });
+    expect(cancelActionState(done)).toEqual({
+      enabled: false,
+      reason: '완료된 탐방은 취소할 수 없습니다.',
+      action: MY_TOURS,
+    });
+  });
+
+  it('취소된 탐방', () => {
+    const canceled = detail('CANCELED', { completable: false, cancellable: false });
+    expect(completeActionState(canceled)).toEqual({
+      enabled: false,
+      reason: '취소된 탐방은 완료할 수 없어요.',
+      action: MY_TOURS,
+    });
+    expect(cancelActionState(canceled)).toEqual({
+      enabled: false,
+      reason: '이미 취소된 탐방이에요.',
+      action: MY_TOURS,
+    });
+  });
+
+  it('날짜 전: 완료는 날짜를 알리고 신청자 관리로 보낸다, 취소는 가능하다', () => {
+    const before = detail('RECRUITING', { completable: false, cancellable: true });
+    expect(completeActionState(before)).toEqual({
+      enabled: false,
+      reason: '탐방 날짜(12/02(수)) 이후에 완료할 수 있어요.',
+      action: { label: '신청자 관리로 이동', to: '/guide/tours/6/applicants' },
+    });
+    expect(cancelActionState(before)).toEqual({ enabled: true, reason: null, action: null });
+  });
+
+  it('서버가 취소를 막는 그 밖의 경우(모집 중인데 불가)는 일반 사유', () => {
+    const odd = detail('CLOSED', { completable: false, cancellable: false });
+    expect(cancelActionState(odd)).toEqual({
+      enabled: false,
+      reason: '지금은 취소할 수 없어요.',
+      action: MY_TOURS,
     });
   });
 });
