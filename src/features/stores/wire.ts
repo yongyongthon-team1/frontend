@@ -1,4 +1,9 @@
-import { computePartnershipState, type MyStore, type StoreReport } from './model';
+import {
+  computePartnershipState,
+  type MyStore,
+  type StoreReport,
+  type StoreSearchItem,
+} from './model';
 
 // 백엔드 S-01 보완 `GET /users/me/store`의 와이어 모양(키는 `request`가 camelCase로 바꾼 뒤의 것).
 
@@ -56,5 +61,40 @@ export function fromWireStoreReport(w: WireStoreReport): StoreReport {
     visitCount: w.visitCount,
     reviewCount: w.reviewCount,
     averageRating: w.averageRating,
+  };
+}
+
+// 백엔드 S-01 `GET /stores/search` · `POST /users/me/store`와 S-03 `PUT /users/me/store/partnership`의 와이어 모양.
+
+export interface WireStoreSearchItem {
+  storeId: number;
+  name: string;
+  address: string;
+  category: string;
+  isRegistered: boolean;
+}
+
+/** `POST /users/me/store`(201)의 데이터. 화면은 이 응답 대신 내 가게를 다시 읽는다. */
+export interface WireRegisteredStore {
+  storeId: number;
+  name: string;
+  address: string;
+  category: string;
+}
+
+/** `PUT /users/me/store/partnership`의 데이터. */
+export interface WirePartnershipSaved {
+  discountText: string;
+  startDate: string;
+  endDate: string;
+}
+
+export function fromWireStoreSearchItem(w: WireStoreSearchItem): StoreSearchItem {
+  return {
+    storeId: w.storeId,
+    name: w.name,
+    address: w.address,
+    category: w.category,
+    registered: w.isRegistered,
   };
 }

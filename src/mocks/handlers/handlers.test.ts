@@ -106,7 +106,18 @@ import {
   REVIEW_NOT_USED,
   STORE_REVIEWS,
 } from '@/test/fixtures/backend/reviews';
-import { MY_STORE, NEARBY_STORES, STORE_REPORT } from '@/test/fixtures/backend/stores';
+import {
+  BUSINESS_INVALID,
+  BUSINESS_OK,
+  MY_STORE,
+  MY_STORE_PATCHED,
+  NEARBY_STORES,
+  PARTNERSHIP_SAVED,
+  STORE_REGISTERED,
+  STORE_REPORT,
+  STORE_SEARCH,
+  STORE_UNAVAILABLE,
+} from '@/test/fixtures/backend/stores';
 import {
   CONSENT_DECIDE_EXPIRED,
   CONSENT_DECIDED,
@@ -3550,5 +3561,260 @@ describe('운영자 인증 심사 (U-08)', () => {
       expect(res.status).toBe(400);
       expect(res.body.errors?.map((e) => e.field)).toEqual(['decision']);
     });
+  });
+});
+
+describe('사장님 사업자 인증 · 상점 검색 · 가게 연결 · 수정 · 제휴 (U-07 · S-01 · S-03)', () => {
+  type Envelope = {
+    code: string;
+    message: string;
+    data: Record<string, unknown> | null;
+    errors: { field: string; reason: string }[] | null;
+  };
+  const business = {
+    business_number: '1234567890',
+    representative_name: '정해린',
+    opened_at: '2021-03-02',
+  };
+
+  it('POST /verifications/business: 200 + 명세 예시 모양, 사장님이 아니면 403', async () => {
+    const { token } = await login('owner-new@demo.kr');
+    const res = await rawFetch<Envelope>('/verifications/business', {
+      method: 'POST',
+      token,
+      body: business,
+    });
+    expect([res.status, res.body.code]).toEqual([200, BUSINESS_OK.code]);
+    expectWireShape(res.body.data, BUSINESS_OK.data);
+    expect(res.body.data).toEqual({ status: 'APPROVED' });
+    expect((await fetchMe()).businessVerified).toBe(true);
+
+    const student = await login('student@demo.kr');
+    const forbidden = await rawFetch<Envelope>('/verifications/business', {
+      method: 'POST',
+      token: student.token,
+      body: business,
+    });
+    expect([forbidden.status, forbidden.body.code]).toEqual([403, 'E403']);
+  });
+
+  it('POST /verifications/business: 불일치 422 + errors[business_number].reason, 폐업은 CLOSED', async () => {
+    const { token } = await login('owner-new@demo.kr');
+    const post = (businessNumber: string) =>
+      rawFetch<Envelope>('/verifications/business', {
+        method: 'POST',
+        token,
+        body: { ...business, business_number: businessNumber },
+      });
+    const mismatch = await post('1111111111');
+    expect([mismatch.status, mismatch.body.code]).toEqual([422, BUSINESS_INVALID.code]);
+    expect(mismatch.body.errors).toEqual(BUSINESS_INVALID.errors);
+    const closed = await post('9999999999');
+    expect([closed.status, closed.body.code]).toEqual([422, BUSINESS_INVALID.code]);
+    expect(closed.body.errors).toEqual([{ field: 'business_number', reason: 'CLOSED' }]);
+    const short = await post('123');
+    expect([short.status, short.body.code]).toEqual([400, 'E400']);
+    expect(short.body.errors?.map((e) => e.field)).toEqual(['business_number']);
+  });
+
+  it('GET /stores/search: 명세 예시와 같은 모양(쪽 정보 포함), 한 글자는 400, 사장님이 아니면 403', async () => {
+    const { token } = await login('owner-nostore@demo.kr');
+    const res = await rawFetch<Envelope>('/stores/search?keyword=%EC%B9%B4%ED%8E%98', {
+      method: 'GET',
+      token,
+    });
+    expect([res.status, res.body.code]).toEqual([200, STORE_SEARCH.code]);
+    expectWireShape(res.body.data, STORE_SEARCH.data);
+    expect(res.body.data).toMatchObject({ page: 1, size: 20, total: 3 });
+    const items = res.body.data!.items as { name: string; is_registered: boolean }[];
+    expect(items.map((i) => [i.name, i.is_registered])).toEqual([
+      ['보드게임 카페 다이스', true],
+      ['카페 단풍', false],
+      ['카페 모래시계', true],
+    ]);
+
+    const paged = await rawFetch<Envelope>(
+      '/stores/search?keyword=%EC%B9%B4%ED%8E%98&page=2&size=2',
+      {
+        method: 'GET',
+        token,
+      },
+    );
+    expect(paged.body.data).toMatchObject({ page: 2, size: 2, total: 3 });
+    expect((paged.body.data!.items as unknown[]).length).toBe(1);
+
+    const short = await rawFetch<Envelope>('/stores/search?keyword=%EC%B9%B4', {
+      method: 'GET',
+      token,
+    });
+    expect([short.status, short.body.code]).toEqual([400, 'E400']);
+    expect(short.body.errors?.map((e) => e.field)).toEqual(['keyword']);
+    const none = await rawFetch<Envelope>('/stores/search', { method: 'GET', token });
+    expect(none.status).toBe(400);
+
+    const student = await login('student@demo.kr');
+    const forbidden = await rawFetch<Envelope>('/stores/search?keyword=%EC%B9%B4%ED%8E%98', {
+      method: 'GET',
+      token: student.token,
+    });
+    expect(forbidden.status).toBe(403);
+  });
+
+  it('POST /users/me/store: 검색에서 고르면 201 + 명세 예시 모양, 다시 하면 409 E409_STORE_UNAVAILABLE', async () => {
+    const { token } = await login('owner-nostore@demo.kr');
+    const target = getDb().stores.find((st) => st.name === '카페 단풍')!;
+    const res = await rawFetch<Envelope>('/users/me/store', {
+      method: 'POST',
+      token,
+      body: { store_id: target.id },
+    });
+    expect([res.status, res.body.code]).toEqual([201, STORE_REGISTERED.code]);
+    expectWireShape(res.body.data, STORE_REGISTERED.data);
+    expect(res.body.data).toEqual({
+      store_id: target.id,
+      name: '카페 단풍',
+      address: target.address,
+      category: '카페',
+    });
+    expect(target.ownerId).toBe(getDb().users.find((u) => u.email === 'owner-nostore@demo.kr')!.id);
+
+    const again = await rawFetch<Envelope>('/users/me/store', {
+      method: 'POST',
+      token,
+      body: { store_id: target.id },
+    });
+    expect([again.status, again.body.code]).toEqual([409, STORE_UNAVAILABLE.code]);
+  });
+
+  it('POST /users/me/store: 다른 사장님의 가게 409, 없는 상점 404, 미인증 403 E403_VERIFICATION_REQUIRED', async () => {
+    const { token } = await login('owner-nostore@demo.kr');
+    const taken = await rawFetch<Envelope>('/users/me/store', {
+      method: 'POST',
+      token,
+      body: { store_id: 1 },
+    });
+    expect([taken.status, taken.body.code]).toEqual([409, STORE_UNAVAILABLE.code]);
+    const missing = await rawFetch<Envelope>('/users/me/store', {
+      method: 'POST',
+      token,
+      body: { store_id: 9999 },
+    });
+    expect([missing.status, missing.body.code]).toEqual([404, 'E404']);
+
+    const unverified = await login('owner-new@demo.kr');
+    const blocked = await rawFetch<Envelope>('/users/me/store', {
+      method: 'POST',
+      token: unverified.token,
+      body: { store_id: 6 },
+    });
+    expect([blocked.status, blocked.body.code]).toEqual([403, 'E403_VERIFICATION_REQUIRED']);
+  });
+
+  it('POST /users/me/store: 직접 등록은 201 + 새 상점(받은 좌표), 칸이 비면 400 errors[name]', async () => {
+    const { token } = await login('owner-nostore@demo.kr');
+    const bad = await rawFetch<Envelope>('/users/me/store', {
+      method: 'POST',
+      token,
+      body: { name: '', address: 'a', category: '카페', latitude: 1, longitude: 2 },
+    });
+    expect([bad.status, bad.body.code]).toEqual([400, 'E400']);
+    expect(bad.body.errors?.map((e) => e.field)).toEqual(['name']);
+
+    const res = await rawFetch<Envelope>('/users/me/store', {
+      method: 'POST',
+      token,
+      body: {
+        name: '새 가게',
+        address: '경기도 용인시 기흥구 덕영대로 1',
+        category: '카페',
+        latitude: 37.2397,
+        longitude: 127.0833,
+      },
+    });
+    expect([res.status, res.body.code]).toEqual([201, STORE_REGISTERED.code]);
+    expectWireShape(res.body.data, STORE_REGISTERED.data);
+    expect(getDb().stores.find((st) => st.name === '새 가게')).toMatchObject({
+      latitude: 37.2397,
+      longitude: 127.0833,
+    });
+  });
+
+  it('PATCH /users/me/store: 200 + 내 가게 조회와 같은 모양, 보낸 칸만 바뀐다', async () => {
+    const { token } = await login('owner1@demo.kr');
+    const res = await rawFetch<Envelope>('/users/me/store', {
+      method: 'PATCH',
+      token,
+      body: { address: '새 주소' },
+    });
+    expect([res.status, res.body.code]).toEqual([200, MY_STORE_PATCHED.code]);
+    expectWireShape(res.body.data, MY_STORE.data);
+    expect(res.body.data).toMatchObject({
+      store_id: 1,
+      name: '서천 밥상',
+      address: '새 주소',
+      partnership: { discount_text: '식사 금액 10% 할인' },
+    });
+
+    const empty = await rawFetch<Envelope>('/users/me/store', {
+      method: 'PATCH',
+      token,
+      body: { category: ' ' },
+    });
+    expect([empty.status, empty.body.code]).toEqual([400, 'E400']);
+    expect(empty.body.errors?.map((e) => e.field)).toEqual(['category']);
+
+    const none = await login('owner-nostore@demo.kr');
+    const missing = await rawFetch<Envelope>('/users/me/store', {
+      method: 'PATCH',
+      token: none.token,
+      body: { name: 'x' },
+    });
+    expect([missing.status, missing.body.code]).toEqual([404, 'E404']);
+  });
+
+  it('PUT /users/me/store/partnership: 200 + 명세 예시 모양, 같은 행을 고친다', async () => {
+    const { token } = await login('owner1@demo.kr');
+    const before = getDb().partnerships.find((p) => p.storeId === 1)!.id;
+    const res = await rawFetch<Envelope>('/users/me/store/partnership', {
+      method: 'PUT',
+      token,
+      body: { discount_text: '음료 500원 할인', start_date: '2027-01-01', end_date: '2027-02-28' },
+    });
+    expect([res.status, res.body.code]).toEqual([200, PARTNERSHIP_SAVED.code]);
+    expectWireShape(res.body.data, PARTNERSHIP_SAVED.data);
+    expect(res.body.data).toEqual({
+      discount_text: '음료 500원 할인',
+      start_date: '2027-01-01',
+      end_date: '2027-02-28',
+    });
+    expect(
+      getDb()
+        .partnerships.filter((p) => p.storeId === 1)
+        .map((p) => p.id),
+    ).toEqual([before]);
+
+    const bad = await rawFetch<Envelope>('/users/me/store/partnership', {
+      method: 'PUT',
+      token,
+      body: { discount_text: '할인', start_date: '2027-02-01', end_date: '2027-01-01' },
+    });
+    expect([bad.status, bad.body.code]).toEqual([400, 'E400']);
+    expect(bad.body.errors?.map((e) => e.field)).toEqual(['end_date']);
+  });
+
+  it('토큰이 없으면 다섯 모두 401', async () => {
+    for (const [method, path] of [
+      ['POST', '/verifications/business'],
+      ['GET', '/stores/search?keyword=%EC%B9%B4%ED%8E%98'],
+      ['POST', '/users/me/store'],
+      ['PATCH', '/users/me/store'],
+      ['PUT', '/users/me/store/partnership'],
+    ] as const) {
+      const res = await rawFetch<Envelope>(path, {
+        method,
+        body: method === 'GET' ? undefined : {},
+      });
+      expect([method, path, res.status]).toEqual([method, path, 401]);
+    }
   });
 });

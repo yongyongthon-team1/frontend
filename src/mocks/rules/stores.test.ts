@@ -4,7 +4,17 @@ import { createSeed } from '@/mocks/db/seed';
 import { addDaysKey, seoulDateKey } from '@/shared/lib/date';
 import { COURSE_RADIUS_M } from '@/mocks/ai/course';
 import { distanceMeters } from '@/shared/lib/geo';
-import { myStoreOf, nearbyStores, storeReport } from './stores';
+import { DEMO_BUSINESS } from '@/shared/config/demoAccounts';
+import {
+  linkStore,
+  myStoreOf,
+  nearbyStores,
+  savePartnership,
+  searchStores,
+  storeReport,
+  updateStore,
+  verifyBusiness,
+} from './stores';
 
 const now = new Date('2026-11-15T05:00:00Z'); // 시연일 KST 14:00
 
@@ -205,5 +215,306 @@ describe('주변 상점 (GET /stores/nearby, 2B′-R15)', () => {
     expect(() => nearbyStores(db, 99, null)).toThrowError(
       expect.objectContaining({ status: 404, code: 'NOT_FOUND' }),
     );
+  });
+});
+
+const userOf = (email: string) => db.users.find((u) => u.email === email)!.id;
+const verifiedOf = (id: number) => db.businessVerifications.find((b) => b.id === id)?.isVerified;
+const match = DEMO_BUSINESS.match;
+const matchBody = {
+  businessNumber: match.businessNumber,
+  representativeName: match.representativeName,
+  openedAt: match.openingDate,
+};
+
+describe('사업자 인증 (POST /verifications/business)', () => {
+  it('등록 정보와 맞으면(하이픈 있어도) 인증이 남는다', () => {
+    const id = userOf('owner-new@demo.kr');
+    expect(verifiedOf(id)).toBeUndefined();
+    verifyBusiness(db, id, matchBody, now);
+    expect(verifiedOf(id)).toBe(true);
+    expect(db.businessVerifications.find((b) => b.id === id)).toMatchObject({
+      verifiedAt: expect.any(String),
+    });
+  });
+
+  it('숫자만 보내도 같다. 이미 인증된 계정이 다시 보내도 행은 하나', () => {
+    const id = userOf('owner-nostore@demo.kr');
+    verifyBusiness(db, id, { ...matchBody, businessNumber: '1234567890' }, now);
+    expect(db.businessVerifications.filter((b) => b.id === id)).toHaveLength(1);
+  });
+
+  it('번호가 숫자 10자리가 아니면 businessNumber 칸 오류', () => {
+    const id = userOf('owner-new@demo.kr');
+    expect(() =>
+      verifyBusiness(db, id, { ...matchBody, businessNumber: '123-45-6789' }, now),
+    ).toThrow(
+      expect.objectContaining({
+        status: 400,
+        code: 'VALIDATION',
+        fieldErrors: { businessNumber: '사업자등록번호 10자리를 입력해 주세요.' },
+      }),
+    );
+    expect(verifiedOf(id)).toBeUndefined();
+  });
+
+  it('대표자명이 비면 representativeName, 개업일 형식이 아니면 openedAt 칸 오류(위에서부터 하나)', () => {
+    const id = userOf('owner-new@demo.kr');
+    expect(() => verifyBusiness(db, id, { ...matchBody, representativeName: '  ' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { representativeName: '대표자명을 입력해 주세요.' } }),
+    );
+    expect(() => verifyBusiness(db, id, { ...matchBody, openedAt: '2021.03.02' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { openedAt: '개업일자를 입력해 주세요.' } }),
+    );
+    expect(() =>
+      verifyBusiness(db, id, { businessNumber: '1', representativeName: '', openedAt: '' }, now),
+    ).toThrow(expect.objectContaining({ fieldErrors: { businessNumber: expect.any(String) } }));
+  });
+
+  it('폐업 번호는 대표자명 · 개업일과 관계없이 422 BIZ_CLOSED(reason CLOSED)', () => {
+    const id = userOf('owner-new@demo.kr');
+    expect(() =>
+      verifyBusiness(
+        db,
+        id,
+        { ...matchBody, businessNumber: DEMO_BUSINESS.closed.businessNumber },
+        now,
+      ),
+    ).toThrow(
+      expect.objectContaining({
+        status: 422,
+        code: 'BIZ_CLOSED',
+        fieldErrors: { businessNumber: 'CLOSED' },
+      }),
+    );
+    expect(verifiedOf(id)).toBeUndefined();
+  });
+
+  it('등록 정보와 다르면 422 BIZ_MISMATCH(reason MISMATCH)', () => {
+    const id = userOf('owner-new@demo.kr');
+    const bad = { ...matchBody, businessNumber: DEMO_BUSINESS.mismatch.businessNumber };
+    expect(() => verifyBusiness(db, id, bad, now)).toThrow(
+      expect.objectContaining({
+        status: 422,
+        code: 'BIZ_MISMATCH',
+        fieldErrors: { businessNumber: 'MISMATCH' },
+      }),
+    );
+    expect(() =>
+      verifyBusiness(db, id, { ...matchBody, representativeName: '박사장' }, now),
+    ).toThrow(expect.objectContaining({ code: 'BIZ_MISMATCH' }));
+    expect(() => verifyBusiness(db, id, { ...matchBody, openedAt: '2020-03-02' }, now)).toThrow(
+      expect.objectContaining({ code: 'BIZ_MISMATCH' }),
+    );
+    expect(verifiedOf(id)).toBeUndefined();
+  });
+});
+
+describe('상점 검색 (GET /stores/search)', () => {
+  it('공백 뺀 2자 미만이면 keyword 칸 오류', () => {
+    for (const keyword of [null, '', ' ', '카', ' 카 ']) {
+      expect(() => searchStores(db, keyword)).toThrow(
+        expect.objectContaining({
+          status: 400,
+          code: 'VALIDATION',
+          fieldErrors: { keyword: '검색어를 2자 이상 입력해 주세요.' },
+        }),
+      );
+    }
+  });
+
+  it('상호 부분 일치(공백 · 대소문자 무시), 이름(ko) → id 순', () => {
+    expect(searchStores(db, '카페').map((s) => s.name)).toEqual([
+      '보드게임 카페 다이스',
+      '카페 단풍',
+      '카페 모래시계',
+    ]);
+    expect(searchStores(db, '보드게임카페').map((s) => s.name)).toEqual(['보드게임 카페 다이스']);
+    expect(searchStores(db, '  단 풍 ').map((s) => s.name)).toEqual(['카페 단풍']);
+    expect(searchStores(db, '없는가게')).toEqual([]);
+  });
+});
+
+describe('가게 연결 · 등록 (POST /users/me/store)', () => {
+  const nostore = () => userOf('owner-nostore@demo.kr');
+  const direct = {
+    name: '새 가게',
+    address: '경기도 용인시 기흥구 덕영대로 1',
+    category: '카페',
+    latitude: 37.2397,
+    longitude: 127.0833,
+  };
+  const dangpung = () => db.stores.find((s) => s.name === '카페 단풍')!;
+
+  it('사업자 미인증이면 403 BIZ_NOT_VERIFIED(가장 먼저)', () => {
+    expect(() =>
+      linkStore(db, userOf('owner-new@demo.kr'), { storeId: dangpung().id }, now),
+    ).toThrow(expect.objectContaining({ status: 403, code: 'BIZ_NOT_VERIFIED' }));
+    expect(() => linkStore(db, userOf('owner-new@demo.kr'), {}, now)).toThrow(
+      expect.objectContaining({ code: 'BIZ_NOT_VERIFIED' }),
+    );
+  });
+
+  it('이미 가게가 있으면 409 STORE_LIMIT', () => {
+    expect(() => linkStore(db, userOf('owner1@demo.kr'), { storeId: dangpung().id }, now)).toThrow(
+      expect.objectContaining({ status: 409, code: 'STORE_LIMIT' }),
+    );
+  });
+
+  it('없는 상점 404, 다른 사장님의 가게 409 STORE_ALREADY_LINKED', () => {
+    expect(() => linkStore(db, nostore(), { storeId: 9999 }, now)).toThrow(
+      expect.objectContaining({ status: 404, code: 'NOT_FOUND' }),
+    );
+    expect(() => linkStore(db, nostore(), { storeId: 1 }, now)).toThrow(
+      expect.objectContaining({ status: 409, code: 'STORE_ALREADY_LINKED' }),
+    );
+    expect(db.stores.find((s) => s.id === 1)!.ownerId).toBe(userOf('owner1@demo.kr'));
+  });
+
+  it('검색에서 고른 상점은 ownerId만 연결한다', () => {
+    const before = db.stores.length;
+    const row = linkStore(db, nostore(), { storeId: dangpung().id }, now);
+    expect(row).toMatchObject({ id: dangpung().id, name: '카페 단풍', ownerId: nostore() });
+    expect(db.stores).toHaveLength(before);
+    expect(myStoreOf(db, nostore(), now).name).toBe('카페 단풍');
+  });
+
+  it('직접 등록: 새 상점(ownerId · 행정동 null · 받은 좌표)', () => {
+    const before = db.stores.length;
+    const row = linkStore(db, nostore(), direct, now);
+    expect(db.stores).toHaveLength(before + 1);
+    expect(row).toMatchObject({
+      ownerId: nostore(),
+      name: '새 가게',
+      category: '카페',
+      administrativeDong: null,
+      latitude: 37.2397,
+      longitude: 127.0833,
+    });
+    expect(db.stores.find((s) => s.id === row.id)).toBe(row);
+  });
+
+  it('직접 등록: 빈 칸은 그 칸 오류, 좌표가 수가 아니면 latitude 오류, DB는 그대로', () => {
+    const before = db.stores.length;
+    expect(() => linkStore(db, nostore(), { ...direct, name: ' ' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { name: '상호명을 입력해 주세요.' } }),
+    );
+    expect(() => linkStore(db, nostore(), { ...direct, address: '' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { address: '가게 주소를 입력해 주세요.' } }),
+    );
+    expect(() => linkStore(db, nostore(), { ...direct, category: '' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { category: '업종을 입력해 주세요.' } }),
+    );
+    expect(() => linkStore(db, nostore(), { ...direct, latitude: '37' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { latitude: '가게 위치를 골라 주세요.' } }),
+    );
+    expect(() => linkStore(db, nostore(), { ...direct, longitude: undefined }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { latitude: '가게 위치를 골라 주세요.' } }),
+    );
+    expect(db.stores).toHaveLength(before);
+  });
+});
+
+describe('가게 수정 (PATCH /users/me/store)', () => {
+  it('준 칸만 고친다(앞뒤 공백은 뗀다)', () => {
+    const row = updateStore(db, owner(1), { address: ' 새 주소 ' }, now);
+    expect(row).toMatchObject({
+      id: 1,
+      name: '서천 밥상',
+      address: '새 주소',
+      category: '한식',
+    });
+    expect(myStoreOf(db, owner(1), now).address).toBe('새 주소');
+  });
+
+  it('준 칸이 빈 문자열이면 그 칸 오류, DB는 그대로', () => {
+    expect(() => updateStore(db, owner(1), { name: '  ' }, now)).toThrow(
+      expect.objectContaining({ status: 400, fieldErrors: { name: '상호명을 입력해 주세요.' } }),
+    );
+    expect(() => updateStore(db, owner(1), { address: '' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { address: '가게 주소를 입력해 주세요.' } }),
+    );
+    expect(() => updateStore(db, owner(1), { category: '' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { category: '업종을 입력해 주세요.' } }),
+    );
+    expect(db.stores.find((s) => s.id === 1)!.name).toBe('서천 밥상');
+  });
+
+  it('가게가 없으면 404 STORE_NOT_LINKED(검증보다 먼저)', () => {
+    expect(() => updateStore(db, userOf('owner-nostore@demo.kr'), { name: '' }, now)).toThrow(
+      expect.objectContaining({ status: 404, code: 'STORE_NOT_LINKED' }),
+    );
+  });
+});
+
+describe('제휴 설정 (PUT /users/me/store/partnership)', () => {
+  const input = { discountText: '음료 500원 할인', startDate: '2027-01-01', endDate: '2027-02-28' };
+
+  it('있는 제휴(가장 큰 id)를 고친다 — id 유지, 조건 null, 행은 늘지 않는다', () => {
+    const before = db.partnerships.filter((p) => p.storeId === 1);
+    expect(before).toHaveLength(1);
+    const row = savePartnership(db, owner(1), input, now);
+    expect(row).toMatchObject({
+      id: before[0].id,
+      storeId: 1,
+      discountDescription: '음료 500원 할인',
+      condition: null,
+      startDate: '2027-01-01',
+      endDate: '2027-02-28',
+    });
+    expect(db.partnerships.filter((p) => p.storeId === 1)).toHaveLength(1);
+  });
+
+  it('제휴가 여럿이면 가장 큰 id 행을 고친다', () => {
+    db.partnerships.push({ ...db.partnerships.find((p) => p.storeId === 1)!, id: 999 });
+    const row = savePartnership(db, owner(1), input, now);
+    expect(row.id).toBe(999);
+    expect(db.partnerships.filter((p) => p.storeId === 1)).toHaveLength(2);
+  });
+
+  it('제휴가 없으면 새로 만든다(조건 null)', () => {
+    db.partnerships = db.partnerships.filter((p) => p.storeId !== 1);
+    const row = savePartnership(db, owner(1), input, now);
+    expect(db.partnerships).toContain(row);
+    expect(row).toMatchObject({
+      storeId: 1,
+      condition: null,
+      discountDescription: '음료 500원 할인',
+    });
+    expect(myStoreOf(db, owner(1), now).partnership).toMatchObject({ discount: '음료 500원 할인' });
+  });
+
+  it('가게가 없으면 404, 문구는 공백 뺀 1~50자', () => {
+    expect(() => savePartnership(db, userOf('owner-nostore@demo.kr'), input, now)).toThrow(
+      expect.objectContaining({ status: 404, code: 'STORE_NOT_LINKED' }),
+    );
+    for (const discountText of ['', '   ', 'a'.repeat(51), undefined]) {
+      expect(() => savePartnership(db, owner(1), { ...input, discountText }, now)).toThrow(
+        expect.objectContaining({
+          status: 400,
+          fieldErrors: { discountText: '50자 이내로 적어 주세요.' },
+        }),
+      );
+    }
+    expect(() =>
+      savePartnership(db, owner(1), { ...input, discountText: 'a'.repeat(50) }, now),
+    ).not.toThrow();
+  });
+
+  it('날짜 형식이 아니면 그 칸, 종료 < 시작이면 endDate 오류(같은 날은 된다)', () => {
+    expect(() => savePartnership(db, owner(1), { ...input, startDate: '2027/01/01' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { startDate: '날짜를 다시 확인해 주세요.' } }),
+    );
+    expect(() => savePartnership(db, owner(1), { ...input, endDate: '' }, now)).toThrow(
+      expect.objectContaining({ fieldErrors: { endDate: '날짜를 다시 확인해 주세요.' } }),
+    );
+    expect(() => savePartnership(db, owner(1), { ...input, endDate: '2026-12-31' }, now)).toThrow(
+      expect.objectContaining({
+        fieldErrors: { endDate: '종료 날짜는 시작 날짜와 같거나 뒤여야 해요.' },
+      }),
+    );
+    expect(() =>
+      savePartnership(db, owner(1), { ...input, endDate: input.startDate }, now),
+    ).not.toThrow();
   });
 });

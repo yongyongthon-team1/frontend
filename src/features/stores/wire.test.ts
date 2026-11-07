@@ -1,11 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { toCamel } from '@/shared/lib/caseKeys';
-import { MY_STORE, MY_STORE_PATCHED, STORE_REPORT } from '@/test/fixtures/backend/stores';
+import {
+  MY_STORE,
+  MY_STORE_PATCHED,
+  STORE_REPORT,
+  STORE_SEARCH,
+} from '@/test/fixtures/backend/stores';
 import {
   fromWireMyStore,
   fromWireStoreReport,
+  fromWireStoreSearchItem,
   type WireMyStore,
   type WireStoreReport,
+  type WireStoreSearchItem,
 } from './wire';
 
 const now = new Date('2026-11-07T12:00:00+09:00');
@@ -70,5 +77,19 @@ describe('fromWireStoreReport', () => {
       averageRating: null,
     };
     expect(fromWireStoreReport(wire).averageRating).toBeNull();
+  });
+});
+
+describe('fromWireStoreSearchItem', () => {
+  it('S-01 상점 검색 명세 예시를 StoreSearchItem으로 읽는다(is_registered → registered)', () => {
+    expect(
+      fromWireStoreSearchItem(toCamel<WireStoreSearchItem>(STORE_SEARCH.data.items[0])),
+    ).toEqual({
+      storeId: 201,
+      name: '용인 분식',
+      address: '경기 용인시 처인구 ...',
+      category: '식당',
+      registered: false,
+    });
   });
 });

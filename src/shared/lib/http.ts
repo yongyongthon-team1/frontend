@@ -12,6 +12,8 @@ export class ApiError extends Error {
   /** 백엔드가 준 오류 코드(`E409_TOUR_FULL`). 클라이언트 오류(TIMEOUT · NETWORK)와 봉투 아닌 오류는 null. */
   backendCode: string | null;
   fieldErrors?: Record<string, string>;
+  /** `errors[]`의 받은 `reason` 원문(칸 이름 규칙 · 첫 항목은 `fieldErrors`와 같다). 기계값(`CLOSED`)을 읽을 때 쓴다(2B′-R20). */
+  fieldReasons?: Record<string, string>;
   details?: Record<string, unknown>;
 
   constructor(
@@ -20,6 +22,7 @@ export class ApiError extends Error {
     message: string,
     extra: {
       fieldErrors?: Record<string, string>;
+      fieldReasons?: Record<string, string>;
       details?: Record<string, unknown>;
       backendCode?: string | null;
     } = {},
@@ -30,6 +33,7 @@ export class ApiError extends Error {
     this.code = code;
     this.backendCode = extra.backendCode ?? null;
     this.fieldErrors = extra.fieldErrors;
+    this.fieldReasons = extra.fieldReasons;
     this.details = extra.details;
   }
 }
@@ -100,6 +104,22 @@ function toFieldErrors(
   return Object.keys(out).length > 0 ? out : undefined;
 }
 
+/** `errors: [{ field, reason }]` → `{ 칸: 받은 reason 원문 }`. 칸 이름 · 첫 항목 규칙은 `toFieldErrors`와 같다. */
+function toFieldReasons(
+  errors: unknown,
+  fieldMap: Record<string, string> | undefined,
+): Record<string, string> | undefined {
+  if (!Array.isArray(errors)) return undefined;
+  const out: Record<string, string> = {};
+  for (const entry of errors as unknown[]) {
+    if (!isRecord(entry) || typeof entry.field !== 'string') continue;
+    const field = fieldMap?.[entry.field] ?? snakeToCamel(entry.field);
+    if (Object.hasOwn(out, field)) continue;
+    out[field] = typeof entry.reason === 'string' ? entry.reason : '';
+  }
+  return Object.keys(out).length > 0 ? out : undefined;
+}
+
 function detailsOf(data: unknown): Record<string, unknown> | undefined {
   return isRecord(data) ? toCamel<Record<string, unknown>>(data) : undefined;
 }
@@ -109,6 +129,7 @@ function envelopeError(status: number, body: EnvelopeLike, options: RequestOptio
   return new ApiError(status, code, errorMessage(code), {
     backendCode: body.code,
     fieldErrors: toFieldErrors(body.errors, code, options.fieldMap),
+    fieldReasons: toFieldReasons(body.errors, options.fieldMap),
     details: detailsOf(body.data),
   });
 }
@@ -268,5 +289,6 @@ export function recode(
     backendCode: error.backendCode,
     details: error.details,
     fieldErrors: extra.fieldErrors ?? error.fieldErrors,
+    fieldReasons: error.fieldReasons,
   });
 }

@@ -1,7 +1,12 @@
 import type { WireNearbyStore } from '@/features/courses/wire';
-import type { WireMyStore } from '@/features/stores/wire';
+import type {
+  WireMyStore,
+  WirePartnershipSaved,
+  WireRegisteredStore,
+  WireStoreSearchItem,
+} from '@/features/stores/wire';
 import { computePartnershipState } from '@/features/stores/model';
-import type { DB, StoreRow } from '@/mocks/db/schema';
+import type { DB, PartnershipRow, StoreRow } from '@/mocks/db/schema';
 import { partnershipOn } from '@/mocks/rules/courses';
 import { seoulDateKey } from '@/shared/lib/date';
 import { latestReviewSummary } from './reviews';
@@ -55,5 +60,35 @@ export function toWireNearbyStore(db: DB, store: StoreRow, now: Date): WireNearb
     lng: store.longitude,
     isPartner: partnershipOn(db, store.id, seoulDateKey(now)) !== undefined,
     reviewSummary: latestReviewSummary(db, store.id)?.summary ?? null,
+  };
+}
+
+/** S-01 상점 검색 항목. `isRegistered`는 어느 사장님이든 연결한 상점인지다. */
+export function toWireStoreSearchItem(store: StoreRow): WireStoreSearchItem {
+  return {
+    storeId: store.id,
+    name: store.name,
+    address: store.address,
+    category: store.category,
+    isRegistered: store.ownerId !== null,
+  };
+}
+
+/** S-01 `POST /users/me/store`(201)의 데이터. */
+export function toWireRegisteredStore(store: StoreRow): WireRegisteredStore {
+  return {
+    storeId: store.id,
+    name: store.name,
+    address: store.address,
+    category: store.category,
+  };
+}
+
+/** S-03 `PUT /users/me/store/partnership`의 데이터. */
+export function toWirePartnershipSaved(row: PartnershipRow): WirePartnershipSaved {
+  return {
+    discountText: row.discountDescription,
+    startDate: row.startDate,
+    endDate: row.endDate,
   };
 }

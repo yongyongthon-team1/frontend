@@ -1,16 +1,99 @@
 import { http } from 'msw';
 import { mockNow } from '@/mocks/clock';
-import { getDb } from '@/mocks/db/store';
+import { getDb, mutate } from '@/mocks/db/store';
 import { delayBase } from '@/mocks/latency';
 import { fieldError } from '@/mocks/rules/errors';
-import { nearbyStores, ownerStoreOf, storeReport } from '@/mocks/rules/stores';
-import { ok, okItems, withWire } from '@/mocks/wire/envelope';
-import { toWireMyStore, toWireNearbyStore } from '@/mocks/wire/stores';
-import { api, requireUser } from './util';
+import {
+  linkStore,
+  nearbyStores,
+  ownerStoreOf,
+  savePartnership,
+  searchStores,
+  storeReport,
+  updateStore,
+  verifyBusiness,
+} from '@/mocks/rules/stores';
+import { ok, okItems, okPage, withWire } from '@/mocks/wire/envelope';
+import {
+  toWireMyStore,
+  toWireNearbyStore,
+  toWirePartnershipSaved,
+  toWireRegisteredStore,
+  toWireStoreSearchItem,
+} from '@/mocks/wire/stores';
+import { api, readBody, requireUser } from './util';
 
-// 사장님의 내 가게(S-01 보완)와 방문 · 리뷰 리포트(S-07), 코스 편집의 주변 상점(S-02). 지금은 조회뿐이다.
+// 사장님의 사업자 인증(U-07) · 상점 검색 · 가게 연결/등록 · 내 가게 조회 · 수정(S-01) · 제휴 설정(S-03), 방문 · 리뷰 리포트(S-07),
+// 코스 편집의 주변 상점(S-02). 사업자 인증 ~ 제휴 설정은 사장님만(그 밖은 403).
 
 export const storeHandlers = [
+  http.post(
+    api('/verifications/business'),
+    withWire(async ({ request }) => {
+      await delayBase();
+      const body = await readBody(request);
+      const now = mockNow();
+      mutate((db) => {
+        const user = requireUser(request, db, 'OWNER');
+        verifyBusiness(db, user.id, body, now);
+      });
+      return ok({ status: 'APPROVED' });
+    }),
+  ),
+
+  http.get(
+    api('/stores/search'),
+    withWire(async ({ request }) => {
+      await delayBase();
+      const db = getDb();
+      requireUser(request, db, 'OWNER');
+      const search = new URL(request.url).searchParams;
+      return okPage(searchStores(db, search.get('keyword')).map(toWireStoreSearchItem), search);
+    }),
+  ),
+
+  http.post(
+    api('/users/me/store'),
+    withWire(async ({ request }) => {
+      await delayBase();
+      const body = await readBody(request);
+      const now = mockNow();
+      const store = mutate((db) => {
+        const user = requireUser(request, db, 'OWNER');
+        return linkStore(db, user.id, body, now);
+      });
+      return ok(toWireRegisteredStore(store), 201);
+    }),
+  ),
+
+  http.patch(
+    api('/users/me/store'),
+    withWire(async ({ request }) => {
+      await delayBase();
+      const body = await readBody(request);
+      const now = mockNow();
+      const wire = mutate((db) => {
+        const user = requireUser(request, db, 'OWNER');
+        return toWireMyStore(db, updateStore(db, user.id, body, now), now);
+      });
+      return ok(wire);
+    }),
+  ),
+
+  http.put(
+    api('/users/me/store/partnership'),
+    withWire(async ({ request }) => {
+      await delayBase();
+      const body = await readBody(request);
+      const now = mockNow();
+      const row = mutate((db) => {
+        const user = requireUser(request, db, 'OWNER');
+        return savePartnership(db, user.id, body, now);
+      });
+      return ok(toWirePartnershipSaved(row));
+    }),
+  ),
+
   http.get(
     api('/users/me/store'),
     withWire(async ({ request }) => {

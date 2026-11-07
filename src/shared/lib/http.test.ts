@@ -424,6 +424,41 @@ describe('오류 봉투', () => {
     });
   });
 
+  it('errors[]의 받은 reason 원문은 fieldReasons로(칸 이름 규칙 · 첫 항목은 fieldErrors와 같다)', async () => {
+    server.use(
+      http.post('/api/biz', () =>
+        wireFail('E422_BUSINESS_INVALID', {
+          errors: [
+            { field: 'business_number', reason: 'CLOSED' },
+            { field: 'business_number', reason: 'MISMATCH' },
+            { field: 'school_name', reason: '50자 이내' },
+          ],
+        }),
+      ),
+    );
+    const error = await request('/biz', {
+      method: 'POST',
+      body: {},
+      fieldMap: { school_name: 'highSchoolName' },
+    }).catch((e: unknown) => e);
+    expect(error).toBeInstanceOf(ApiError);
+    expect((error as ApiError).fieldReasons).toEqual({
+      businessNumber: 'CLOSED',
+      highSchoolName: '50자 이내',
+    });
+    // fieldErrors는 그대로: 대문자 기계값은 코드 문구, 첫 항목만.
+    expect((error as ApiError).fieldErrors).toEqual({
+      businessNumber: errorMessage('BIZ_MISMATCH'),
+      highSchoolName: '50자 이내',
+    });
+  });
+
+  it('errors[]가 없으면 fieldReasons도 없다', async () => {
+    server.use(http.get('/api/e', () => wireFail('E409_TOUR_FULL')));
+    const error = await request('/e').catch((e: unknown) => e);
+    expect((error as ApiError).fieldReasons).toBeUndefined();
+  });
+
   it('오류 봉투의 data 객체는 details(camelCase)로', async () => {
     server.use(
       http.post('/api/d', () =>
@@ -522,6 +557,19 @@ describe('recode', () => {
       fieldErrors: { email: '중복' },
     });
     expect(recode(original, 'EMAIL_DUPLICATE').fieldErrors).toEqual({ email: '형식' });
+  });
+
+  it('fieldReasons는 recode 뒤에도 그대로 남는다', () => {
+    const original = new ApiError(422, 'BIZ_MISMATCH', 'x', {
+      backendCode: 'E422_BUSINESS_INVALID',
+      fieldErrors: { businessNumber: '일치하지 않아요' },
+      fieldReasons: { businessNumber: 'CLOSED' },
+    });
+    const next = recode(original, 'BIZ_CLOSED', {
+      fieldErrors: { businessNumber: errorMessage('BIZ_CLOSED') },
+    });
+    expect(next.fieldReasons).toEqual({ businessNumber: 'CLOSED' });
+    expect(next.fieldErrors).toEqual({ businessNumber: errorMessage('BIZ_CLOSED') });
   });
 });
 
