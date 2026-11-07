@@ -1,49 +1,105 @@
 import { describe, expect, it } from 'vitest';
 import { handlersByDomain, selectHandlers } from './registry';
 
-/** `docs/api/frontend-needs.md` 3절 표의 골든 패스 엔드포인트(쿼리 문자열은 뺀 경로). */
-const CONTRACT = [
-  'POST /api/auth/login',
-  'POST /api/auth/logout',
-  'GET /api/me',
-  'GET /api/universities',
-  'GET /api/universities/:id/insight',
-  'POST /api/recommendations',
-  'GET /api/tours',
-  'GET /api/tours/:id',
-  'POST /api/tours/:id/applications',
-  'GET /api/me/applications',
-  'GET /api/me/applications/:id',
-  'POST /api/me/applications/:id/cancel',
-  'GET /api/guide/tours',
-  'GET /api/guide/tours/:id/applicants',
-  'POST /api/guide/applications/:id/approve',
-  'POST /api/guide/applications/:id/reject',
-  'GET /api/guide/tours/:id/course',
-  'POST /api/guide/tours/:id/course/draft',
-  'PUT /api/guide/tours/:id/course/order',
-  'PATCH /api/guide/tours/:id/course/stops/:stopId',
-  'DELETE /api/guide/tours/:id/course/stops/:stopId',
-  'POST /api/guide/tours/:id/course/confirm',
-  'GET /api/tours/:id/course',
-  'GET /api/me/coupons',
-  'GET /api/me/coupons/:id',
-  'GET /api/owner/coupons/:code',
-  'POST /api/owner/coupons/:code/redeem',
-  'GET /api/health',
-  'POST /api/demo/reset',
+// 등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS ∪ LEGACY (2C-R24).
+// 도메인 태스크가 자기 줄을 LEGACY · NOT_MOCKED에서 지운다. 끝나면 LEGACY는 없어지고 NOT_MOCKED는 2B가 채울 20개다.
+// 경로는 `/api`를 뗀 꼴이다(비교할 때 `label(h).replace(' /api/', ' /')`).
+
+/** `docs/api/backend-spec.md`의 `### METHOD /path` 46개(명세 순서). */
+const BACKEND_CONTRACT: string[] = [
+  'POST /auth/signup',
+  'POST /auth/login',
+  'POST /auth/logout',
+  'GET /users/me',
+  'PATCH /users/me',
+  'PUT /users/me/guide-profile',
+  'POST /verifications/enrollment',
+  'POST /guardian-consents',
+  'GET /guardian-consents/:consentToken',
+  'PATCH /guardian-consents/:consentToken',
+  'POST /verifications/business',
+  'GET /admin/verifications',
+  'GET /admin/verifications/:verificationId',
+  'PATCH /admin/verifications/:verificationId',
+  'GET /tours',
+  'POST /tour-wishes',
+  'GET /users/me/tour-wishes',
+  'PATCH /users/me/tour-wishes/:wishId',
+  'GET /tour-wishes',
+  'GET /tours/:tourId',
+  'POST /tours',
+  'GET /users/me/tours',
+  'POST /tours/:tourId/cancel',
+  'POST /tours/:tourId/complete',
+  'POST /tours/:tourId/applications',
+  'PATCH /applications/:applicationId/decision',
+  'POST /applications/:applicationId/cancel',
+  'GET /tours/:tourId/applications',
+  'POST /tours/:tourId/course',
+  'PUT /tours/:tourId/course/spots',
+  'POST /tours/:tourId/course/confirm',
+  'GET /tours/:tourId/course',
+  'GET /stores/search',
+  'POST /users/me/store',
+  'GET /users/me/store',
+  'PATCH /users/me/store',
+  'GET /stores/nearby',
+  'PUT /users/me/store/partnership',
+  'GET /users/me/coupons',
+  'GET /coupons/:couponCode',
+  'POST /coupons/:couponCode/redeem',
+  'GET /users/me/store/report',
+  'POST /stores/:storeId/reviews',
+  'GET /stores/:storeId/reviews',
+  'GET /campuses',
+  'GET /campuses/:campusId/places',
 ];
 
-/** 계약 3-2절(P1 엔드포인트, 동결 대상 아님) 중 목업이 있는 것(쿼리 문자열은 뺀 경로). 2B의 각 API 태스크가 자기 행을 더한다. */
-const P1_CONTRACT: string[] = [
-  'GET /api/owner/store',
-  'POST /api/auth/signup',
-  'PUT /api/me/student-profile',
-  'PUT /api/me/guide-profile',
+/** 목업 전용 확장 엔드포인트(2C-R8). Task 4가 `GET /campuses/:campusId/insight`를 더한다. */
+const EXTENSIONS: string[] = ['GET /health', 'POST /demo/reset'];
+
+/** 아직 목업이 없는 백엔드 경로. 도메인 태스크가 자기 줄을 지운다. 끝에 남는 20개는 2B 몫이다. */
+const NOT_MOCKED: string[] = [...BACKEND_CONTRACT];
+
+/** 아직 바꾸지 않은 옛 경로(전환 기간). 도메인 태스크가 자기 줄을 지운다. */
+const LEGACY: string[] = [
+  'POST /auth/login',
+  'POST /auth/logout',
+  'GET /me',
+  'GET /universities',
+  'GET /universities/:id/insight',
+  'POST /recommendations',
+  'GET /tours',
+  'GET /tours/:id',
+  'POST /tours/:id/applications',
+  'GET /me/applications',
+  'GET /me/applications/:id',
+  'POST /me/applications/:id/cancel',
+  'GET /guide/tours',
+  'GET /guide/tours/:id/applicants',
+  'POST /guide/applications/:id/approve',
+  'POST /guide/applications/:id/reject',
+  'GET /guide/tours/:id/course',
+  'POST /guide/tours/:id/course/draft',
+  'PUT /guide/tours/:id/course/order',
+  'PATCH /guide/tours/:id/course/stops/:stopId',
+  'DELETE /guide/tours/:id/course/stops/:stopId',
+  'POST /guide/tours/:id/course/confirm',
+  'GET /tours/:id/course',
+  'GET /me/coupons',
+  'GET /me/coupons/:id',
+  'GET /owner/coupons/:code',
+  'POST /owner/coupons/:code/redeem',
+  'GET /owner/store',
+  'POST /auth/signup',
+  'PUT /me/student-profile',
+  'PUT /me/guide-profile',
 ];
 
 const label = (h: { info: { method: unknown; path: unknown } }) =>
-  `${String(h.info.method)} ${String(h.info.path)}`;
+  `${String(h.info.method)} ${String(h.info.path)}`.replace(' /api/', ' /');
+
+const sorted = (xs: Iterable<string>) => [...xs].sort();
 
 describe('registry', () => {
   it('도메인 일부만 고르면 그 핸들러만', () => {
@@ -59,20 +115,24 @@ describe('registry', () => {
     expect(selectHandlers([])).toEqual([]);
   });
 
-  it('계약 표의 29개 엔드포인트와 P1 엔드포인트를 메서드 · 경로 그대로 모두 등록한다', () => {
-    const registered = selectHandlers('all').map(label);
-    expect(CONTRACT).toHaveLength(29);
-    expect(P1_CONTRACT.filter((e) => CONTRACT.includes(e))).toEqual([]);
-    expect([...registered].sort()).toEqual([...new Set([...CONTRACT, ...P1_CONTRACT])].sort());
+  it('BACKEND_CONTRACT는 46개이고 겹치지 않는다', () => {
+    expect(BACKEND_CONTRACT).toHaveLength(46);
+    expect(new Set(BACKEND_CONTRACT).size).toBe(46);
   });
 
-  it('P1 도메인의 핸들러는 모두 P1_CONTRACT에 있다', () => {
-    const p1Domains = ['stores', 'reviews', 'verification', 'admin'] as const;
-    for (const domain of p1Domains) {
-      for (const handler of selectHandlers([domain])) {
-        expect(P1_CONTRACT, `${domain}: ${label(handler)}`).toContain(label(handler));
-      }
-    }
-    expect(selectHandlers(['stores']).map(label)).toContain('GET /api/owner/store');
+  it('NOT_MOCKED ⊆ BACKEND_CONTRACT 이고 EXTENSIONS ∩ BACKEND_CONTRACT = ∅', () => {
+    expect(NOT_MOCKED.filter((e) => !BACKEND_CONTRACT.includes(e))).toEqual([]);
+    expect(EXTENSIONS.filter((e) => BACKEND_CONTRACT.includes(e))).toEqual([]);
+  });
+
+  it('등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS ∪ LEGACY', () => {
+    const expected = new Set([
+      ...BACKEND_CONTRACT.filter((e) => !NOT_MOCKED.includes(e)),
+      ...EXTENSIONS,
+      ...LEGACY,
+    ]);
+    const registered = selectHandlers('all').map(label);
+    expect(new Set(registered).size).toBe(registered.length);
+    expect(sorted(registered)).toEqual(sorted(expected));
   });
 });

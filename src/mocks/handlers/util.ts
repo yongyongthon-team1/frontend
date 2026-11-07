@@ -104,7 +104,7 @@ export function byStartsAt(a: TourRow, b: TourRow): number {
   return Date.parse(a.startsAt) - Date.parse(b.startsAt) || a.id - b.id;
 }
 
-type Resolver = (info: { request: Request; params: PathParams }) => Promise<Response>;
+export type Resolver = (info: { request: Request; params: PathParams }) => Promise<Response>;
 
 /** 규칙이 던진 `MockApiError`를 `{ code, message, details, fieldErrors }` 본문과 그 상태 코드로 바꾼다. 다른 오류는 그대로 던진다. */
 export function withErrors(resolver: Resolver): HttpResponseResolver {

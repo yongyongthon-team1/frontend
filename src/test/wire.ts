@@ -1,23 +1,14 @@
 import { HttpResponse } from 'msw';
+import { ok } from '@/mocks/wire/envelope';
 import { toSnake } from '@/shared/lib/caseKeys';
 
 // 백엔드 응답 봉투를 만드는 테스트 도구(2C-R25 ④). 본문은 snake_case 와이어 모양이다.
 
 const TIMESTAMP = '2026-11-04T21:00:00+09:00';
 
-/** 성공 봉투 `{ code: S200|S201, message, data, errors: null, timestamp }`. `data`의 키는 snake로 바뀐다. */
+/** 성공 봉투 `{ code: S200|S201, message, data, errors: null, timestamp }`. 목업 `ok`를 그대로 쓴다(봉투 규칙을 둘로 두지 않는다 — errata G10). */
 export function wireOk(data: unknown, init: { status?: 200 | 201 } = {}): Response {
-  const status = init.status ?? 200;
-  return HttpResponse.json(
-    {
-      code: status === 201 ? 'S201' : 'S200',
-      message: '성공',
-      data: toSnake(data),
-      errors: null,
-      timestamp: TIMESTAMP,
-    },
-    { status },
-  );
+  return ok(data, init.status ?? 200);
 }
 
 /** 목록 봉투 `data: { items, page, size, total }`. 생략하면 1쪽 · 50개 · `items.length`. */
@@ -82,4 +73,50 @@ export async function rawFetch<T = unknown>(
     }
   }
   return { status: res.status, body: body as T };
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+  return typeof value === 'object' && value !== null && !Array.isArray(value);
+}
+
+function compareShape(
+  actual: unknown,
+  example: unknown,
+  ext: readonly string[],
+  path: string,
+): void {
+  // 한쪽이 null이면(값이 없는 칸) 그 아래는 비교하지 않는다.
+  if (actual === null || example === null || actual === undefined || example === undefined) return;
+  if (Array.isArray(example)) {
+    if (!Array.isArray(actual))
+      throw new Error(`${path}: 배열이어야 해요 (받은 값: ${typeof actual})`);
+    if (actual.length > 0 && example.length > 0) {
+      compareShape(actual[0], example[0], ext, `${path}[0]`);
+    }
+    return;
+  }
+  if (!isRecord(example)) return;
+  if (!isRecord(actual)) throw new Error(`${path}: 객체여야 해요 (받은 값: ${typeof actual})`);
+  const at = (key: string) => (path === '' ? key : `${path}.${key}`);
+  for (const key of Object.keys(example)) {
+    if (!Object.hasOwn(actual, key)) throw new Error(`${at(key)}: 명세 키가 없어요`);
+  }
+  for (const key of Object.keys(actual)) {
+    if (!Object.hasOwn(example, key) && !ext.includes(key)) {
+      throw new Error(`${at(key)}: 명세에도 확장 목록에도 없는 키예요`);
+    }
+  }
+  for (const key of Object.keys(example)) compareShape(actual[key], example[key], ext, at(key));
+}
+
+/**
+ * 목업 응답이 명세 예시와 같은 모양인지(2C-R25 ②). 객체는 `keys(example) ⊆ keys(actual)`이고 그 밖의 키는 `ext`(키 이름)에 든 것뿐이다.
+ * 같은 키끼리 다시 비교하며, 배열은 둘 다 비어 있지 않으면 첫 원소끼리, 한쪽이 null이면 그 키는 넘어간다. 실패 메시지에 경로(`data.items[0].guide`)가 있다.
+ */
+export function expectWireShape(
+  actual: unknown,
+  example: unknown,
+  ext: readonly string[] = [],
+): void {
+  compareShape(actual, example, ext, '');
 }
