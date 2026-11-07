@@ -33,7 +33,7 @@ export function useTours(filter: TourFilter): UseQueryResult<TourSummary[]> {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: qk.tours(filter),
-    queryFn: async () => listTours(filter, await loadCampuses(queryClient)),
+    queryFn: () => listTours(filter, loadCampuses(queryClient)),
   });
 }
 
@@ -41,6 +41,6 @@ export function useTour(id: number): UseQueryResult<TourDetail> {
   const queryClient = useQueryClient();
   return useQuery({
     queryKey: qk.tour(id),
-    queryFn: async () => getTour(id, await loadCampuses(queryClient)),
+    queryFn: () => getTour(id, loadCampuses(queryClient)),
   });
 }

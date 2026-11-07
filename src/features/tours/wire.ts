@@ -22,7 +22,8 @@ export interface WireTourGuide {
 export interface WireTourItem {
   tourId: number;
   campusName: string;
-  major: string | null;
+  /** 명세 예시에는 늘 있지만 실서버가 빼면 `undefined`로 온다. */
+  major?: string | null;
   date: string;
   startTime: string;
   capacity: number;
@@ -75,9 +76,9 @@ function summaryFields(
   const campus = joinCampus(w, campuses);
   return {
     id: w.tourId,
-    title: tourTitle(campus.universityName, campus.campusName, w.major),
+    title: tourTitle(campus.universityName, campus.campusName, w.major ?? null),
     ...campus,
-    major: w.major,
+    major: w.major ?? null,
     guideName: w.guide.name,
     guideVerified: w.guide.verified,
     startsAt: seoulDateAt(w.date, w.startTime),

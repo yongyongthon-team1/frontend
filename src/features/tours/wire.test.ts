@@ -79,6 +79,14 @@ describe('fromWireTourDetail', () => {
     expect(read.myApplication).toBeNull();
   });
 
+  it('major가 없으면(실서버가 빼면) null이고 제목은 학과 없이 만든다', () => {
+    const wire = detail();
+    delete wire.major;
+    const read = fromWireTourDetail(wire, D01);
+    expect(read.major).toBeNull();
+    expect(read.title).toBe('단국대 죽전캠퍼스 캠퍼스 탐방');
+  });
+
   it('end_time이 null이면 endsAt도 null', () => {
     expect(fromWireTourDetail({ ...detail(), endTime: null }, D01).endsAt).toBeNull();
   });

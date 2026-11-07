@@ -405,6 +405,8 @@ describe('tours', () => {
     expect(res.body.data.items).toHaveLength(2);
     expect(res.body.data.total).toBe(5);
     expectWireShape(res.body.data, TOURS_LIST.data, ['campus_id']);
+    // `expectWireShape`는 확장 키를 허용만 하고 요구하지 않으므로 확장이 실제로 나가는지 따로 고정한다(2C-R8).
+    expect((res.body.data.items[0] as { campus_id?: number }).campus_id).toBe(2);
   });
 
   it('GET /tours/{tourId}는 명세 모양으로 낸다', async () => {
@@ -412,6 +414,7 @@ describe('tours', () => {
     expect(res.status).toBe(200);
     expect(res.body.code).toBe('S200');
     expectWireShape(res.body.data, TOUR_DETAIL.data, ['campus_id']);
+    expect((res.body.data as { campus_id?: number }).campus_id).toBe(2);
   });
 
   it('탐방 상세: 승인된 신청자에게 오픈채팅과 내 신청', async () => {
