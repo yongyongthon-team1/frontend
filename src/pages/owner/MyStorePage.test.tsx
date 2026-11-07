@@ -1,11 +1,12 @@
 import { screen, waitFor, within } from '@testing-library/react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { describe, expect, it } from 'vitest';
 import { qk } from '@/shared/api/queryKeys';
 import { useSession } from '@/features/auth/session';
 import { mutate } from '@/mocks/db/store';
 import { server } from '@/mocks/node';
 import { renderApp } from '@/test/renderApp';
+import { wireFail } from '@/test/wire';
 
 /** `renderApp`은 목업 DB를 새로 만들므로, DB를 고친 뒤에 내 가게로 이동해 그 값으로 그린다. */
 async function renderStore(patch?: Parameters<typeof mutate>[0]) {
@@ -98,7 +99,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
   });
 
   it('불러오는 동안은 Skeleton, 로그아웃은 그때도 보인다', async () => {
-    server.use(http.get('/api/owner/store', () => new Promise<never>(() => {})));
+    server.use(http.get('/api/users/me/store', () => new Promise<never>(() => {})));
     await renderStore();
     expect(await screen.findByRole('button', { name: '로그아웃' })).toBeInTheDocument();
     expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
@@ -110,8 +111,8 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
 
   it('조회가 실패하고 받은 데이터가 없으면 ErrorState와 다시 시도', async () => {
     server.use(
-      http.get('/api/owner/store', () =>
-        HttpResponse.json({ code: 'UNKNOWN', message: 'x' }, { status: 400 }),
+      http.get('/api/users/me/store', () =>
+        wireFail('E400'),
       ),
     );
     const { user } = await renderStore();
@@ -127,8 +128,8 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     const { queryClient } = await renderStore();
     await screen.findByText('서천 밥상');
     server.use(
-      http.get('/api/owner/store', () =>
-        HttpResponse.json({ code: 'UNKNOWN', message: 'x' }, { status: 400 }),
+      http.get('/api/users/me/store', () =>
+        wireFail('E400'),
       ),
     );
     await queryClient.refetchQueries({ queryKey: qk.myStore });

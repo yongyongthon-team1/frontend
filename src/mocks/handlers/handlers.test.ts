@@ -9,7 +9,7 @@ import type { LoginResponse, Me } from '@/features/auth/model';
 import { getInsight, listCampuses } from '@/features/campuses/api';
 import type { Coupon, CouponLookup, RedeemResult } from '@/features/coupons/model';
 import type { Course } from '@/features/courses/model';
-import type { MyStore } from '@/features/stores/model';
+import { getMyStore } from '@/features/stores/api';
 import type { RecommendationResult, TourDetail, TourSummary } from '@/features/tours/model';
 import { COURSE_CRITERIA } from '@/mocks/ai/course';
 import { getMockFile, putMockFile } from '@/mocks/db/files';
@@ -19,6 +19,7 @@ import { MockApiError } from '@/mocks/rules/errors';
 import { server } from '@/mocks/node';
 import { testImage } from '@/test/files';
 import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
+import { MY_STORE } from '@/test/fixtures/backend/stores';
 import { expectWireShape, rawFetch } from '@/test/wire';
 import { fieldError, formFile, readBody, readForm, withErrors } from './util';
 
@@ -825,10 +826,61 @@ describe('demo', () => {
   });
 });
 
-describe('사장님 내 가게 (GET /owner/store)', () => {
-  it('사장님: 내 가게 · 제휴, 가게가 없으면 404 STORE_NOT_LINKED, 사장님이 아니면 403', async () => {
+describe('사장님 내 가게 (GET /users/me/store)', () => {
+  it('사장님: 명세 S-01 보완 응답과 같은 봉투 · 모양(확장 없음)', async () => {
+    const { token } = await login('owner1@demo.kr');
+    const res = await rawFetch<{ code: string; data: Record<string, unknown> }>(
+      '/users/me/store',
+      { method: 'GET', token },
+    );
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe('S200');
+    expectWireShape(res.body.data, MY_STORE.data);
+    expect(res.body.data).toMatchObject({
+      store_id: 1,
+      name: '서천 밥상',
+      partnership: { discount_text: '식사 금액 10% 할인' },
+    });
+  });
+
+  it('제휴가 없으면 partnership은 null', async () => {
+    const { token } = await login('owner1@demo.kr');
+    mutate((db) => {
+      db.partnerships = db.partnerships.filter((p) => p.storeId !== 1);
+    });
+    const res = await rawFetch<{ data: { partnership: unknown } }>('/users/me/store', {
+      method: 'GET',
+      token,
+    });
+    expect(res.status).toBe(200);
+    expect(res.body.data.partnership).toBeNull();
+  });
+
+  it('가게가 없으면 404 E404, 사장님이 아니면 403 E403, 토큰이 없으면 401 E401', async () => {
+    const { token } = await login('owner1@demo.kr');
+    mutate((db) => {
+      db.stores.find((s) => s.id === 1)!.ownerId = null;
+    });
+    const none = await rawFetch<{ code: string }>('/users/me/store', { method: 'GET', token });
+    expect(none.status).toBe(404);
+    expect(none.body.code).toBe('E404');
+
+    const student = await login('student@demo.kr');
+    const forbidden = await rawFetch<{ code: string }>('/users/me/store', {
+      method: 'GET',
+      token: student.token,
+    });
+    expect(forbidden.status).toBe(403);
+    expect(forbidden.body.code).toBe('E403');
+
+    const anonymous = await rawFetch<{ code: string }>('/users/me/store', { method: 'GET' });
+    expect(anonymous.status).toBe(401);
+    expect(anonymous.body.code).toBe('E401');
+  });
+
+  it('어댑터 끝까지: 내 가게 · 가게 없음(null) · 학생은 FORBIDDEN', async () => {
     await login('owner1@demo.kr');
-    expect(await request<MyStore>('/owner/store')).toMatchObject({
+    expect(await getMyStore()).toMatchObject({
       id: 1,
       name: '서천 밥상',
       partnership: { discount: '식사 금액 10% 할인', state: 'ACTIVE' },
@@ -837,15 +889,16 @@ describe('사장님 내 가게 (GET /owner/store)', () => {
     mutate((db) => {
       db.stores.find((s) => s.id === 1)!.ownerId = null;
     });
-    await expect(request('/owner/store')).rejects.toMatchObject({
-      status: 404,
-      code: 'STORE_NOT_LINKED',
-    });
+    expect(await getMyStore()).toBeNull();
 
     await login('student@demo.kr');
-    await expect(request('/owner/store')).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
+    await expect(getMyStore()).rejects.toMatchObject({
+      status: 403,
+      code: 'FORBIDDEN',
+      backendCode: 'E403',
+    });
     configureHttp({ getToken: () => null });
-    await expect(request('/owner/store')).rejects.toMatchObject({ status: 401 });
+    await expect(getMyStore()).rejects.toMatchObject({ status: 401 });
   });
 });
 

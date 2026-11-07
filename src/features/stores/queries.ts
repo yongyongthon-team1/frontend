@@ -6,5 +6,5 @@ import type { MyStore } from './model';
 
 /** 내 가게. 데이터가 `null`이면 연결된 가게가 없다(O01-E). */
 export function useMyStore(): UseQueryResult<MyStore | null, ApiError> {
-  return useQuery({ queryKey: qk.myStore, queryFn: getMyStore });
+  return useQuery({ queryKey: qk.myStore, queryFn: () => getMyStore() });
 }

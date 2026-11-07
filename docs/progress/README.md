@@ -82,7 +82,7 @@
 
 ## API 연동
 
-도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 [`../api/frontend-needs.md`](../api/frontend-needs.md)의 골든 패스 엔드포인트 29개와 P1 엔드포인트 27개(3-2절 초안, `#번호`는 그 절의 번호, 동결 대상 아님)다. P1 `GET /api/owner/store`(#26)는 내 가게 화면 때문에 2A에서 목업을 먼저 만들었고, 나머지 P1 행은 MVP 2B의 API 태스크가 목업을 만들 때 ✅로 바꾼다. 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이다.
+도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 [`../api/frontend-needs.md`](../api/frontend-needs.md)의 골든 패스 엔드포인트 29개와 P1 엔드포인트 27개(3-2절 초안, `#번호`는 그 절의 번호, 동결 대상 아님)다. P1 `GET /api/owner/store`(#26)는 내 가게 화면 때문에 2A에서 목업을 먼저 만들었고(2C Task 5에서 백엔드 경로 `GET /api/users/me/store`로 바뀜), 나머지 P1 행은 MVP 2B의 API 태스크가 목업을 만들 때 ✅로 바꾼다. 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이다.
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
@@ -123,7 +123,7 @@
 | coupons | `GET /api/me/coupons/:id` | hs-s09 (상세) | ⬜ | ✅ | ⬜ | ⬜ |
 | coupons | `GET /api/owner/coupons/:code` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
 | coupons | `POST /api/owner/coupons/:code/redeem` | owner-s03, owner-a03 | ⬜ | ✅ | ⬜ | ⬜ |
-| stores | `GET /api/owner/store` | owner-s02 (O01 · O01-E, P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
+| stores | `GET /api/users/me/store` (S-01 보완, 백엔드 와이어) | owner-s02 (O01 · O01-E), 쿠폰 사용 처리 | ⬜ | ✅ | ⬜ | ⬜ |
 | stores | #22 `POST /api/me/business-verification` | owner-s01 사업자 인증 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | #23 `GET /api/owner/store-candidates` | owner-a01 가게 후보 선택 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
 | stores | #24 `POST /api/owner/store/link` | owner-a01 가게 연결 (P1 · 동결 대상 아님) | ⬜ | ⬜ | ⬜ | ⬜ |
