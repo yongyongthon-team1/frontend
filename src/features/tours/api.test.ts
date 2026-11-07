@@ -1,5 +1,5 @@
 import { beforeEach, describe, expect, it } from 'vitest';
-import { getInsight, listUniversities } from '@/features/campuses/api';
+import { getInsight, listCampuses } from '@/features/campuses/api';
 import { ApiError, configureHttp } from '@/shared/lib/http';
 import { resetDb } from '@/mocks/db/store';
 import { getTour, listTours, recommend } from './api';
@@ -33,8 +33,8 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
     await expect(getTour(99999)).rejects.toBeInstanceOf(ApiError);
   });
 
-  it('listUniversities · getInsight', async () => {
-    const universities = await listUniversities();
+  it('listCampuses · getInsight', async () => {
+    const universities = await listCampuses();
     expect(universities).toHaveLength(5);
     expect((await getInsight(universities[0].id)).universityId).toBe(universities[0].id);
   });

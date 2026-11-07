@@ -6,7 +6,7 @@ import type {
   MyApplication,
 } from '@/features/applications/model';
 import type { LoginResponse, Me } from '@/features/auth/model';
-import type { Insight, University } from '@/features/campuses/model';
+import { getInsight, listCampuses } from '@/features/campuses/api';
 import type { Coupon, CouponLookup, RedeemResult } from '@/features/coupons/model';
 import type { Course } from '@/features/courses/model';
 import type { MyStore } from '@/features/stores/model';
@@ -18,7 +18,8 @@ import { configureHttp, request, upload } from '@/shared/lib/http';
 import { MockApiError } from '@/mocks/rules/errors';
 import { server } from '@/mocks/node';
 import { testImage } from '@/test/files';
-import { rawFetch } from '@/test/wire';
+import { CAMPUSES_LIST } from '@/test/fixtures/backend/campuses';
+import { expectWireShape, rawFetch } from '@/test/wire';
 import { fieldError, formFile, readBody, readForm, withErrors } from './util';
 
 // 핸들러를 실제 HTTP 클라이언트로 부른다. 테스트 setup이 전체 핸들러를 건 MSW 서버를 켜고,
@@ -167,8 +168,16 @@ describe('auth', () => {
 });
 
 describe('campuses', () => {
-  it('대학 5곳: 짧은 이름 · 좌표 · 방학', async () => {
-    const list = await request<University[]>('/universities');
+  it('GET /campuses: 명세 D-01 응답과 같은 봉투 · 모양(토큰 없이)', async () => {
+    const res = await rawFetch<{ code: string; data: unknown }>('/campuses', { method: 'GET' });
+    expect(res.status).toBe(200);
+    expect(res.body.code).toBe('S200');
+    expectWireShape(res.body.data, CAMPUSES_LIST.data);
+  });
+
+  it('대학 5곳: id 순 · 짧은 이름 · 좌표 · 방학 2개(시작일 순)', async () => {
+    const list = await listCampuses();
+    expect(list.map((u) => u.id)).toEqual([1, 2, 3, 4, 5]);
     expect(list.map((u) => u.shortName)).toEqual([
       '강남대',
       '경희대',
@@ -176,7 +185,8 @@ describe('campuses', () => {
       '명지대',
       '한국외대',
     ]);
-    expect(list[1]).toEqual({
+    expect(list.every((u) => u.vacations.length === 2)).toBe(true);
+    expect(list[1]).toMatchObject({
       id: 2,
       name: '경희대학교',
       shortName: '경희대',
@@ -184,29 +194,43 @@ describe('campuses', () => {
       address: '경기도 용인시 기흥구 덕영대로 1732',
       lat: 37.2397,
       lng: 127.0833,
-      administrativeDong: '서천동',
+      administrativeDong: null,
       vacations: [
-        { startDate: '2026-12-21', endDate: '2027-02-28', label: '2026 겨울방학' },
-        { startDate: '2027-06-21', endDate: '2027-08-31', label: '2027 여름방학' },
+        { startDate: '2026-12-21', endDate: '2027-02-28', label: null },
+        { startDate: '2027-06-21', endDate: '2027-08-31', label: null },
       ],
     });
   });
 
-  it('방학 상권 인사이트는 행정동을 넣은 예시 문구', async () => {
-    expect(await request<Insight>('/universities/2/insight')).toEqual({
+  it('방학 상권 인사이트(확장)는 행정동을 넣은 예시 문구', async () => {
+    expect(await getInsight(2)).toEqual({
       universityId: 2,
       title: '방학 상권 인사이트',
       text: '서천동은 방학이면 대학가 손님이 크게 줄어요. 이 코스는 그 상권으로 신청자들을 보내요.',
       source: '팀 데이터 담당 확정 전 예시',
       isPlaceholder: true,
     });
+    const raw = await rawFetch<{ code: string; data: Record<string, unknown> }>(
+      '/campuses/2/insight',
+      { method: 'GET' },
+    );
+    expect(raw.status).toBe(200);
+    expect(raw.body.code).toBe('S200');
+    expect(Object.keys(raw.body.data).sort()).toEqual([
+      'campus_id',
+      'is_placeholder',
+      'source',
+      'text',
+      'title',
+    ]);
   });
 
-  it('없는 대학의 인사이트는 404 NOT_FOUND', async () =>
-    await expect(request('/universities/99/insight')).rejects.toMatchObject({
-      status: 404,
-      code: 'NOT_FOUND',
-    }));
+  it('없는 캠퍼스의 인사이트는 404 NOT_FOUND', async () => {
+    await expect(getInsight(99)).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+    const raw = await rawFetch<{ code: string }>('/campuses/99/insight', { method: 'GET' });
+    expect(raw.status).toBe(404);
+    expect(raw.body.code).toBe('E404');
+  });
 });
 
 describe('tours', () => {

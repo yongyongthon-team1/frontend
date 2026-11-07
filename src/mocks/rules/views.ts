@@ -5,11 +5,10 @@ import type {
   MyApplication,
 } from '@/features/applications/model';
 import type { GuardianStatus, Me } from '@/features/auth/model';
-import type { University } from '@/features/campuses/model';
 import { computeCouponState, type Coupon } from '@/features/coupons/model';
 import { slotTimes, type Course, type CourseStop } from '@/features/courses/model';
 import { computePartnershipState, type MyStore } from '@/features/stores/model';
-import { shortUniversityName, type TourDetail, type TourSummary } from '@/features/tours/model';
+import type { TourDetail, TourSummary } from '@/features/tours/model';
 import { COURSE_CRITERIA } from '@/mocks/ai/course';
 import { mockNow } from '@/mocks/clock';
 import type {
@@ -20,7 +19,6 @@ import type {
   GuardianConsentRow,
   StoreRow,
   TourRow,
-  UniversityRow,
 } from '@/mocks/db/schema';
 import { seoulDateKey } from '@/shared/lib/date';
 import { isCancellable, remainingSeats } from './applications';
@@ -93,23 +91,6 @@ export function toMe(db: DB, userId: number, now: Date = mockNow()): Me {
         : null,
     businessVerified: db.businessVerifications.find((b) => b.id === userId)?.isVerified ?? false,
     storeId: db.stores.find((s) => s.ownerId === userId)?.id ?? null,
-  };
-}
-
-export function toUniversity(db: DB, u: UniversityRow): University {
-  return {
-    id: u.id,
-    name: u.name,
-    shortName: shortUniversityName(u.name),
-    campusName: u.campusName,
-    address: u.address,
-    lat: u.latitude,
-    lng: u.longitude,
-    administrativeDong: u.administrativeDong,
-    vacations: db.vacations
-      .filter((v) => v.universityId === u.id)
-      .sort((a, b) => (a.startDate < b.startDate ? -1 : a.startDate > b.startDate ? 1 : 0))
-      .map((v) => ({ startDate: v.startDate, endDate: v.endDate, label: v.label })),
   };
 }
 

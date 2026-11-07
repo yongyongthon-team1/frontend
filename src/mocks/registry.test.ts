@@ -55,8 +55,8 @@ const BACKEND_CONTRACT: string[] = [
   'GET /campuses/:campusId/places',
 ];
 
-/** 목업 전용 확장 엔드포인트(2C-R8). Task 4가 `GET /campuses/:campusId/insight`를 더한다. */
-const EXTENSIONS: string[] = ['GET /health', 'POST /demo/reset'];
+/** 목업 전용 확장 엔드포인트(2C-R8). */
+const EXTENSIONS: string[] = ['GET /health', 'POST /demo/reset', 'GET /campuses/:campusId/insight'];
 
 /** 아직 목업이 없는 백엔드 경로. 도메인 태스크가 자기 줄을 지운다. 끝에 남는 20개는 2B 몫이다. */
 const NOT_MOCKED: string[] = [
@@ -104,7 +104,6 @@ const NOT_MOCKED: string[] = [
   'GET /users/me/store/report',
   'POST /stores/:storeId/reviews',
   'GET /stores/:storeId/reviews',
-  'GET /campuses',
   'GET /campuses/:campusId/places',
 ];
 
@@ -113,8 +112,6 @@ const LEGACY: string[] = [
   'POST /auth/login',
   'POST /auth/logout',
   'GET /me',
-  'GET /universities',
-  'GET /universities/:id/insight',
   'POST /recommendations',
   'GET /tours',
   'GET /tours/:id',

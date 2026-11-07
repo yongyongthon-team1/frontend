@@ -92,8 +92,8 @@
 | auth | #1 `POST /api/auth/signup` | hs-a01 회원가입 (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | #2 `PUT /api/me/student-profile` | hs-a03 내 정보 수정 `/me/edit` (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
 | auth | #3 `PUT /api/me/guide-profile` | guide-s01 가이드 프로필 `/guide/me/profile` (P1 · 동결 대상 아님) | ⬜ | ✅ | ⬜ | ⬜ |
-| campuses | `GET /api/universities` | hs-s03, guide-s02 | ⬜ | ✅ | ⬜ | ⬜ |
-| campuses | `GET /api/universities/:id/insight` | hs-s04, guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
+| campuses | `GET /api/campuses` (D-01, 백엔드 와이어) | hs-s03, guide-s02 | ⬜ | ✅ | ⬜ | ⬜ |
+| campuses | `GET /api/campuses/:campusId/insight` (확장 · 목업 전용, 봉투) | hs-s04, guide-s04 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `POST /api/recommendations` | hs-s03, hs-s04, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours?status=&universityId=` | `/explore`(P2). 추천 0건 대체 목록(hs-a06)은 `POST /api/recommendations`가 준다 | ⬜ | ✅ | ⬜ | ⬜ |
 | tours | `GET /api/tours/:id` | hs-s05, hs-a06 | ⬜ | ✅ | ⬜ | ⬜ |
