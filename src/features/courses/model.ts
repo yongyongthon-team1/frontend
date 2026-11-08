@@ -48,6 +48,21 @@ export function walkingLabel(distanceM: number): string {
   return `도보 약 ${walkingMinutes(distanceM)}분`;
 }
 
+/**
+ * 지도에 핀으로 찍을 수 있는 좌표인지(대략 한국 범위: 위도 33~39, 경도 124~132). 백엔드가 0 · null을 주거나
+ * 인허가 원본의 중부원점 TM(미터) 값을 그대로 주면 지도가 바다로 가므로 그 지점은 핀에서 뺀다.
+ */
+export function isKoreaCoordinate(lat: number, lng: number): boolean {
+  return (
+    Number.isFinite(lat) &&
+    Number.isFinite(lng) &&
+    lat >= 33 &&
+    lat <= 39 &&
+    lng >= 124 &&
+    lng <= 132
+  );
+}
+
 export interface CourseStop {
   id: number;
   order: number;

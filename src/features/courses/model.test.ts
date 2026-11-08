@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   candidateStatus,
   courseKinds,
+  isKoreaCoordinate,
   matchesPlace,
   partnerStopCount,
   pickTarget,
@@ -269,5 +270,22 @@ describe('matchesPlace (G07 검색)', () => {
   it('빈 검색어(공백뿐 포함)는 모두 맞는다', () => {
     expect(matchesPlace(['학생회관', null], '')).toBe(true);
     expect(matchesPlace([null], '   ')).toBe(true);
+  });
+});
+
+describe('isKoreaCoordinate (지도 핀 방어)', () => {
+  it('한국 범위(위도 33~39, 경도 124~132) 안이면 참', () => {
+    expect(isKoreaCoordinate(37.2417, 127.0848)).toBe(true);
+    expect(isKoreaCoordinate(33, 124)).toBe(true);
+    expect(isKoreaCoordinate(39, 132)).toBe(true);
+  });
+
+  it('0 · 범위 밖 · 중부원점 TM(미터) 값 · 숫자가 아닌 값은 거짓', () => {
+    expect(isKoreaCoordinate(0, 0)).toBe(false);
+    expect(isKoreaCoordinate(32.9, 127)).toBe(false);
+    expect(isKoreaCoordinate(37.5, 132.1)).toBe(false);
+    expect(isKoreaCoordinate(455123.4, 205678.9)).toBe(false);
+    expect(isKoreaCoordinate(Number.NaN, 127)).toBe(false);
+    expect(isKoreaCoordinate(null as unknown as number, 127)).toBe(false);
   });
 });

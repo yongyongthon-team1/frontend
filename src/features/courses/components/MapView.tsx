@@ -1,7 +1,7 @@
 import { useCallback } from 'react';
 import { CustomOverlayMap, Map as KakaoMap, Polyline } from 'react-kakao-maps-sdk';
 import { useKakaoMaps } from '@/features/courses/kakaoLoader';
-import type { CourseStop } from '@/features/courses/model';
+import { isKoreaCoordinate, type CourseStop } from '@/features/courses/model';
 import { circled } from '@/shared/lib/date';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { SchematicMap } from './SchematicMap';
@@ -19,11 +19,14 @@ export interface MapViewProps {
  */
 export function MapView({ stops, onSelect, forceSchematic = false }: MapViewProps) {
   const status = useKakaoMaps(forceSchematic);
+  // 좌표가 한국 범위 밖인 지점은 핀에서 뺀다(목록 · 시트에는 그대로 있다). 남는 핀이 없으면 도식 지도로 가고,
+  // 도식 지도는 상대 위치만 쓰므로 그때는 지점을 다 그린다.
+  const pinned = stops.filter((s) => isKoreaCoordinate(s.lat, s.lng));
   if (status === 'loading') return <Skeleton className="h-[var(--map-h)] rounded-lg" />;
-  if (status === 'fallback' || stops.length === 0) {
-    return <SchematicMap stops={stops} onSelect={onSelect} />;
+  if (status === 'fallback' || pinned.length === 0) {
+    return <SchematicMap stops={pinned.length > 0 ? pinned : stops} onSelect={onSelect} />;
   }
-  return <KakaoCourseMap stops={stops} onSelect={onSelect} />;
+  return <KakaoCourseMap stops={pinned} onSelect={onSelect} />;
 }
 
 const average = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / values.length;
