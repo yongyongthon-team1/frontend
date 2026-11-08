@@ -35,6 +35,12 @@ export default tseslint.config(
     languageOptions: { globals: globals.node },
   },
   {
+    // 데이터 생성 스크립트(Node, 의존성 없음)
+    extends: [js.configs.recommended],
+    files: ['scripts/**/*.mjs'],
+    languageOptions: { ecmaVersion: 2022, sourceType: 'module', globals: globals.node },
+  },
+  {
     files: ['src/pages/**'],
     rules: {
       'no-restricted-imports': [
