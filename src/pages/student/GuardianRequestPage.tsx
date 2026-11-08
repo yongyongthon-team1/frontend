@@ -39,11 +39,8 @@ const BACK_TO = '/me';
 
 const emailSchema = z.email();
 
-/** 진행 상태 카드의 제목. 대기만 시안 문구(`동의 요청 대기`)이고 나머지는 상태 이름 그대로다. */
-const CARD_TITLE: Record<GuardianStatus, string> = {
-  ...GUARDIAN_STATUS_LABEL,
-  PENDING: '동의 요청 대기',
-};
+/** 진행 상태 카드의 제목은 상태 이름 그대로다(대기는 시안 문구 `동의 요청 대기`, C07과 같다). */
+const CARD_TITLE = GUARDIAN_STATUS_LABEL;
 
 function cardDescription(status: GuardianStatus): string {
   switch (status) {

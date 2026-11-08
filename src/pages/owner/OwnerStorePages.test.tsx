@@ -49,30 +49,50 @@ async function search(user: User, keyword: string) {
 }
 
 describe('/owner/verify 사업자 인증 (owner-s01, U-07)', () => {
-  it('owner-new 첫 화면: 제목 · 칩 · 세 칸 · 결과 카드 기본 · 버튼', async () => {
+  it('owner-new 첫 화면: 뒤로 가기 상단 바 · 제목 · 설명 · 세 칸(상호명 없음) · 즉시 확인 안내 · 버튼 · 탭 없음 · 로그아웃', async () => {
     const { router } = await renderApp('/owner/verify', { as: OWNER_NEW });
     expect(
       await screen.findByRole('heading', { level: 1, name: '사업자 인증' }),
     ).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/owner/verify');
-    expect(screen.queryByRole('button', { name: '뒤로 가기' })).not.toBeInTheDocument();
-    // 칩과 제출 버튼이 같은 문구다.
-    expect(screen.getAllByText('사업자 정보 확인')).toHaveLength(2);
+    expect(
+      screen.getByRole('heading', { level: 2, name: '가게 정보를 확인할게요.' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('사업자 인증 후 제휴 할인 설정이 가능해요.')).toBeInTheDocument();
+    // 예전 칩은 없고 `사업자 정보 확인`은 제출 버튼 하나뿐이다.
+    expect(screen.getAllByText('사업자 정보 확인')).toHaveLength(1);
     const number = screen.getByLabelText('사업자등록번호');
     expect(number).toHaveAttribute('inputmode', 'numeric');
     expect(number).toHaveAttribute('maxlength', '12');
-    expect(screen.getByText("'-' 없이 숫자 10자리로 적어도 돼요.")).toBeInTheDocument();
-    expect(screen.getByLabelText('대표자명')).toBeInTheDocument();
+    expect(number).toHaveAttribute('placeholder', '000-00-00000');
+    expect(screen.queryByText("'-' 없이 숫자 10자리로 적어도 돼요.")).not.toBeInTheDocument();
+    expect(screen.getByLabelText('대표자명')).toHaveAttribute(
+      'placeholder',
+      '이름을 입력해 주세요',
+    );
     const opened = screen.getByLabelText('개업일자');
     expect(opened).toHaveAttribute('type', 'date');
     expect(opened).toHaveAttribute('max', seoulDateKey(new Date()));
-    expect(screen.getByText('국세청 진위확인 API 연동')).toBeInTheDocument();
-    expect(screen.getByText('정보 일치 · 계속사업자 여부 확인')).toBeInTheDocument();
+    // API에 없는 상호명 칸은 넣지 않는다(판정 A3).
+    expect(screen.queryByLabelText('상호명')).not.toBeInTheDocument();
+    // 확인은 즉시다 — 운영자 확인을 기다리는 말도, 예전 API 연동 카드도 없다.
+    expect(screen.getByText('국세청 사업자등록 정보로 바로 확인해요.')).toBeInTheDocument();
+    expect(screen.queryByText(/운영자 확인/)).not.toBeInTheDocument();
+    expect(screen.queryByText('국세청 진위확인 API 연동')).not.toBeInTheDocument();
     expect(screen.getByRole('button', { name: '사업자 정보 확인' })).toBeEnabled();
     // 시연 도구가 꺼져 있으면 채우기 버튼이 없다.
     expect(
       screen.queryByRole('button', { name: '시연 사업자 정보 채우기' }),
     ).not.toBeInTheDocument();
+    // 인증 화면 셸(판정 A8): 하단 탭이 없고, 첫 진입(첫 화면 규칙이 보낸 곳)이라 로그아웃이 있다.
+    expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument();
+  });
+
+  it('뒤로 가기는 /owner/store(사장님 MY가 없다)', async () => {
+    const { user, router } = await renderApp('/owner/verify', { as: OWNER_NEW });
+    await user.click(await screen.findByRole('button', { name: '뒤로 가기' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/owner/store'));
   });
 
   it('일치하는 정보: 토스트 후 /owner/store/connect(replace) — 후보 카드 없이 검색 안내 카드', async () => {
@@ -124,7 +144,7 @@ describe('/owner/verify 사업자 인증 (owner-s01, U-07)', () => {
     ['불일치', DEMO_BUSINESS.mismatch, '사업자 정보가 일치하지 않아요'],
     ['폐업', DEMO_BUSINESS.closed, '휴업 또는 폐업한 사업자예요'],
   ])(
-    '%s: 결과 카드가 안내로 바뀌고 입력값은 남고, 다시 입력하면 기본으로',
+    '%s: 안내 상자가 danger 안내로 바뀌고 입력값은 남고, 다시 입력하면 기본으로',
     async (_n, biz, title) => {
       const { user, router } = await renderApp('/owner/verify', { as: OWNER_NEW });
       await user.type(await screen.findByLabelText('사업자등록번호'), biz.businessNumber);
@@ -132,14 +152,15 @@ describe('/owner/verify 사업자 인증 (owner-s01, U-07)', () => {
       fireEvent.change(screen.getByLabelText('개업일자'), { target: { value: biz.openingDate } });
       await user.click(screen.getByRole('button', { name: '사업자 정보 확인' }));
       expect(await screen.findByText(title)).toBeInTheDocument();
-      expect(screen.queryByText('국세청 진위확인 API 연동')).not.toBeInTheDocument();
+      expect(screen.getByText(title).closest('div')).toHaveClass('border-danger', 'text-ink');
+      expect(screen.queryByText('국세청 사업자등록 정보로 바로 확인해요.')).not.toBeInTheDocument();
       expect(screen.getByLabelText('사업자등록번호')).toHaveValue(biz.businessNumber);
       expect(screen.getByLabelText('대표자명')).toHaveValue(biz.representativeName);
       expect(router.state.location.pathname).toBe('/owner/verify');
 
       await user.type(screen.getByLabelText('대표자명'), '씨');
       expect(screen.queryByText(title)).not.toBeInTheDocument();
-      expect(screen.getByText('국세청 진위확인 API 연동')).toBeInTheDocument();
+      expect(screen.getByText('국세청 사업자등록 정보로 바로 확인해요.')).toBeInTheDocument();
       // 실패한 뒤에도 다시 낼 수 있다.
       expect(screen.getByRole('button', { name: '사업자 정보 확인' })).toBeEnabled();
     },
@@ -172,6 +193,7 @@ describe('/owner/verify 사업자 인증 (owner-s01, U-07)', () => {
     expect(await screen.findByText('사업자 인증 완료')).toBeInTheDocument();
     expect(screen.getByText('국세청 진위확인으로 확인된 사업자예요.')).toBeInTheDocument();
     expect(screen.queryByLabelText('사업자등록번호')).not.toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '뒤로 가기' })).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '가게 연결하기' })).toHaveAttribute(
       'href',
       '/owner/store/connect',

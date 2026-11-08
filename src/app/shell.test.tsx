@@ -126,7 +126,6 @@ describe('레이아웃', () => {
     ['guide', '/guide/wishes', '내 탐방', ['코스 편집', 'MY']],
     ['student', '/me/wishes', 'MY', ['탐색', '내 탐방']],
     ['student', '/me/wishes/1/edit', 'MY', ['탐색', '내 탐방']],
-    ['owner', '/owner/verify', '내 가게', ['쿠폰']],
     ['owner', '/owner/report', '내 가게', ['쿠폰']],
   ])('%s 인증 화면(%s)에서 %s 탭만 활성', async (as, path, tab, others) => {
     await renderApp(path, { as });
@@ -145,6 +144,8 @@ describe('레이아웃', () => {
     ['student', '/verify/guardian', '/me'],
     ['guide', '/guide/verify', '/guide/me'],
     ['guide-rejected@demo.kr', '/guide/verify', '/guide/me'],
+    ['owner-new@demo.kr', '/owner/verify', '/owner/store'],
+    ['owner', '/owner/verify', '/owner/store'],
   ])('%s 인증 화면(%s)은 하단 탭이 없고 뒤로 가기는 %s', async (as, path, back) => {
     const { user, router } = await renderApp(path, { as });
     await user.click(await screen.findByRole('button', { name: '뒤로 가기' }));
@@ -157,6 +158,7 @@ describe('레이아웃', () => {
     ['student', '/verify/guardian'],
     ['guide', '/guide/verify'],
     ['guide-rejected@demo.kr', '/guide/verify'],
+    ['owner-new@demo.kr', '/owner/verify'],
   ])('%s 인증 화면(%s)에는 하단 탭이 없다', async (as, path) => {
     await renderApp(path, { as });
     await screen.findByRole('button', { name: '뒤로 가기' });

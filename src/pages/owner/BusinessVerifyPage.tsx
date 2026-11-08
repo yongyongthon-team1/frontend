@@ -2,6 +2,7 @@ import { useRef, useState, type FormEvent } from 'react';
 import { Link, useNavigate } from 'react-router';
 import { toast } from 'sonner';
 import { useMe } from '@/features/auth/queries';
+import { FirstEntryLogout } from '@/features/verification/components/FirstEntryLogout';
 import {
   businessNotice,
   normalizeBusinessNumber,
@@ -18,9 +19,10 @@ import { Button } from '@/shared/ui/Button';
 import { buttonClass } from '@/shared/ui/buttonStyles';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { InfoCard } from '@/shared/ui/InfoCard';
+import { Notice } from '@/shared/ui/Notice';
 import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
-import { StatusChip } from '@/shared/ui/StatusChip';
 import { TextField } from '@/shared/ui/TextField';
 import { TopBar } from '@/shared/ui/TopBar';
 
@@ -30,6 +32,9 @@ type Verify = ReturnType<typeof useVerifyBusiness>;
 
 const FIELDS: readonly Field[] = ['businessNumber', 'representativeName', 'openedAt'];
 const BUSINESS_NUMBER_DIGITS = 10;
+
+/** 뒤로 가기가 가는 곳: 사장님은 MY가 없어 내 가게다(판정 A8 · 2B-R4). */
+const BACK_TO = '/owner/store';
 
 function validate(values: Record<Field, string>): Errors {
   const errors: Errors = {};
@@ -45,7 +50,7 @@ function validate(values: Record<Field, string>): Errors {
 }
 
 /**
- * 제출 폼. 제출은 되돌릴 수 없어 처리 중에 잠기고 연타해도 요청은 한 번이다(`locked`). 실패한 사업자 정보는 결과 카드가
+ * 제출 폼(시안 C06). 상호명 칸은 API에 없어 넣지 않는다(판정 A3). 제출은 되돌릴 수 없어 처리 중에 잠기고 연타해도 요청은 한 번이다(`locked`). 실패한 사업자 정보는 결과 카드가
  * 안내(`businessNotice`)로 바뀌고 입력값은 그대로 남으며, 다시 고치면 카드가 기본으로 돌아간다. 제출 훅은 인증이 끝나 폼이
  * 사라져도 이동이 끝나도록 페이지가 가진다.
  */
@@ -126,7 +131,7 @@ function VerifyForm({ verify }: { verify: Verify }) {
           inputMode="numeric"
           maxLength={12}
           autoComplete="off"
-          hint="'-' 없이 숫자 10자리로 적어도 돼요."
+          placeholder="000-00-00000"
           value={values.businessNumber}
           error={errors.businessNumber}
           onChange={(e) => change('businessNumber', e.target.value)}
@@ -135,6 +140,7 @@ function VerifyForm({ verify }: { verify: Verify }) {
           label="대표자명"
           showLabel
           autoComplete="off"
+          placeholder="이름을 입력해 주세요"
           value={values.representativeName}
           error={errors.representativeName}
           onChange={(e) => change('representativeName', e.target.value)}
@@ -150,12 +156,16 @@ function VerifyForm({ verify }: { verify: Verify }) {
         />
       </fieldset>
 
+      {/* 확인은 즉시다(U-07, 운영자 심사 없음). 실패하면 같은 자리가 danger 안내로 바뀐다. */}
       <div aria-live="polite" className="mt-3">
-        <InfoCard
-          tone={failure ? 'local' : 'brand'}
-          title={failure ? failure.title : '국세청 진위확인 API 연동'}
-          description={failure ? failure.description : '정보 일치 · 계속사업자 여부 확인'}
-        />
+        {failure ? (
+          <Notice tone="danger">
+            <p className="font-bold">{failure.title}</p>
+            <p className="mt-0.5">{failure.description}</p>
+          </Notice>
+        ) : (
+          <Notice>국세청 사업자등록 정보로 바로 확인해요.</Notice>
+        )}
       </div>
 
       {demoOn ? (
@@ -174,13 +184,14 @@ function VerifyForm({ verify }: { verify: Verify }) {
         <Button type="submit" loading={verify.isPending}>
           사업자 정보 확인
         </Button>
+        <FirstEntryLogout />
       </BottomAction>
     </form>
   );
 }
 
 /**
- * 사업자 인증(owner-s01, V2에 없음, U-07). 일치하면 바로 인증된다(운영자 심사 없음 — 2B-R2). 이미 인증됐으면 폼 대신 완료 카드와
+ * 사업자 인증(C06 새 시안, owner-s01, U-07). 상단 바 뒤로 가기만 있고 하단 탭은 없다(판정 A8). 일치하면 바로 인증된다(운영자 심사 없음 — 2B-R2). 이미 인증됐으면 폼 대신 완료 카드와
  * 다음 행동. 성공하면 토스트와 함께 가게 찾기로 간다.
  */
 export function BusinessVerifyPage() {
@@ -226,11 +237,13 @@ export function BusinessVerifyPage() {
 
   return (
     <>
-      <TopBar title="사업자 인증" />
-      <Page className={BOTTOM_ACTION_PAGE}>
-        <div className="pt-3">
-          <StatusChip tone="info">사업자 정보 확인</StatusChip>
-        </div>
+      <TopBar title="사업자 인증" back={BACK_TO} />
+      <Page className={`${BOTTOM_ACTION_PAGE} pt-3`}>
+        <PageHeading
+          as="h2"
+          title="가게 정보를 확인할게요."
+          description="사업자 인증 후 제휴 할인 설정이 가능해요."
+        />
         {body}
       </Page>
     </>

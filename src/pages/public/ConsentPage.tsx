@@ -1,31 +1,37 @@
-import { useRef, type ReactNode } from 'react';
+import { useRef, useState, type ReactNode } from 'react';
 import { Link, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { useSession } from '@/features/auth/session';
 import type { ConsentDecision, ConsentView } from '@/features/verification/model';
 import { useConsent, useDecideConsent } from '@/features/verification/queries';
+import { maskStudentName } from '@/features/verification/model';
 import { formatMonthDay, formatTime } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
-import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
+import { BrandMark } from '@/shared/ui/BrandMark';
+import { BOTTOM_ACTION_PAGE_TAB_ROOT, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
 import { buttonClass } from '@/shared/ui/buttonStyles';
+import { Checkbox } from '@/shared/ui/Checkbox';
 import { ErrorState } from '@/shared/ui/ErrorState';
 import { InfoCard } from '@/shared/ui/InfoCard';
 import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
-import { TopBar } from '@/shared/ui/TopBar';
+import { StepList } from '@/shared/ui/StepList';
 
-const TITLE = '보호자 동의 페이지';
 const LINK_CODES = new Set(['CONSENT_LINK_EXPIRED', 'CONSENT_LINK_INVALID']);
 
+/** 시안 C05의 브랜드 머리: 워드마크 → 제목 · 설명. 공개 링크라 뒤로 가기도 하단 탭도 없다. */
 function Header() {
   return (
     <>
-      <TopBar title={TITLE} />
-      <div className="px-[var(--gutter)] pt-3">
-        <StatusChip tone="info">고교생 보호자 전용 링크</StatusChip>
-      </div>
+      <BrandMark variant="wordmark" />
+      <PageHeading
+        title="탐방 참여 동의"
+        description="보호자께서 확인하는 페이지예요."
+        className="mt-5"
+      />
     </>
   );
 }
@@ -96,7 +102,7 @@ export function ConsentPage() {
     });
   }
 
-  // 폼(대기 중)은 아래에 붙는 버튼 영역이 있는 자기 `Page`를 그리고, 나머지는 같은 `Page` 안의 카드 하나다.
+  // 폼(대기 중)은 아래에 붙는 버튼 영역이 있는 자기 `Page`를 그리고, 나머지는 같은 머리 아래 카드 하나다.
   let card: ReactNode = null;
   let pendingView: ConsentView | null = null;
   if (linkError) {
@@ -123,20 +129,34 @@ export function ConsentPage() {
     }
   }
 
-  return (
-    <>
+  return pendingView !== null ? (
+    <PendingBody
+      view={pendingView}
+      pending={decide.isPending}
+      pendingDecision={decide.variables}
+      onDecide={onDecide}
+    />
+  ) : (
+    <Page className="pt-6">
       <Header />
-      {pendingView !== null ? (
-        <PendingBody
-          view={pendingView}
-          pending={decide.isPending}
-          pendingDecision={decide.variables}
-          onDecide={onDecide}
-        />
-      ) : (
-        <Page className="mt-3">{card}</Page>
-      )}
-    </>
+      <div className="mt-5">{card}</div>
+    </Page>
+  );
+}
+
+/** 학생 정보 카드(시안 C05): 칩 `학생 정보` → 17/Bold `{가린 이름} · 고교생` → 13 muted 두 줄. 학교는 보이지 않는다. */
+function StudentCard({ studentName }: { studentName: string }) {
+  return (
+    <section aria-label="학생 정보" className="flex flex-col gap-1 rounded-lg bg-surface p-5">
+      <StatusChip tone="info" dot={false}>
+        학생 정보
+      </StatusChip>
+      <h2 className="mt-1 text-[17px] font-bold text-ink">
+        {`${maskStudentName(studentName)} · 고교생`}
+      </h2>
+      <p className="text-[13px] text-muted">UNIRO 캠퍼스 탐방 서비스</p>
+      <p className="text-[13px] text-muted">대학생 가이드가 개설한 비공식 탐방에 참여합니다.</p>
+    </section>
   );
 }
 
@@ -151,25 +171,32 @@ function PendingBody({
   pendingDecision: ConsentDecision | undefined;
   onDecide(decision: ConsentDecision): void;
 }) {
+  const [checked, setChecked] = useState(false);
   return (
-    <Page className={BOTTOM_ACTION_PAGE}>
-      <div className="mt-3 flex flex-col gap-3">
-        <InfoCard
-          title="캠퍼스 탐방 참여 동의"
-          description={<span className="whitespace-pre-wrap">{view.guideText}</span>}
+    <Page className={BOTTOM_ACTION_PAGE_TAB_ROOT}>
+      <Header />
+      <div className="mt-5 flex flex-col gap-3">
+        <StudentCard studentName={view.studentName} />
+        {/* 시안의 `02 참여 일시 · 연락처` 자리는 API에 없는 값이라 서버 안내문(`guide_text`)이 대신한다(판정 A2). */}
+        <StepList
+          current={0}
+          steps={[
+            '탐방은 학교 공식 프로그램이 아니에요.',
+            <span key="guide" className="whitespace-pre-wrap">
+              {view.guideText}
+            </span>,
+            '미성년자 참여에 동의해 주세요.',
+          ]}
         />
-        <InfoCard
-          title="탐방 방식 및 안전 안내"
-          description="참가 신청 후 가이드 승인 · 오픈채팅 연결 · 캠퍼스와 주변 상점 방문"
-        />
+        <div className="rounded-lg bg-surface px-4">
+          <Checkbox
+            label="내용에 동의합니다"
+            checked={checked}
+            disabled={pending}
+            onChange={(e) => setChecked(e.target.checked)}
+          />
+        </div>
       </div>
-
-      <h2 className="mt-5 mb-2 text-[15px] font-bold text-ink">동의 대상</h2>
-      <InfoCard
-        muted
-        title={`학생: ${view.studentName}${view.schoolName ? ` · ${view.schoolName}` : ''}`}
-        description="탐방 신청 및 관련 정보 제공에 동의합니다."
-      />
 
       {view.expiresAt ? (
         <p className="mt-4 text-[13px] text-muted">
@@ -184,11 +211,12 @@ function PendingBody({
         <div className="flex flex-col gap-2">
           <Button
             loading={pending && pendingDecision === 'AGREED'}
-            disabled={pending}
+            disabled={pending || !checked}
             onClick={() => onDecide('AGREED')}
           >
-            안내 확인 후 동의하기
+            보호자 동의 완료
           </Button>
+          {/* 동의하지 않기(U-06 동의 거부, 판정 A2): 시안의 보조 버튼 자리. 동의 선택과 상관없이 늘 열려 있다. */}
           <Button
             variant="secondary"
             loading={pending && pendingDecision === 'REJECTED'}

@@ -101,7 +101,10 @@ test.describe('재학 인증 · 보호자 동의', () => {
 
     await page.getByRole('link', { name: '보호자 페이지 열기' }).click();
     await expect(page).toHaveURL(/\/consent\/demo-consent-valid$/);
-    await page.getByRole('button', { name: '안내 확인 후 동의하기' }).click();
+    // 체크 상자 입력은 화면에서 숨겨져 있어 보이는 글자 줄을 눌러 체크한다.
+    await page.getByText('내용에 동의합니다').click();
+    await expect(page.getByRole('checkbox', { name: '내용에 동의합니다' })).toBeChecked();
+    await page.getByRole('button', { name: '보호자 동의 완료' }).click();
     await expect(page.getByText('동의를 마쳤어요')).toBeVisible();
 
     await page.getByRole('link', { name: '학생 화면으로 돌아가기' }).click();

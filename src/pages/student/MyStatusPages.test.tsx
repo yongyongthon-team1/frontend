@@ -37,7 +37,7 @@ describe('C07 내 정보 · 인증 상태 (/me/status)', () => {
 
   it.each([
     ['newbie@demo.kr', '미제출', '미요청'],
-    ['waiting@demo.kr', '심사 중', '동의 대기'],
+    ['waiting@demo.kr', '심사 중', '동의 요청 대기'],
     ['rejected@demo.kr', '반려', '거부'],
     ['expired@demo.kr', '승인 완료', '링크 만료'],
     ['pending@demo.kr', '심사 중', '동의 완료'],

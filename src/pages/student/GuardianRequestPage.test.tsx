@@ -244,7 +244,8 @@ describe('C04 보호자 동의 요청 (/verify/guardian)', () => {
       await waitFor(() =>
         expect(router.state.location.pathname).toBe(`/consent/${DEMO_CONSENT_TOKENS.valid}`),
       );
-      await user.click(await screen.findByRole('button', { name: '안내 확인 후 동의하기' }));
+      await user.click(await screen.findByRole('checkbox', { name: '내용에 동의합니다' }));
+      await user.click(screen.getByRole('button', { name: '보호자 동의 완료' }));
       expect(await screen.findByText('동의를 마쳤어요')).toBeInTheDocument();
       await user.click(screen.getByRole('link', { name: '학생 화면으로 돌아가기' }));
 
@@ -259,7 +260,8 @@ describe('C04 보호자 동의 요청 (/verify/guardian)', () => {
       demoOn();
       const { user, router } = await renderApp('/verify/guardian', { as: 'waiting@demo.kr' });
       await user.click(await screen.findByRole('link', { name: OPEN_PAGE }));
-      await user.click(await screen.findByRole('button', { name: '안내 확인 후 동의하기' }));
+      await user.click(await screen.findByRole('checkbox', { name: '내용에 동의합니다' }));
+      await user.click(screen.getByRole('button', { name: '보호자 동의 완료' }));
       expect(await screen.findByText('동의를 마쳤어요')).toBeInTheDocument();
       setMockLatency({ base: 250, ai: 0 }); // 돌아온 화면의 내 정보 다시 읽기를 느리게 한다
       await user.click(screen.getByRole('link', { name: '학생 화면으로 돌아가기' }));

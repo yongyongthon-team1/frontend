@@ -39,7 +39,7 @@ export const TABS: Record<Role, TabItem[]> = {
       to: '/owner/store',
       label: '내 가게',
       icon: Store,
-      match: ['/owner/store', '/owner/verify', '/owner/report'],
+      match: ['/owner/store', '/owner/report'], // `/owner/verify`는 탭 없는 인증 화면(C06)
     },
     {
       to: '/owner/coupons/redeem',

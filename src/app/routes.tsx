@@ -77,7 +77,7 @@ export const routes: RouteObject[] = [
         element: <RequireAuth />,
         children: [
           {
-            // 인증 화면(C03 · C04 · C08): 상단 바 뒤로 가기만 있고 하단 탭이 없다(판정 A8). 뒤로 가기는 그 역할의 MY로 간다.
+            // 인증 화면(C03 · C04 · C06 · C08): 상단 바 뒤로 가기만 있고 하단 탭이 없다(판정 A8). 뒤로 가기는 그 역할의 MY(사장님은 내 가게)로 간다.
             element: <RoleTabLayout tabs={false} />,
             errorElement: (
               <RoleTabLayout tabs={false}>
@@ -96,6 +96,12 @@ export const routes: RouteObject[] = [
                 element: <RequireRole role="UNIVERSITY" />,
                 children: [
                   { path: '/guide/verify', element: <GuideVerifyPage /> }, // C03 · C08 · 상태 (U-05 guide-a01)
+                ],
+              },
+              {
+                element: <RequireRole role="OWNER" />,
+                children: [
+                  { path: '/owner/verify', element: <BusinessVerifyPage /> }, // C06 (U-07 owner-s01)
                 ],
               },
             ],
@@ -288,10 +294,6 @@ export const routes: RouteObject[] = [
                   {
                     path: '/owner/store/edit',
                     element: <StoreEditPage />, // S-01 PATCH
-                  },
-                  {
-                    path: '/owner/verify',
-                    element: <BusinessVerifyPage />, // U-07 owner-s01
                   },
                   {
                     path: '/owner/report',

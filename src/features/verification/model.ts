@@ -52,6 +52,16 @@ export interface ConsentView {
   expiresAt: string | null;
 }
 
+/**
+ * 보호자 동의 링크(공개)에 보이는 학생 이름 가림(시안 C05 `양○○`): 첫 글자만 남기고 나머지는 `○`. API는 이름 전체를 주므로 화면에서 가린다.
+ * 한 글자(또는 빈 이름)는 가릴 것이 없어 그대로다.
+ */
+export function maskStudentName(name: string): string {
+  const chars = Array.from(name.trim());
+  if (chars.length <= 1) return chars.join('');
+  return chars[0]! + '○'.repeat(chars.length - 1);
+}
+
 export type ConsentDecision = 'AGREED' | 'REJECTED';
 
 /** 제출할 수 있는 인증 상태: 미제출 · 반려(심사 중이거나 승인되면 다시 낼 수 없다). */
@@ -68,7 +78,7 @@ export const VERIFICATION_STATUS_LABEL: Record<VerificationStatus, string> = {
 
 export const GUARDIAN_STATUS_LABEL: Record<GuardianStatus, string> = {
   NONE: '미요청',
-  PENDING: '동의 대기',
+  PENDING: '동의 요청 대기', // 시안 C04의 문구. 내 정보 · 인증 상태(C07)도 같은 말을 쓴다
   AGREED: '동의 완료',
   REJECTED: '거부',
   EXPIRED: '링크 만료',

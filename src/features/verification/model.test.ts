@@ -4,6 +4,7 @@ import {
   canSubmitVerification,
   GUARDIAN_STATUS_LABEL,
   GUARDIAN_TONE,
+  maskStudentName,
   PROOF_ACCEPT,
   PROOF_MAX_BYTES,
   proofFileError,
@@ -68,7 +69,7 @@ describe('라벨 · 톤', () => {
   it('보호자 동의 상태', () => {
     expect(GUARDIAN_STATUS_LABEL).toEqual({
       NONE: '미요청',
-      PENDING: '동의 대기',
+      PENDING: '동의 요청 대기',
       AGREED: '동의 완료',
       REJECTED: '거부',
       EXPIRED: '링크 만료',
@@ -117,5 +118,19 @@ describe('verifySteps', () => {
       guardian: guardian[g],
       done: v === 'APPROVED' && g === 'AGREED',
     });
+  });
+});
+
+describe('maskStudentName (C05 학생 이름 가림: 성 + ○)', () => {
+  it.each([
+    ['양수정', '양○○'],
+    ['강하린', '강○○'],
+    ['이강', '이○'],
+    ['남궁민수', '남○○○'],
+    ['  김하늘 ', '김○○'],
+    ['김', '김'],
+    ['', ''],
+  ])('%j → %j', (name, expected) => {
+    expect(maskStudentName(name)).toBe(expected);
   });
 });
