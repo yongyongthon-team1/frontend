@@ -2,7 +2,8 @@
 // Vercel의 Password Protection은 Hobby 플랜에서 쓸 수 없어 같은 효과를 미들웨어로 낸다.
 // 비밀번호는 Vercel 환경 변수 `PREVIEW_PASSWORD`(저장소에 두지 않는다). 없으면 모든 요청이 잠긴다.
 // 로컬 개발 · E2E(vite)는 이 파일을 쓰지 않는다.
-import { isAuthorized } from './src/deploy/basicAuth';
+// Vercel이 미들웨어를 Node ESM으로 돌려 확장자 없는 상대 경로를 못 찾는다 — 컴파일된 .js를 가리킨다.
+import { isAuthorized } from './src/deploy/basicAuth.js';
 
 export const config = {
   // 목업 서비스 워커 스크립트는 잠그지 않는다 — 브라우저가 워커를 등록할 때 인증 정보를 안 보낼 수 있어,
