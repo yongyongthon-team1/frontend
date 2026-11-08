@@ -11,7 +11,7 @@ import {
   type DemoRole,
   type SeedCheckpoint,
 } from '@/shared/config/demoAccounts';
-import type { ApiMode } from '@/shared/config/env';
+import { env, type ApiMode } from '@/shared/config/env';
 import { cn } from '@/shared/lib/cn';
 import { errorMessage } from '@/shared/lib/errors';
 import { ApiError } from '@/shared/lib/http';
@@ -314,6 +314,9 @@ function FullPanel({ actions }: { actions: DemoActions }) {
             ['mock', '목업'],
             ['real', '실서버'],
           ]}
+          disabledOption={
+            env.realApi ? undefined : { value: 'real', reason: REAL_API_MISSING_REASON }
+          }
           onChange={(mode) => {
             // 모드는 부트스트랩에서 한 번 정한다(목업 워커 · HTTP) — 저장하고 다시 불러온다.
             setApiModeOverride(mode);
@@ -366,45 +369,66 @@ function Group({ title, children }: { title: string; children: ReactNode }) {
 }
 
 /** 두 값 중 하나를 고르는 버튼 묶음(눌린 쪽 = 지금 값). */
+/** 백엔드가 연결되지 않은 배포(`VITE_REAL_API=off`)에서 실서버 버튼이 잠긴 사유. */
+const REAL_API_MISSING_REASON = '이 배포에는 백엔드가 연결되지 않았어요.';
+
 function Segmented<T extends string>({
   label,
   value,
   options,
   onChange,
+  disabledOption,
 }: {
   label: string;
   value: T;
   options: [T, string][];
   onChange(value: T): void;
+  /** 고를 수 없는 선택지와 그 사유(버튼 설명으로 읽히고 아래에 작게 보인다). */
+  disabledOption?: { value: T; reason: string };
 }) {
   const labelId = useId();
+  const reasonId = useId();
   return (
-    <div className="flex items-center justify-between gap-3">
-      <span id={labelId} className="text-sm text-ink">
-        {label}
-      </span>
-      <div
-        role="group"
-        aria-labelledby={labelId}
-        className="flex overflow-hidden rounded-md bg-neutral-100"
-      >
-        {options.map(([option, text]) => (
-          <button
-            key={option}
-            type="button"
-            aria-pressed={option === value}
-            onClick={() => {
-              if (option !== value) onChange(option);
-            }}
-            className={cn(
-              'min-h-11 px-3 text-sm font-bold',
-              option === value ? 'bg-brand text-on-primary' : 'text-muted hover:bg-neutral-300/40',
-            )}
-          >
-            {text}
-          </button>
-        ))}
+    <div>
+      <div className="flex items-center justify-between gap-3">
+        <span id={labelId} className="text-sm text-ink">
+          {label}
+        </span>
+        <div
+          role="group"
+          aria-labelledby={labelId}
+          className="flex overflow-hidden rounded-md bg-neutral-100"
+        >
+          {options.map(([option, text]) => {
+            const off = disabledOption?.value === option;
+            return (
+              <button
+                key={option}
+                type="button"
+                aria-pressed={option === value}
+                disabled={off}
+                aria-describedby={off ? reasonId : undefined}
+                onClick={() => {
+                  if (option !== value) onChange(option);
+                }}
+                className={cn(
+                  'min-h-11 px-3 text-sm font-bold disabled:cursor-not-allowed disabled:opacity-50',
+                  option === value
+                    ? 'bg-brand text-on-primary'
+                    : 'text-muted hover:bg-neutral-300/40',
+                )}
+              >
+                {text}
+              </button>
+            );
+          })}
+        </div>
       </div>
+      {disabledOption ? (
+        <p id={reasonId} className="mt-1 text-right text-xs text-muted">
+          {disabledOption.reason}
+        </p>
+      ) : null}
     </div>
   );
 }

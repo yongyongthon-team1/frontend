@@ -20,6 +20,8 @@ export interface AppEnv {
   demoTools: boolean;
   kakaoMapKey: string | null;
   demoPassword: string;
+  /** 실서버 모드를 쓸 수 있는지. 백엔드가 연결되지 않은 배포는 `VITE_REAL_API=off`로 막는다(그때는 늘 목업). */
+  realApi: boolean;
 }
 
 const MOCK_DOMAINS: readonly MockDomain[] = [
@@ -61,12 +63,20 @@ export function readEnv(raw: Record<string, unknown>): AppEnv {
     demoTools: raw.VITE_DEMO_TOOLS === true || raw.VITE_DEMO_TOOLS === 'true',
     kakaoMapKey: str(raw.VITE_KAKAO_MAP_KEY) || null,
     demoPassword: str(raw.VITE_DEMO_PASSWORD) || 'demo1234',
+    realApi: !['off', 'false', '0'].includes(str(raw.VITE_REAL_API).toLowerCase()),
   };
 }
 
 export const env: AppEnv = readEnv(import.meta.env);
 
-// 우선순위: URL ?mode= > override(시연 패널에서 저장한 값) > base(env)
-export function resolveApiMode(base: ApiMode, override: ApiMode | null, search: string): ApiMode {
+// 우선순위: URL ?mode= > override(시연 패널에서 저장한 값) > base(env). 실서버가 막힌 배포(`realApi` false)는
+// 무엇을 골랐든 목업이다 — 전에 실서버로 저장해 둔 브라우저가 깨진 채 갇히지 않게.
+export function resolveApiMode(
+  base: ApiMode,
+  override: ApiMode | null,
+  search: string,
+  realApi = true,
+): ApiMode {
+  if (!realApi) return 'mock';
   return parseMode(new URLSearchParams(search).get('mode')) ?? override ?? base;
 }

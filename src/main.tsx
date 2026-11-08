@@ -27,7 +27,7 @@ async function bootstrap() {
   const demoParams = parseDemoParams(window.location.search);
   applyDemoParamsBeforeRender(demoParams);
 
-  const mode = resolveApiMode(env.apiMode, readDemoOverride(), window.location.search);
+  const mode = resolveApiMode(env.apiMode, readDemoOverride(), window.location.search, env.realApi);
   useBootStatus.setState({ apiMode: mode });
   if (mode === 'mock') {
     try {

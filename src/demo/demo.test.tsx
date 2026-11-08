@@ -9,6 +9,7 @@ import { getDb, mutate } from '@/mocks/db/store';
 import { setMockLatency } from '@/mocks/latency';
 import { server } from '@/mocks/node';
 import { qk } from '@/shared/api/queryKeys';
+import { env } from '@/shared/config/env';
 import { errorMessage } from '@/shared/lib/errors';
 import { DEMO_EMAILS, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { findApplicationId, renderApp } from '@/test/renderApp';
@@ -250,6 +251,24 @@ describe('시연 패널', () => {
     expect(screen.getByRole('button', { name: '목업' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: '실서버' })).toHaveAttribute('aria-pressed', 'false');
     expect(await within(panel()).findByText('정상')).toBeInTheDocument();
+  });
+
+  it('백엔드가 없는 배포(VITE_REAL_API=off)에서는 실서버 버튼이 잠기고 사유가 보인다', async () => {
+    const before = env.realApi;
+    env.realApi = false;
+    try {
+      useDemoStore.setState({ enabled: true });
+      await renderApp('/', { as: 'student' });
+      const real = within(panel()).getByRole('button', { name: '실서버' });
+      expect(real).toBeDisabled();
+      expect(real).toHaveAccessibleDescription('이 배포에는 백엔드가 연결되지 않았어요.');
+      expect(within(panel()).getByRole('button', { name: '목업' })).toHaveAttribute(
+        'aria-pressed',
+        'true',
+      );
+    } finally {
+      env.realApi = before;
+    }
   });
 
   it('헬스 체크가 실패하면 응답 없음', async () => {
