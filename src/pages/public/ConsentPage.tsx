@@ -212,6 +212,11 @@ function PendingBody({
           <Button
             loading={pending && pendingDecision === 'AGREED'}
             disabled={pending || !checked}
+            hint={
+              checked || pending
+                ? undefined
+                : { reason: '위 내용에 동의하면 보호자 동의를 완료할 수 있어요.' }
+            }
             onClick={() => onDecide('AGREED')}
           >
             보호자 동의 완료

@@ -60,7 +60,7 @@ import { NotFoundPage } from './NotFoundPage';
  * 설계 5.3의 라우트 전부. 화면이 아직 없는 곳은 `/explore`(P2)뿐이고 `PlaceholderPage`(자리)로 둔다.
  * 코드 분할(lazy)은 쓰지 않는다(결정 0006).
  * 가드 두 겹(설계 5.4): `RequireAuth`(토큰 → 내 정보) 안에 `RoleTabLayout`(역할별 하단 탭), 그 안에 `RequireRole`.
- * 재학 인증 · 보호자 동의 요청 화면(C03 · C04 · C08)만 탭이 없는 `RoleTabLayout tabs={false}` 묶음이다(판정 A8).
+ * 재학 인증 · 보호자 동의 요청 화면(C03 · C04 · C06 · C08)만 탭이 없는 `RoleTabLayout tabs={false}` 묶음이다(판정 A8).
  * 에러 경계 두 겹(설계 5.10): 로그인한 화면의 렌더 오류는 같은 탭 레이아웃 안의 `RouteErrorPage`가 받아 프레임 ·
  * 하단 탭 · 시연 패널이 남는다. 그 밖(공개 화면 · 레이아웃 자체)은 루트의 `ErrorPage`.
  */
@@ -81,7 +81,7 @@ export const routes: RouteObject[] = [
             element: <RoleTabLayout tabs={false} />,
             errorElement: (
               <RoleTabLayout tabs={false}>
-                <RouteErrorPage />
+                <RouteErrorPage withLogout />
               </RoleTabLayout>
             ),
             children: [

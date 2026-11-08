@@ -14,7 +14,7 @@ export function RoleTabLayout({
   tabs: showTabs = true,
 }: {
   children?: ReactNode;
-  /** false면 하단 탭을 그리지 않는다(새 시안 C03 · C04 · C08 인증 화면 — 상단 바 뒤로 가기만, 판정 A8). */
+  /** false면 하단 탭을 그리지 않는다(새 시안 C03 · C04 · C06 · C08 인증 화면 — 상단 바 뒤로 가기만, 판정 A8). */
   tabs?: boolean;
 }) {
   const { data: me } = useMe();

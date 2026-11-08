@@ -38,7 +38,7 @@ export function Checkbox({ label, error, id, className, disabled, ...rest }: Che
           aria-hidden
           data-checkbox-box
           className={cn(
-            'flex size-[22px] shrink-0 items-center justify-center rounded-[6px] border-2 border-border bg-surface text-on-primary transition-colors',
+            'flex size-[22px] shrink-0 items-center justify-center rounded-[6px] border-2 border-muted bg-surface text-on-primary transition-colors',
             'peer-checked:border-brand peer-checked:bg-brand peer-checked:[&_svg]:opacity-100',
             'peer-focus-visible:outline-2 peer-focus-visible:outline-offset-2 peer-focus-visible:outline-accent',
             error && 'border-danger',

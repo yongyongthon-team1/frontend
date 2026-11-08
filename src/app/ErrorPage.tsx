@@ -1,4 +1,5 @@
 import { Link, useRouteError } from 'react-router';
+import { LogoutButton } from '@/features/auth/components/LogoutButton';
 import { getLandingPath } from '@/features/auth/landing';
 import { useMe } from '@/features/auth/queries';
 import { buttonClass } from '@/shared/ui/buttonStyles';
@@ -25,8 +26,9 @@ export function ErrorPage() {
 /**
  * 로그인한 화면의 오류(화면 단위 에러 경계, 설계 5.10). 하단 탭 레이아웃 안에 그려져 폰 프레임 · 하단 탭 · 시연 패널이
  * 남는다 — 무대에서 화면 하나가 렌더 중에 깨져도 탭이나 역할 버튼으로 이어 간다. 다른 주소로 가면 오류에서 벗어난다.
+ * 탭이 없는 인증 화면(`withLogout`)에는 로그아웃도 둔다(처음 화면이 깨진 그 화면일 수 있다).
  */
-export function RouteErrorPage() {
+export function RouteErrorPage({ withLogout = false }: { withLogout?: boolean }) {
   const error = useRouteError();
   const { data: me } = useMe();
   return (
@@ -37,6 +39,8 @@ export function RouteErrorPage() {
         <Link to={me ? getLandingPath(me) : '/'} className={buttonClass('secondary')}>
           처음 화면으로
         </Link>
+        {/* 탭이 없는 인증 화면은 처음 화면이 깨진 그 화면일 수 있다 — 로그아웃이 마지막 출구다. */}
+        {withLogout ? <LogoutButton variant="ghost" className="mt-1 w-full" /> : null}
       </Page>
     </>
   );

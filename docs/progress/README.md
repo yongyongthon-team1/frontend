@@ -143,7 +143,7 @@
 | reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 ✅ 화면 연결 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
 | reviews | `GET /api/stores/:storeId/reviews` | hs-s08 · 가이드 확정 코스 상점 시트의 요약 · 별점 · 접힌 `최근 리뷰` ✅ 화면 연결 (R-02, `page=1&size=3` 한 쪽, 캠퍼스 지점은 부르지 않음. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증(C03 · C08), 사진 업로드 (U-05, multipart `school_name`(고교생) · `campus_id`(대학생) + `document`, jpg · png 5MB. 고교생은 이어서 `PATCH /users/me`로 학년을 저장. 고교생 화면 ✅ 연결(`/verify`), 대학생 화면 ✅ 연결(`/guide/verify`)) | ⬜ | ✅ | ⬜ | ⬜ |
-| verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 ✅ 화면 연결 (U-06, 거부 · 만료일 때만 다시 요청, 링크 7일) | ⬜ | ✅ | ⬜ | ⬜ |
+| verification | `POST /api/guardian-consents` | hs-s02b 보호자 동의 요청 ✅ 화면 연결 (U-06, 거부 · 만료일 때만 다시 요청, 링크 7일) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `GET /api/guardian-consents/:consentToken` | hs-a02 보호자 동의 안내 ✅ 화면 연결 (U-06, 로그인 없이 `auth: false`. 처리된 링크는 200 + 그 상태, 만료 `E410_EXPIRED` → `CONSENT_LINK_EXPIRED`, 없는 토큰 `E404` → `CONSENT_LINK_INVALID`) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `PATCH /api/guardian-consents/:consentToken` | hs-a02 동의 · 거부 ✅ 화면 연결 (U-06, 본문 `{ agree }`, 로그인 없이 `auth: false`, 처리한 요청은 `E409_ALREADY_PROCESSED`) | ⬜ | ✅ | ⬜ | ⬜ |
 | admin | `GET /api/admin/verifications` | owner-s06 인증 심사 목록 ✅ 화면 연결 (U-08 보완, `status` 없이 부른다 — 서버 기본 PENDING, 오래된 제출 순. 목업은 `APPROVED` · `REJECTED`도 받고 그 밖은 400) | ⬜ | ✅ | ⬜ | ⬜ |
@@ -184,7 +184,7 @@
 | 22 | 백엔드 | 보호자 동의 메일 발송 여부 · 링크 주소 · 유효 기간, 시연용 `demoConsentToken`은 `X-Demo-Key`가 있을 때만(계약 6절 21번). 처리: 목업은 `보호자 페이지 열기` 시연 링크 | 11/8 | ⬜ |
 | 23 | 사용자 · 팀 | 11/6 시연 대본 게이트: 대본에 리뷰 · 상점 교체 · 운영자 심사 · 가입 장면이 들어가면 그 화면을 P0로 올리고 무대 단언을 더한다(2B-R20). 처리: 사용자가 대본 확정 뒤 알려 준다 | 11/6 | ⬜ |
 | 24 | 백엔드 | `backend-alignment.md` 9절(2C 뒤 남은 질문, 시연 영향 순) 전달 | 11/8 | ⬜ |
-| 25 | 기획 · 백엔드 | 상점 데이터 출처가 바뀌었다: 기능 명세(U-07 · S-01)는 "인허가 데이터"인데 목업은 소상공인 상가정보(15083033, 2026-09)다. 상점 지점의 출처 줄은 `공공데이터(소상공인 상가정보) 기반`으로 바꿨다. 아직 `인허가`라고 쓰는 화면 문구 둘(G03 `추천 상점 기준`의 `COURSE_CRITERIA`, O05 검색 안내 `공공데이터(인허가)에 있는 가게`)은 그대로 두었다 — 바꿀지 결정. 백엔드는 같은 원본을 따로 적재하고, 시연 가게 1~4 ↔ owner1~4 짝을 맞춘다(`../reference/store-data.md`). 처리: 사용자가 팀에 전달 | 11/10 | ⬜ |
+| 25 | 기획 · 백엔드 | 상점 데이터 출처가 바뀌었다: 기능 명세(U-07 · S-01)는 "인허가 데이터"인데 목업은 소상공인 상가정보(15083033, 2026-09)다. 상점 지점의 출처 줄은 `공공데이터(소상공인 상가정보) 기반`으로, 화면 문구 둘(G03 `추천 상점 기준`의 `COURSE_CRITERIA`, O05 검색 안내)도 같은 출처 이름으로 바꿨다(2cfcf60). 백엔드는 같은 원본을 따로 적재하고, 시연 가게 1~4 ↔ owner1~4 짝을 맞춘다(`../reference/store-data.md`). **C-01(코스 초안)에는 규칙 하나를 더 알려 드린다: 상점 후보에서 캠퍼스 안 매장(주소가 대학 주소와 같은 행)을 뺀다.** 안 빼면 경희대 탐방에서 캠퍼스 안 14곳(중심에서 186m)이 렌토(570m)보다 먼저 뽑혀 시연 코스와 달라진다. 목업은 주소 문자열이 정확히 같은 행만 뺀다(`죽전로 152-1` 단국대 4곳은 빠지지 않고, 한국외대 글로벌은 10곳이 모두 캠퍼스 안이라 상점 정거장이 없다). 처리: 사용자가 팀에 전달 | 11/10 | ⬜ |
 
 ## 열린 질문
 

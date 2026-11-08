@@ -111,6 +111,18 @@ describe('보호자 동의 페이지 (/consent/:token)', () => {
     expect(screen.getByRole('button', { name: AGREE })).toBeDisabled();
   });
 
+  it('체크 전에는 보호자 동의 완료의 비활성 사유가 설명으로 붙고, 체크하면 사라진다', async () => {
+    const { user } = await open(DEMO_CONSENT_TOKENS.valid);
+    const button = await screen.findByRole('button', { name: AGREE });
+    expect(button).toBeDisabled();
+    expect(button).toHaveAccessibleDescription(
+      '위 내용에 동의하면 보호자 동의를 완료할 수 있어요.',
+    );
+    await user.click(screen.getByRole('checkbox', { name: CHECK }));
+    expect(screen.getByRole('button', { name: AGREE })).toBeEnabled();
+    expect(screen.getByRole('button', { name: AGREE })).not.toHaveAccessibleDescription();
+  });
+
   it('체크 전에는 보호자 동의 완료를 눌러도 요청이 나가지 않는다', async () => {
     const patches = capturePatches();
     const { user } = await open(DEMO_CONSENT_TOKENS.valid);

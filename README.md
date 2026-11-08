@@ -77,7 +77,7 @@ npm run e2e
 | 고교생(심사 중)   | `pending@demo.kr`                   | 오지호. 재학 인증 심사 중 · 보호자 동의 완료(운영자 대기열에 보임)                                                                                       |
 | 고교생(반려)      | `rejected@demo.kr`                  | 윤서아. 재학 인증 반려 · 보호자 동의 거부. 로그인하면 `/verify`                                                                                          |
 | 고교생(동의 대기) | `waiting@demo.kr`                   | 강하린. 재학 인증 심사 중 · 보호자 동의 대기(링크 유효). 로그인하면 홈(`/`)                                                                              |
-| 고교생(동의 만료) | `expired@demo.kr`                   | 임채원. 재학 인증 승인 · 보호자 동의 링크 만료. 로그인하면 `/verify`                                                                                     |
+| 고교생(동의 만료) | `expired@demo.kr`                   | 임채원. 재학 인증 승인 · 보호자 동의 링크 만료. 로그인하면 보호자 동의 요청(`/verify/guardian`)                                                          |
 | 가이드(인증 전)   | `guide-new@demo.kr`                 | 윤가온. 로그인하면 `/guide/verify`                                                                                                                       |
 | 가이드(심사 중)   | `guide-pending@demo.kr`             | 한도윤. 단국대, 재학 인증 심사 중. 프로필 학과 없음                                                                                                      |
 | 가이드(반려)      | `guide-rejected@demo.kr`            | 서지안. 명지대, 재학 인증 반려. 로그인하면 `/guide/verify`                                                                                               |

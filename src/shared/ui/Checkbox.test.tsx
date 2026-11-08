@@ -46,6 +46,13 @@ describe('Checkbox', () => {
     expect(container.querySelector('[data-checkbox-box]')).toHaveClass('size-[22px]');
   });
 
+  it('체크 전 테두리는 비텍스트 대비 3:1을 넘는 border-muted이고, 체크하면 브랜드색이 이긴다', () => {
+    const { container } = render(<Controlled />);
+    const box = container.querySelector('[data-checkbox-box]');
+    expect(box).toHaveClass('border-muted', 'peer-checked:border-brand');
+    expect(box).not.toHaveClass('border-border');
+  });
+
   it('disabled면 바뀌지 않는다', async () => {
     const onChange = vi.fn();
     render(<Checkbox label="동의" checked={false} onChange={onChange} disabled />);
