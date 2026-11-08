@@ -557,7 +557,7 @@ describe('P1 상태 계정(시드 v3)', () => {
     expect(landing('waiting@demo.kr')).toBe('/');
   });
 
-  it('임채원: 재학 승인 · 동의 링크 만료 · 첫 화면 /verify', () => {
+  it('임채원: 재학 승인 · 동의 링크 만료 · 첫 화면 /verify/guardian', () => {
     expect(verificationOf('expired@demo.kr')).toMatchObject({
       status: 'APPROVED',
       reviewedAt: stamp('2026-11-06', '09:00'),
@@ -575,7 +575,7 @@ describe('P1 상태 계정(시드 v3)', () => {
       interestedMajor: '통번역',
     });
     expect(toMe(db, 21, today).guardianStatus).toBe('EXPIRED');
-    expect(landing('expired@demo.kr')).toBe('/verify');
+    expect(landing('expired@demo.kr')).toBe('/verify/guardian');
   });
 
   it('오지호: 사진 · 제출 어제 21:30 · 동의 완료 토큰', () => {

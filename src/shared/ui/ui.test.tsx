@@ -325,7 +325,7 @@ describe('isTabActive: RegExp · exclude · 가이드/사장님 탭', () => {
     ['/guide/tours/1/course/confirm', ['코스 편집']],
     ['/guide/course', ['코스 편집']],
     ['/guide/me', ['MY']],
-    ['/guide/verify', ['MY']],
+    ['/guide/me/status', ['MY']],
   ])('가이드 %s → %j만 활성', (pathname, labels) => {
     expect(activeOf('UNIVERSITY', pathname)).toEqual(labels);
   });

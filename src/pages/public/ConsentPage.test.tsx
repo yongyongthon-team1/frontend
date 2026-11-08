@@ -218,12 +218,12 @@ describe('보호자 동의 페이지 (/consent/:token)', () => {
   });
 
   describe('토큰 세션이 있을 때 (같은 탭 학생)', () => {
-    it('결과 카드 아래에 학생 화면으로 돌아가기 링크(/verify)', async () => {
+    it('결과 카드 아래에 학생 화면으로 돌아가기 링크(/verify/guardian)', async () => {
       const { user, queryClient } = await open(DEMO_CONSENT_TOKENS.valid, 'waiting@demo.kr');
       await user.click(await screen.findByRole('button', { name: AGREE }));
       expect(await screen.findByText('동의를 마쳤어요')).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: BACK })).toHaveAttribute('href', '/verify');
-      // 학생의 내 정보 · 시연 토큰이 낡았다고 표시돼 /verify가 새로고침 없이 새 상태를 읽는다.
+      expect(screen.getByRole('link', { name: BACK })).toHaveAttribute('href', '/verify/guardian');
+      // 학생의 내 정보 · 시연 토큰이 낡았다고 표시돼 /verify/guardian이 새로고침 없이 새 상태를 읽는다.
       expect(queryClient.getQueryState(qk.me)?.isInvalidated).toBe(true);
     });
 

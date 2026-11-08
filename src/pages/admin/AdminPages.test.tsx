@@ -41,8 +41,6 @@ function capture(method: string, path: string): { count: () => number; bodies: u
   return { count: () => count, bodies };
 }
 
-const step1 = () => screen.getByRole('region', { name: 'STEP 1 · 재학 인증' });
-
 describe('A01 인증 심사 목록 (owner-s06)', () => {
   it('제목 · 소제목 `대기 3건` · 오래된 제출 순(한도윤이 첫 카드, `학교 확인`), 탭 · 처리 완료는 없다', async () => {
     await renderApp(LIST, { as: 'admin' });
@@ -271,7 +269,7 @@ describe('A02 학생증 상세 심사 (owner-a02)', () => {
     expect(screen.getByRole('link', { name: '목록으로' })).toHaveAttribute('href', LIST);
   });
 
-  it('승인 뒤 그 고교생의 /verify STEP 1 배지가 `승인`이다(전파)', async () => {
+  it('승인 뒤 그 고교생의 /verify 상태 줄이 `승인 완료`다(전파)', async () => {
     const { user, router, queryClient } = await renderApp(`${LIST}/${idOf(WAITING)}`, {
       as: 'admin',
     });
@@ -281,11 +279,10 @@ describe('A02 학생증 상세 심사 (owner-a02)', () => {
 
     await switchAccount(queryClient, WAITING);
     await act(() => router.navigate('/verify'));
-    await screen.findByText('STEP 1 · 재학 인증');
-    expect(within(step1()).getByText('승인')).toBeInTheDocument();
+    expect(await screen.findByRole('definition')).toHaveTextContent('승인 완료');
   });
 
-  it('승인 뒤 그 가이드의 /guide/verify가 `재학 인증 상태 · 승인`이다(전파)', async () => {
+  it('승인 뒤 그 가이드의 /guide/verify 상태 줄이 `승인 완료`다(전파)', async () => {
     const { user, router, queryClient } = await renderApp(`${LIST}/${idOf(GUIDE_PENDING)}`, {
       as: 'admin',
     });
@@ -301,7 +298,7 @@ describe('A02 학생증 상세 심사 (owner-a02)', () => {
 
     await switchAccount(queryClient, GUIDE_PENDING);
     await act(() => router.navigate('/guide/verify'));
-    expect(await screen.findByText('재학 인증 상태 · 승인')).toBeVisible();
+    expect(await screen.findByRole('definition')).toHaveTextContent('승인 완료');
   });
 });
 
@@ -458,7 +455,7 @@ describe('A03 반려 사유 입력 (owner-a02 · 반려)', () => {
     expect(screen.getByRole('link', { name: '목록으로' })).toHaveAttribute('href', LIST);
   });
 
-  it('반려 뒤 그 고교생의 /verify에 `반려`와 사유가 보인다(전파)', async () => {
+  it('반려 뒤 그 고교생의 /verify가 반려 · 재제출 화면이고 사유가 보인다(전파)', async () => {
     const { user, router, queryClient } = await renderApp(rejectPath(WAITING), { as: 'admin' });
     await user.type(
       await screen.findByRole('textbox', { name: '반려 사유' }),
@@ -470,8 +467,10 @@ describe('A03 반려 사유 입력 (owner-a02 · 반려)', () => {
 
     await switchAccount(queryClient, WAITING);
     await act(() => router.navigate('/verify'));
-    await screen.findByText('STEP 1 · 재학 인증');
-    expect(within(step1()).getByText('반려')).toBeInTheDocument();
-    expect(within(step1()).getByText('반려 사유: 학교명이 보이지 않습니다')).toBeInTheDocument();
+    // 반려면 `/verify`는 C08(반려 · 재제출) 화면이고, 사유가 맨 위 안내 상자에 보인다.
+    expect(
+      await screen.findByRole('heading', { level: 1, name: '인증 반려 · 재제출' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('반려 사유: 학교명이 보이지 않습니다')).toBeInTheDocument();
   });
 });

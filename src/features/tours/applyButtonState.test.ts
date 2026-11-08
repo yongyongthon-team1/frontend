@@ -140,10 +140,10 @@ describe('applyButtonState', () => {
       action: { label: '역할 인증 단계로 이동', to: '/verify' },
     }));
 
-  it('보호자 동의 전이면 인증 단계로', () =>
+  it('보호자 동의 전이면 보호자 동의 요청 화면으로', () =>
     expect(applyButtonState({ ...base, guardianStatus: 'PENDING' }, tour, '/').action).toEqual({
       label: '역할 인증 단계로 이동',
-      to: '/verify',
+      to: '/verify/guardian',
     }));
 
   it('모든 조건을 갖추면 신청 가능(활성)', () =>

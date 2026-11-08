@@ -12,8 +12,8 @@ import { testImage } from '@/test/files';
 import { renderApp, switchAccount } from '@/test/renderApp';
 import { wireFail } from '@/test/wire';
 
-const FILE_LABEL = '학생증·재학증명서 이미지 업로드';
-const SUBMIT = '재학 인증 제출하기';
+const FILE_LABEL = '학생증 사진 올리기';
+const SUBMIT = '인증 요청하기';
 const SAVE = '프로필 저장';
 const MB = 1024 * 1024;
 
@@ -42,18 +42,22 @@ function capture(method: string, pathPrefix: string): { count: () => number; bod
   return { count: () => count, bodies };
 }
 
-const univSelect = () => screen.getByRole('combobox', { name: '용용톤 참여 대학 선택' });
-const statusCard = () => screen.getByRole('region', { name: /^재학 인증 상태 · / });
+const univSelect = () => screen.getByRole('combobox', { name: '용용톤 참여 대학' });
 
-describe('/guide/verify 대학생 재학 인증', () => {
-  it('guide-new: 제목 · 칩 · 대학 선택 · 사진 칸 · 안내 · 각주, 뒤로 가기 없음 · MY 탭 활성', async () => {
+describe('/guide/verify 대학생 재학 인증 (C03 · C08 · 상태)', () => {
+  it('guide-new(C03): 상단 바 · 제목 · 안내 · 대학 선택 · 사진 카드 · 단계 · 버튼, 하단 탭 없음 · 첫 화면이라 로그아웃', async () => {
     await renderApp('/guide/verify', { as: 'guide-new@demo.kr' });
     expect(
-      await screen.findByRole('heading', { level: 1, name: '대학생 재학 인증' }),
+      await screen.findByRole('heading', { level: 1, name: '재학 인증 · 학생증 업로드' }),
     ).toBeInTheDocument();
-    expect(screen.queryByRole('button', { name: '뒤로 가기' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: 'MY' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByText('가이드 권한 인증')).toBeInTheDocument();
+    expect(
+      screen.getByRole('heading', { level: 2, name: '학생증을 인증해 주세요.' }),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText('고교생·대학생 모두 학생증 또는 재학증명서를 제출해요.'),
+    ).toBeInTheDocument();
+    expect(screen.getByRole('button', { name: '뒤로 가기' })).toBeInTheDocument();
+    expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).not.toBeInTheDocument();
     expect(screen.queryByText(/^반려 사유/)).not.toBeInTheDocument();
 
     await screen.findByRole('option', { name: '경희대 국제캠퍼스' });
@@ -71,11 +75,17 @@ describe('/guide/verify 대학생 재학 인증', () => {
       ['5', '한국외대 글로벌캠퍼스'],
     ]);
     expect(screen.getByLabelText(FILE_LABEL)).toBeInTheDocument();
-    expect(screen.getByText('이미지 형식·용량 확인 후 운영자 심사 대기')).toBeInTheDocument();
+    expect(screen.getByText('이름·학교명·재학 여부를 확인할 수 있게 촬영해 주세요.')).toBeVisible();
     expect(screen.getByText('jpg · png, 5MB 이하')).toBeInTheDocument();
-    expect(screen.getByText('심사 중 → 승인 / 반려')).toBeInTheDocument();
-    expect(screen.getByText('5개교 이외 학교 선택 시 제출할 수 없어요.')).toBeInTheDocument();
+    expect(screen.getByText('사진 확인 후 운영자가 심사해요')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: SUBMIT })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '로그아웃' })).toBeInTheDocument();
+  });
+
+  it('뒤로 가기는 가이드 MY(/guide/me)로 간다', async () => {
+    const { user, router } = await renderApp('/guide/verify', { as: 'guide-new@demo.kr' });
+    await user.click(await screen.findByRole('button', { name: '뒤로 가기' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/me'));
   });
 
   it('빈 칸을 내면 칸마다 문구, 요청은 나가지 않는다', async () => {
@@ -106,7 +116,7 @@ describe('/guide/verify 대학생 재학 인증', () => {
     expect(router.state.location.pathname).toBe('/guide/verify');
   });
 
-  it('guide-new: 대학 · 사진을 내면 토스트 + 심사 중으로 바뀌고 학과가 없으니 /guide/me/profile로 간다', async () => {
+  it('guide-new: 대학 · 사진을 내면 토스트 + 인증 상태(C07)로 간다(replace)', async () => {
     const posts = capture('POST', '/api/verifications/enrollment');
     const { user, router, queryClient } = await renderApp('/guide/verify', {
       as: 'guide-new@demo.kr',
@@ -118,7 +128,7 @@ describe('/guide/verify 대학생 재학 인증', () => {
     await user.click(screen.getByRole('button', { name: SUBMIT }));
 
     expect(await screen.findByText('재학 인증을 제출했어요.')).toBeInTheDocument();
-    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/me/profile'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/me/status'));
     expect(queryClient.getQueryData(qk.me)).toMatchObject({
       verificationStatus: 'PENDING',
       guideProfile: { universityId: 3 },
@@ -128,7 +138,7 @@ describe('/guide/verify 대학생 재학 인증', () => {
     expect(router.state.historyAction).toBe('REPLACE');
   });
 
-  it('제출하기를 연타해도 요청은 한 번', async () => {
+  it('인증 요청하기를 연타해도 요청은 한 번', async () => {
     setMockLatency({ base: 60, ai: 0 });
     const posts = capture('POST', '/api/verifications/enrollment');
     const { user, router } = await renderApp('/guide/verify', { as: 'guide-new@demo.kr' });
@@ -136,7 +146,7 @@ describe('/guide/verify 대학생 재학 인증', () => {
     await user.selectOptions(univSelect(), '3');
     await uploader().upload(screen.getByLabelText(FILE_LABEL), testImage());
     await user.dblClick(screen.getByRole('button', { name: SUBMIT }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/me/profile'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/me/status'));
     expect(posts.count()).toBe(1);
   });
 
@@ -159,22 +169,30 @@ describe('/guide/verify 대학생 재학 인증', () => {
     expect(router.state.location.pathname).toBe('/guide/verify');
   });
 
-  it('guide-rejected: 반려 사유 카드 · 직전 대학(명지) 미리 선택 · 재제출하면 학과가 있어 /guide', async () => {
+  it('guide-rejected(C08): danger 반려 사유 · 직전 대학(명지) 미리 선택 · A5 안내 · 재제출하면 인증 상태로', async () => {
     const { user, router } = await renderApp('/guide/verify', { as: 'guide-rejected@demo.kr' });
-    expect(await screen.findByText('재학 인증 상태 · 반려')).toBeInTheDocument();
     expect(
-      screen.getByText(
-        '반려 사유: 학생증 사진이 흐려 학교 이름을 확인할 수 없어요. 밝은 곳에서 다시 찍어 올려 주세요.',
-      ),
+      await screen.findByRole('heading', { level: 1, name: '인증 반려 · 재제출' }),
     ).toBeInTheDocument();
-    expect(screen.getAllByText('승인 전에는 탐방을 개설할 수 없습니다.').length).toBeGreaterThan(0);
+    expect(
+      screen.getByRole('heading', { level: 2, name: '인증을 다시 요청해 주세요.' }),
+    ).toBeInTheDocument();
+    const reason = screen.getByText(
+      '반려 사유: 학생증 사진이 흐려 학교 이름을 확인할 수 없어요. 밝은 곳에서 다시 찍어 올려 주세요.',
+    );
+    expect(reason).toHaveClass('bg-danger-soft');
+    expect(screen.getByText('새 사진으로 다시 제출해 주세요.')).toBeInTheDocument();
+    expect(screen.getByText('재제출 후 인증 상태를 다시 확인할 수 있어요')).toBeInTheDocument();
+    expect(
+      screen.queryByText('고교생·대학생 모두 학생증 또는 재학증명서를 제출해요.'),
+    ).not.toBeInTheDocument();
     await screen.findByRole('option', { name: '명지대 자연캠퍼스' });
     await waitFor(() => expect(univSelect()).toHaveValue('4'));
 
-    await uploader().upload(screen.getByLabelText(FILE_LABEL), testImage());
-    await user.click(screen.getByRole('button', { name: SUBMIT }));
+    await uploader().upload(screen.getByLabelText('학생증 다시 올리기'), testImage());
+    await user.click(screen.getByRole('button', { name: '재제출하기' }));
     expect(await screen.findByText('재학 인증을 제출했어요.')).toBeInTheDocument();
-    await waitFor(() => expect(router.state.location.pathname).toBe('/guide'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/me/status'));
     const userId = getDb().users.find((u) => u.email === 'guide-rejected@demo.kr')!.id;
     expect(getDb().verifications.find((v) => v.id === userId)).toMatchObject({
       status: 'PENDING',
@@ -182,15 +200,17 @@ describe('/guide/verify 대학생 재학 인증', () => {
     });
   });
 
-  it('guide-pending: 폼 없음 · 카드 심사 중 + 대학 줄 + 안내, 학과가 없으니 가이드 프로필 작성하기', async () => {
+  it('guide-pending: 폼 없음 · 심사 중 상태 줄 + 참여 대학 + 안내, 학과가 없으니 가이드 프로필 작성하기, 로그아웃 없음', async () => {
     await renderApp('/guide/verify', { as: 'guide-pending@demo.kr' });
-    expect(await screen.findByText('재학 인증 상태 · 심사 중')).toBeInTheDocument();
-    expect(await within(statusCard()).findByText('단국대학교 죽전캠퍼스')).toBeInTheDocument();
     expect(
-      within(statusCard()).getByText('승인 전에는 탐방을 개설할 수 없습니다.'),
+      await screen.findByRole('heading', { level: 2, name: '학생증을 심사하고 있어요.' }),
     ).toBeInTheDocument();
+    expect(await screen.findByText('단국대학교 죽전캠퍼스')).toBeInTheDocument();
+    expect(screen.getByText('학생증 인증').nextSibling).toHaveTextContent('심사 중');
+    expect(screen.getByText('승인 전에는 탐방을 개설할 수 없습니다.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: SUBMIT })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(FILE_LABEL)).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '가이드 프로필 작성하기' })).toHaveAttribute(
       'href',
       '/guide/me/profile',
@@ -205,17 +225,20 @@ describe('/guide/verify 대학생 재학 인증', () => {
     });
     await switchAccount(queryClient, 'guide-pending@demo.kr'); // 내 정보를 새로 받는다
     await act(() => router.navigate('/guide/verify'));
-    expect(await screen.findByText('재학 인증 상태 · 심사 중')).toBeInTheDocument();
+    expect(await screen.findByText('학생증을 심사하고 있어요.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
   });
 
-  it('정다은(승인 · 학과 있음): 승인 카드 + 새 탐방 개설하기 → /guide/tours/new', async () => {
+  it('정다은(승인 · 학과 있음): 승인 완료 상태 줄 + 참여 대학 + 새 탐방 개설하기 → /guide/tours/new', async () => {
     await renderApp('/guide/verify', { as: 'guide' });
-    expect(await screen.findByText('재학 인증 상태 · 승인')).toBeInTheDocument();
-    expect(await within(statusCard()).findByText('경희대학교 국제캠퍼스')).toBeInTheDocument();
+    expect(
+      await screen.findByRole('heading', { level: 2, name: '재학 인증이 끝났어요.' }),
+    ).toBeInTheDocument();
+    expect(screen.getByText('학생증 인증').nextSibling).toHaveTextContent('승인 완료');
+    expect(await screen.findByText('경희대학교 국제캠퍼스')).toBeInTheDocument();
     expect(screen.getByText('학생증 심사 완료 · 인증 배지 노출')).toBeInTheDocument();
     expect(screen.queryByText('승인 전에는 탐방을 개설할 수 없습니다.')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '새 탐방 개설하기' })).toHaveAttribute(
@@ -225,7 +248,7 @@ describe('/guide/verify 대학생 재학 인증', () => {
     expect(screen.queryByRole('button', { name: SUBMIT })).not.toBeInTheDocument();
   });
 
-  it('인증한 대학을 5개교 목록에서 못 찾으면 대학 줄이 없다', async () => {
+  it('인증한 대학을 5개교 목록에서 못 찾으면 참여 대학 줄이 없다', async () => {
     const { router, queryClient } = await renderApp('/explore', { as: 'guide-pending@demo.kr' });
     mutate((db) => {
       const user = db.users.find((u) => u.email === 'guide-pending@demo.kr')!;
@@ -233,9 +256,9 @@ describe('/guide/verify 대학생 재학 인증', () => {
     });
     await switchAccount(queryClient, 'guide-pending@demo.kr');
     await act(() => router.navigate('/guide/verify'));
-    expect(await screen.findByText('재학 인증 상태 · 심사 중')).toBeInTheDocument();
+    expect(await screen.findByText('학생증을 심사하고 있어요.')).toBeInTheDocument();
     await waitFor(() => expect(queryClient.getQueryData(qk.universities)).toBeDefined());
-    expect(within(statusCard()).queryByText(/캠퍼스$/)).not.toBeInTheDocument();
+    expect(screen.queryByText('참여 대학')).not.toBeInTheDocument();
     expect(screen.getByRole('link', { name: '가이드 프로필 작성하기' })).toBeInTheDocument();
   });
 });

@@ -10,12 +10,11 @@ describe('Notice', () => {
     expect(box).not.toHaveAttribute('role');
   });
 
-  it('danger: danger-soft 바탕 · danger 글자', () => {
+  it('danger: danger-soft 바탕 · 본문색(ink) 글자 + danger 왼쪽 띠 (danger 글자는 대비 AA 미달)', () => {
     render(<Notice tone="danger">반려 사유: 사진이 흐려요.</Notice>);
-    expect(screen.getByText('반려 사유: 사진이 흐려요.')).toHaveClass(
-      'bg-danger-soft',
-      'text-danger',
-    );
+    const box = screen.getByText('반려 사유: 사진이 흐려요.');
+    expect(box).toHaveClass('bg-danger-soft', 'text-ink', 'border-l-4', 'border-danger');
+    expect(box).not.toHaveClass('text-danger');
   });
 
   it('role · className을 넘길 수 있다', () => {

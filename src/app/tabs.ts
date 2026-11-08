@@ -15,7 +15,7 @@ export const TABS: Record<Role, TabItem[]> = {
       match: ['/', '/tours'],
     },
     { to: '/my-tours', label: '내 탐방', icon: List, match: ['/my-tours', '/coupons', '/reviews'] },
-    { to: '/me', label: 'MY', icon: CircleUser, match: ['/verify'] },
+    { to: '/me', label: 'MY', icon: CircleUser },
   ],
   UNIVERSITY: [
     {
@@ -32,7 +32,7 @@ export const TABS: Record<Role, TabItem[]> = {
       icon: Route,
       match: ['/guide/course', /^\/guide\/tours\/\d+\/course(\/|$)/],
     },
-    { to: '/guide/me', label: 'MY', icon: CircleUser, match: ['/guide/me', '/guide/verify'] },
+    { to: '/guide/me', label: 'MY', icon: CircleUser },
   ],
   OWNER: [
     {

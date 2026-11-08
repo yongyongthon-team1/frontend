@@ -35,7 +35,7 @@ describe('G12 /guide/me 가이드 MY', () => {
       ['/guide/me/profile', '가이드 프로필 수정전공·학교·소개를 관리해요.'],
       ['/guide/wishes', '고교생 희망 사항학생들이 남긴 희망 사항을 보고 탐방을 준비해요.'],
       ['/guide/tours', '내가 개설한 탐방모집 상태와 참가자를 확인해요.'],
-      ['/guide/verify', '내 정보·인증 상태계정과 재학 인증 정보를 확인해요.'],
+      ['/guide/me/status', '내 정보·인증 상태계정과 재학 인증 정보를 확인해요.'],
     ]);
     expect(screen.getByRole('button', { name: /^로그아웃/ })).toHaveTextContent(
       '다른 계정으로 UNIRO 사용하기',
@@ -59,7 +59,7 @@ describe('G12 /guide/me 가이드 MY', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/guide/me/profile'));
     await router.navigate('/guide/me');
     await user.click(await screen.findByRole('link', { name: /^내 정보·인증 상태/ }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/verify'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/guide/me/status'));
   });
 
   it('학과가 없는 계정은 등록 안내 카드와 프로필 등록 링크', async () => {

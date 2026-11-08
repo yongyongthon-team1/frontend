@@ -9,9 +9,16 @@ import { TABS } from '../tabs';
  * `RequireAuth` 안에서만 쓴다(내 정보가 이미 있다). `children`을 주면 하위 라우트 대신 그것을 그린다 — 화면 단위
  * 에러 경계(routes.tsx의 errorElement)가 같은 탭 레이아웃 안에 오류를 그릴 때 쓴다.
  */
-export function RoleTabLayout({ children }: { children?: ReactNode }) {
+export function RoleTabLayout({
+  children,
+  tabs: showTabs = true,
+}: {
+  children?: ReactNode;
+  /** false면 하단 탭을 그리지 않는다(새 시안 C03 · C04 · C08 인증 화면 — 상단 바 뒤로 가기만, 판정 A8). */
+  tabs?: boolean;
+}) {
   const { data: me } = useMe();
-  const tabs = me ? TABS[me.role] : [];
+  const tabs = me && showTabs ? TABS[me.role] : [];
   const scrollRef = useRef<HTMLElement>(null);
   const { pathname } = useLocation();
 

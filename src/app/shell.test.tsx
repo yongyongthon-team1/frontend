@@ -121,8 +121,8 @@ describe('레이아웃', () => {
   });
 
   it.each([
-    ['student', '/verify', 'MY', ['탐색', '내 탐방']],
-    ['guide', '/guide/verify', 'MY', ['내 탐방', '코스 편집']],
+    ['student', '/me/status', 'MY', ['탐색', '내 탐방']],
+    ['guide', '/guide/me/status', 'MY', ['내 탐방', '코스 편집']],
     ['guide', '/guide/wishes', '내 탐방', ['코스 편집', 'MY']],
     ['student', '/me/wishes', 'MY', ['탐색', '내 탐방']],
     ['student', '/me/wishes/1/edit', 'MY', ['탐색', '내 탐방']],
@@ -135,6 +135,32 @@ describe('레이아웃', () => {
     for (const other of others) {
       expect(within(nav).getByRole('link', { name: other })).not.toHaveAttribute('aria-current');
     }
+  });
+
+  // 판정 A8: 재학 인증 · 보호자 동의 요청 · 반려 재제출은 상단 바 뒤로 가기만 있고 하단 탭이 없다.
+  it.each([
+    ['student', '/verify', '/me'],
+    ['newbie@demo.kr', '/verify', '/me'],
+    ['rejected@demo.kr', '/verify', '/me'],
+    ['student', '/verify/guardian', '/me'],
+    ['guide', '/guide/verify', '/guide/me'],
+    ['guide-rejected@demo.kr', '/guide/verify', '/guide/me'],
+  ])('%s 인증 화면(%s)은 하단 탭이 없고 뒤로 가기는 %s', async (as, path, back) => {
+    const { user, router } = await renderApp(path, { as });
+    await user.click(await screen.findByRole('button', { name: '뒤로 가기' }));
+    await waitFor(() => expect(router.state.location.pathname).toBe(back));
+  });
+
+  it.each([
+    ['student', '/verify'],
+    ['newbie@demo.kr', '/verify'],
+    ['student', '/verify/guardian'],
+    ['guide', '/guide/verify'],
+    ['guide-rejected@demo.kr', '/guide/verify'],
+  ])('%s 인증 화면(%s)에는 하단 탭이 없다', async (as, path) => {
+    await renderApp(path, { as });
+    await screen.findByRole('button', { name: '뒤로 가기' });
+    expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).not.toBeInTheDocument();
   });
 
   it('운영자는 탭 없이 로그아웃 버튼', async () => {
@@ -175,7 +201,9 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/coupons/1', 'HIGH_SCHOOL'],
   ['/reviews/new', 'HIGH_SCHOOL'],
   ['/verify', 'HIGH_SCHOOL'],
+  ['/verify/guardian', 'HIGH_SCHOOL'],
   ['/me', 'HIGH_SCHOOL'],
+  ['/me/status', 'HIGH_SCHOOL'],
   ['/me/edit', 'HIGH_SCHOOL'],
   ['/me/wishes', 'HIGH_SCHOOL'],
   ['/me/wishes/1/edit', 'HIGH_SCHOOL'],
@@ -195,6 +223,7 @@ const SPEC_ROUTES: Array<[path: string, access: Access]> = [
   ['/guide/tours/1/cancel', 'UNIVERSITY'],
   ['/guide/me', 'UNIVERSITY'],
   ['/guide/me/profile', 'UNIVERSITY'],
+  ['/guide/me/status', 'UNIVERSITY'],
   ['/guide/verify', 'UNIVERSITY'],
   ['/guide/wishes', 'UNIVERSITY'],
   ['/explore', 'ANY'],

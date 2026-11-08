@@ -139,7 +139,7 @@ export function GuideMyPage() {
         />
         <ListRow to="/guide/tours" title="내가 개설한 탐방" meta="모집 상태와 참가자를 확인해요." />
         <ListRow
-          to="/guide/verify"
+          to="/guide/me/status"
           title="내 정보·인증 상태"
           meta="계정과 재학 인증 정보를 확인해요."
         />

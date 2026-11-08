@@ -46,11 +46,15 @@ test.describe('막다른 곳 없음', () => {
     await start(page, 'as=student');
     await switchTo(page, 'newbie@demo.kr');
 
-    await page.getByRole('link', { name: 'MY', exact: true }).click();
+    // 인증 전이라 첫 화면이 재학 인증(C03)이다 — 하단 탭이 없어 상단 바 뒤로 가기로 MY에 간다.
+    await expectOpen(page, /\/verify$/, '재학 인증 · 학생증 업로드');
+    await back(page);
     await expectOpen(page, /\/me$/, 'MY');
     await page.getByRole('link', { name: /^인증 상태 확인/ }).click();
-    await expectOpen(page, /\/verify$/, '인증하고 탐방 신청하기');
-    await page.getByRole('link', { name: 'MY', exact: true }).click();
+    await expectOpen(page, /\/me\/status$/, '내 정보');
+    await page.getByRole('link', { name: /^학생증 인증/ }).click();
+    await expectOpen(page, /\/verify$/, '재학 인증 · 학생증 업로드');
+    await back(page);
     await page.getByRole('link', { name: /^내 정보 수정/ }).click();
     await expectOpen(page, /\/me\/edit$/, '내 정보 수정');
   });
@@ -59,10 +63,14 @@ test.describe('막다른 곳 없음', () => {
     await start(page, 'as=student');
     await switchTo(page, 'guide-new@demo.kr');
 
-    await page.getByRole('link', { name: 'MY', exact: true }).click();
+    // 첫 화면이 재학 인증(C03)이다 — 하단 탭이 없어 상단 바 뒤로 가기로 MY에 간다.
+    await expectOpen(page, /\/guide\/verify$/, '재학 인증 · 학생증 업로드');
+    await back(page);
     await expectOpen(page, /\/guide\/me$/, 'MY');
     await page.getByRole('link', { name: /^내 정보·인증 상태/ }).click();
-    await expectOpen(page, /\/guide\/verify$/, '대학생 재학 인증');
+    await expectOpen(page, /\/guide\/me\/status$/, '내 정보');
+    await page.getByRole('link', { name: /^학생증 인증/ }).click();
+    await expectOpen(page, /\/guide\/verify$/, '재학 인증 · 학생증 업로드');
   });
 
   test('가이드: 인증 완료(guide) → 개설 · 완료 · 취소 · 장소 고르기 · 확정 코스 지도', async ({
@@ -110,6 +118,8 @@ test.describe('막다른 곳 없음', () => {
     await expectOpen(page, /\/guide\/me\/profile$/);
     await page.getByRole('link', { name: 'MY', exact: true }).click();
     await page.getByRole('link', { name: /^내 정보·인증 상태/ }).click();
+    await expectOpen(page, /\/guide\/me\/status$/, '내 정보');
+    await page.getByRole('link', { name: /^학생증 인증/ }).click();
     await expectOpen(page, /\/guide\/verify$/);
   });
 

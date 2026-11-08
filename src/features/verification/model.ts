@@ -62,7 +62,7 @@ export function canSubmitVerification(status: VerificationStatus): boolean {
 export const VERIFICATION_STATUS_LABEL: Record<VerificationStatus, string> = {
   NONE: '미제출',
   PENDING: '심사 중',
-  APPROVED: '승인',
+  APPROVED: '승인 완료',
   REJECTED: '반려',
 };
 

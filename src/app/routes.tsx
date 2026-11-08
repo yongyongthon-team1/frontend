@@ -10,6 +10,7 @@ import { CoursePickPage } from '@/pages/guide/CoursePickPage';
 import { GuideCourseMapPage } from '@/pages/guide/GuideCourseMapPage';
 import { GuideCourseRedirect } from '@/pages/guide/GuideCourseRedirect';
 import { GuideMyPage } from '@/pages/guide/GuideMyPage';
+import { GuideMyStatusPage } from '@/pages/guide/GuideMyStatusPage';
 import { GuideProfilePage } from '@/pages/guide/GuideProfilePage';
 import { GuideHomePage } from '@/pages/guide/GuideHomePage';
 import { GuideToursPage } from '@/pages/guide/GuideToursPage';
@@ -37,7 +38,9 @@ import { CourseMapPage } from '@/pages/student/CourseMapPage';
 import { EditWishPage } from '@/pages/student/EditWishPage';
 import { HomePage } from '@/pages/student/HomePage';
 import { MeEditPage } from '@/pages/student/MeEditPage';
+import { GuardianRequestPage } from '@/pages/student/GuardianRequestPage';
 import { MePage } from '@/pages/student/MePage';
+import { MyStatusPage } from '@/pages/student/MyStatusPage';
 import { MyTourDetailPage } from '@/pages/student/MyTourDetailPage';
 import { MyToursPage } from '@/pages/student/MyToursPage';
 import { MyWishesPage } from '@/pages/student/MyWishesPage';
@@ -57,6 +60,7 @@ import { NotFoundPage } from './NotFoundPage';
  * 설계 5.3의 라우트 전부. 화면이 아직 없는 곳은 `/explore`(P2)뿐이고 `PlaceholderPage`(자리)로 둔다.
  * 코드 분할(lazy)은 쓰지 않는다(결정 0006).
  * 가드 두 겹(설계 5.4): `RequireAuth`(토큰 → 내 정보) 안에 `RoleTabLayout`(역할별 하단 탭), 그 안에 `RequireRole`.
+ * 재학 인증 · 보호자 동의 요청 화면(C03 · C04 · C08)만 탭이 없는 `RoleTabLayout tabs={false}` 묶음이다(판정 A8).
  * 에러 경계 두 겹(설계 5.10): 로그인한 화면의 렌더 오류는 같은 탭 레이아웃 안의 `RouteErrorPage`가 받아 프레임 ·
  * 하단 탭 · 시연 패널이 남는다. 그 밖(공개 화면 · 레이아웃 자체)은 루트의 `ErrorPage`.
  */
@@ -72,6 +76,30 @@ export const routes: RouteObject[] = [
       {
         element: <RequireAuth />,
         children: [
+          {
+            // 인증 화면(C03 · C04 · C08): 상단 바 뒤로 가기만 있고 하단 탭이 없다(판정 A8). 뒤로 가기는 그 역할의 MY로 간다.
+            element: <RoleTabLayout tabs={false} />,
+            errorElement: (
+              <RoleTabLayout tabs={false}>
+                <RouteErrorPage />
+              </RoleTabLayout>
+            ),
+            children: [
+              {
+                element: <RequireRole role="HIGH_SCHOOL" />,
+                children: [
+                  { path: '/verify', element: <VerifyPage /> }, // C03 · C08 · 상태
+                  { path: '/verify/guardian', element: <GuardianRequestPage /> }, // C04
+                ],
+              },
+              {
+                element: <RequireRole role="UNIVERSITY" />,
+                children: [
+                  { path: '/guide/verify', element: <GuideVerifyPage /> }, // C03 · C08 · 상태 (U-05 guide-a01)
+                ],
+              },
+            ],
+          },
           {
             element: <RoleTabLayout />,
             errorElement: (
@@ -139,12 +167,12 @@ export const routes: RouteObject[] = [
                     element: <ReviewNewPage />,
                   },
                   {
-                    path: '/verify',
-                    element: <VerifyPage />,
-                  },
-                  {
                     path: '/me',
                     element: <MePage />, // H16 hs-a03
+                  },
+                  {
+                    path: '/me/status',
+                    element: <MyStatusPage />, // C07 내 정보 · 인증 상태
                   },
                   {
                     path: '/me/edit',
@@ -231,8 +259,8 @@ export const routes: RouteObject[] = [
                     element: <GuideProfilePage />, // U-04 G05
                   },
                   {
-                    path: '/guide/verify',
-                    element: <GuideVerifyPage />, // U-05 guide-a01
+                    path: '/guide/me/status',
+                    element: <GuideMyStatusPage />, // C07 내 정보 · 인증 상태(가이드)
                   },
                 ],
               },

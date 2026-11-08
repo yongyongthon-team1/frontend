@@ -1,4 +1,5 @@
 import type { ApplicationStatus } from '@/features/applications/model';
+import { studentVerificationPath } from '@/features/auth/landing';
 import type { Me } from '@/features/auth/model';
 import type { ActionLink } from '@/shared/lib/types';
 
@@ -164,7 +165,7 @@ export function applyButtonState(
       enabled: false,
       label: '탐방 신청하기',
       reason: '학생증 승인·보호자 동의 완료 후 신청할 수 있어요.',
-      action: { label: '역할 인증 단계로 이동', to: '/verify' },
+      action: { label: '역할 인증 단계로 이동', to: studentVerificationPath(me) },
     };
   }
   return {

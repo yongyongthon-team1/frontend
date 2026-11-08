@@ -54,7 +54,7 @@ describe('라벨 · 톤', () => {
     expect(VERIFICATION_STATUS_LABEL).toEqual({
       NONE: '미제출',
       PENDING: '심사 중',
-      APPROVED: '승인',
+      APPROVED: '승인 완료',
       REJECTED: '반려',
     });
     expect(VERIFICATION_TONE).toEqual({

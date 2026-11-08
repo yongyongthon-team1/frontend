@@ -52,7 +52,7 @@ describe('H16 /me 고교생 MY', () => {
       ['/my-tours?tab=past', '지난 탐방완료한 캠퍼스 탐방과 후기를 확인해요.'],
       ['/me/wishes', '내 희망 사항남긴 희망 사항을 보고 고쳐요.'],
       ['/me/edit', '내 정보 수정이름·학교·관심 분야를 관리해요.'],
-      ['/verify', '인증 상태 확인학생증 인증 및 보호자 동의 현황'],
+      ['/me/status', '인증 상태 확인학생증 인증 및 보호자 동의 현황'],
     ]);
     const logout = screen.getByRole('button', { name: /^로그아웃/ });
     expect(logout).toHaveTextContent('다른 계정으로 UNIRO 사용하기');
@@ -86,10 +86,10 @@ describe('H16 /me 고교생 MY', () => {
     await waitFor(() => expect(router.state.location.pathname).toBe('/verify'));
   });
 
-  it('인증 상태 확인 행 → /verify', async () => {
+  it('인증 상태 확인 행 → /me/status(C07)', async () => {
     const { user, router } = await renderApp('/me', { as: 'student' });
     await user.click(await screen.findByRole('link', { name: /^인증 상태 확인/ }));
-    await waitFor(() => expect(router.state.location.pathname).toBe('/verify'));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/me/status'));
   });
 
   it('로그아웃 행 → /login, 토큰 비움', async () => {

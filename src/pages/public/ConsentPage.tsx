@@ -59,7 +59,7 @@ function DecidedCard({ agreed, signedIn }: { agreed: boolean; signedIn: boolean 
         }
       />
       {signedIn ? (
-        <Link to="/verify" className={buttonClass('secondary')}>
+        <Link to="/verify/guardian" className={buttonClass('secondary')}>
           학생 화면으로 돌아가기
         </Link>
       ) : null}

@@ -3,6 +3,7 @@ import { Link } from 'react-router';
 import { completedTourCount } from '@/features/applications/model';
 import { useMyApplications } from '@/features/applications/queries';
 import { LogoutButton } from '@/features/auth/components/LogoutButton';
+import { studentVerificationPath } from '@/features/auth/landing';
 import type { Me } from '@/features/auth/model';
 import { splitInterests, verificationBadge } from '@/features/auth/profile';
 import { useMe } from '@/features/auth/queries';
@@ -99,7 +100,7 @@ export function MePage() {
               title="인증을 마치면 탐방을 신청할 수 있어요."
               footer={
                 <Link
-                  to="/verify"
+                  to={studentVerificationPath(me)}
                   className="inline-flex min-h-11 items-center gap-1 text-sm font-bold text-brand"
                 >
                   인증 이어하기
@@ -119,7 +120,7 @@ export function MePage() {
         />
         <ListRow to="/me/wishes" title="내 희망 사항" meta="남긴 희망 사항을 보고 고쳐요." />
         <ListRow to="/me/edit" title="내 정보 수정" meta="이름·학교·관심 분야를 관리해요." />
-        <ListRow to="/verify" title="인증 상태 확인" meta="학생증 인증 및 보호자 동의 현황" />
+        <ListRow to="/me/status" title="인증 상태 확인" meta="학생증 인증 및 보호자 동의 현황" />
         <LogoutButton variant="row" description="다른 계정으로 UNIRO 사용하기" />
       </div>
     </Page>

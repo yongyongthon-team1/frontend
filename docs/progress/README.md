@@ -32,7 +32,9 @@
 | 코드 | 화면 | 라우트 | 우선 | UI | 목업 | 실API | 하이파이 | QA |
 |---|---|---|---|---|---|---|---|---|
 | `hs-s01` | 로그인 ✅(새 시안 C01 — 워드마크 머리 · 보이는 라벨 칸 · 안내 상자 · 하단 고정 `로그인` + 텍스트 링크 `회원가입`) | `/login` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `hs-s02` | 재학 인증 · 보호자 동의 ✅(U-05 · U-06 — 학생증 업로드, 보호자 동의 요청 · 대기 · 완료, 시연 도구가 켜졌을 때 `보호자 페이지 열기` · `동의 완료로 건너뛰기`) | `/verify` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
+| `hs-s02` | 재학 인증 ✅(새 시안 C03 · C08 — 학생증 업로드 한 장 · 안내 상자 · 학교 이름 · 학년 칸(판정 A1, 두 번 쓰기 유지) · 단계 목록 · 하단 고정 `인증 요청하기`, 반려면 danger 반려 사유 + `재제출하기`(A5 문구), 심사 중 · 승인은 상태 줄 + 다음 행동. 상단 바 뒤로 가기 → `/me`, 하단 탭 없음(A8), 첫 화면이면 로그아웃) | `/verify` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `hs-s02b` | 보호자 동의 요청 ✅(C04 — `/verify`의 STEP 2를 떼어 냄: 보호자 성함(A1) · 이메일 · 안내 상자 · 진행 상태 카드 · 하단 고정 `동의 링크 보내기`. 미요청 · 동의 대기 · 완료 · 거부 · 링크 만료, 거부 · 만료에서만 다시 요청, 시연 도구가 켜지고 확장 토큰이 있을 때 `보호자 페이지 열기` · `동의 완료로 건너뛰기`(A9). 인증 상태를 다시 읽는 동안 건너뛰기 잠금) | `/verify/guardian` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
+| `hs-s02c` | 내 정보 · 인증 상태 ✅(C07 — 프로필 카드 · `학생증 인증` · `보호자 참여 동의` 상태 줄이 C03 · C04로 이어짐, `계정 및 알림 설정` 행 없음(A6). 가이드는 보호자 줄 없이 학교 · 학과. MY의 `인증 상태 확인` · `내 정보·인증 상태`가 여기로) | `/me/status` · `/guide/me/status` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s03` | 홈 · T-01 희망 사항 등록(H01 V2 부품) | `/` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s04` | T-01 탐방 찾기 결과(H02 V2 부품 · 희망 원문 카드 + 모집 중 탐방) | `/tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `hs-s05` | 탐방 상세 · 신청 · V2(H03) | `/tours/:tourId` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -64,7 +66,7 @@
 | `guide-s05` | 코스 편집 · 상점 교체 · V2(G03 코스 완성: AI 초안 + 편집 한 화면, 카드 `≡` → 지점 시트) · 지점 추가 · 교체 ✅(소제목 줄 `+ 장소 추가` · 지점 시트 `다른 장소로 교체` → G07) | `/guide/tours/:tourId/course/edit` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s06` | 코스 확정 · 쿠폰 발급 · V2(G08 확정 전 점검 → 같은 화면의 완료 상태, 옛 `/confirmed`는 이리로) | `/guide/tours/:tourId/course/confirm` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-s07` | 탐방 종료 · 완료 · V2(G09, 확인 창 없음) | `/guide/tours/:tourId/complete` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
-| `guide-a01` | 대학생 재학 인증 ✅(U-05 — 대학 + 학생증 사진, 심사 중 · 승인 상태 카드, 반려 재제출) | `/guide/verify` | P1 | ✅ | ✅ | ⬜ | V2에 없음 | ⬜ |
+| `guide-a01` | 대학생 재학 인증 ✅(새 시안 C03 · C08 — 고교생 `/verify`와 같은 화면 모양, 학교 칸 자리에 `용용톤 참여 대학` 선택(A1), 반려면 직전 대학 미리 선택 + danger 반려 사유 · `재제출하기`, 제출 뒤 C07 `/guide/me/status`, 심사 중 · 승인은 상태 줄 + 참여 대학 + 다음 행동) | `/guide/verify` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a02` | 내가 개설한 탐방 · V2(G06, `?tab=past`) | `/guide/tours` | P0 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a03` | 코스 장소 추가 · 교체 · V2(G07 — 추가는 `주변 상점` · `캠퍼스 장소` 탭, 교체는 그 지점 유형 목록만, 상점 카드의 `학생 요청:` 줄 대신 `✦` AI 리뷰 요약, 도보 거리순) | `/guide/tours/:tourId/course/stops/pick` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
 | `guide-a04` | 탐방 취소 확인 · V2(G10, 확인 창 대체) | `/guide/tours/:tourId/cancel` | P1 | ✅ | ✅ | ⬜ | ✅ | ⬜ |
@@ -140,7 +142,7 @@
 | stores | `POST /api/verifications/business` | owner-s01 사업자 인증 ✅ 화면 연결 (U-07, 본문 `{ business_number(숫자 10자리), representative_name, opened_at }`. 422 `E422_BUSINESS_INVALID`의 `errors[].reason`이 `CLOSED`면 `BIZ_CLOSED` · 그 밖은 `BIZ_MISMATCH` — `ApiError.fieldReasons`. 성공하면 내 정보를 다시 읽는다. 화면 ✅ MVP 2B′ Task 14) | ⬜ | ✅ | ⬜ | ⬜ |
 | reviews | `POST /api/stores/:storeId/reviews` | hs-s10 방문 리뷰 작성 ✅ 화면 연결 (R-01, 본문 `{ coupon_id, rating, content }`, `E403_COUPON_NOT_USED` → `REVIEW_NOT_ALLOWED` · `E409_ALREADY_REVIEWED` → `REVIEW_DUPLICATE`) | ⬜ | ✅ | ⬜ | ⬜ |
 | reviews | `GET /api/stores/:storeId/reviews` | hs-s08 · 가이드 확정 코스 상점 시트의 요약 · 별점 · 접힌 `최근 리뷰` ✅ 화면 연결 (R-02, `page=1&size=3` 한 쪽, 캠퍼스 지점은 부르지 않음. 작성자 가림 · 목업 AI 요약은 저장 때 다시 만든다) | ⬜ | ✅ | ⬜ | ⬜ |
-| verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증, 사진 업로드 (U-05, multipart `school_name`(고교생) · `campus_id`(대학생) + `document`, jpg · png 5MB. 고교생은 이어서 `PATCH /users/me`로 학년을 저장. 고교생 화면 ✅ 연결(`/verify`), 대학생 화면 ✅ 연결(`/guide/verify`)) | ⬜ | ✅ | ⬜ | ⬜ |
+| verification | `POST /api/verifications/enrollment` | hs-s02 · guide-a01 재학 인증(C03 · C08), 사진 업로드 (U-05, multipart `school_name`(고교생) · `campus_id`(대학생) + `document`, jpg · png 5MB. 고교생은 이어서 `PATCH /users/me`로 학년을 저장. 고교생 화면 ✅ 연결(`/verify`), 대학생 화면 ✅ 연결(`/guide/verify`)) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `POST /api/guardian-consents` | hs-s02 보호자 동의 요청 ✅ 화면 연결 (U-06, 거부 · 만료일 때만 다시 요청, 링크 7일) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `GET /api/guardian-consents/:consentToken` | hs-a02 보호자 동의 안내 ✅ 화면 연결 (U-06, 로그인 없이 `auth: false`. 처리된 링크는 200 + 그 상태, 만료 `E410_EXPIRED` → `CONSENT_LINK_EXPIRED`, 없는 토큰 `E404` → `CONSENT_LINK_INVALID`) | ⬜ | ✅ | ⬜ | ⬜ |
 | verification | `PATCH /api/guardian-consents/:consentToken` | hs-a02 동의 · 거부 ✅ 화면 연결 (U-06, 본문 `{ agree }`, 로그인 없이 `auth: false`, 처리한 요청은 `E409_ALREADY_PROCESSED`) | ⬜ | ✅ | ⬜ | ⬜ |
