@@ -126,7 +126,7 @@ export const COURSE_CRITERIA =
   '신청자들이 적은 하고 싶은 것 → 관련 업종 상점 매칭(인허가 공공데이터) · 제휴 상점 1곳 이상 포함';
 
 /** 상점 지점의 데이터 출처 라벨(설계 5.6). */
-export const STORE_DATA_SOURCE = '공공데이터(인허가) 기반';
+export const STORE_DATA_SOURCE = '공공데이터(소상공인 상가정보) 기반';
 
 /** 지점 한줄평 최대 길이(백엔드 C-02 `comment` 100자 이내, 2C-R12 ③). */
 export const COURSE_NOTE_MAX = 100;

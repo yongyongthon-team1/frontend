@@ -256,10 +256,10 @@ describe('candidateStatus (G07)', () => {
 
 describe('matchesPlace (G07 검색)', () => {
   it('공백 · 대소문자를 무시한 부분 일치', () => {
-    expect(matchesPlace(['카페 모래시계', '카페'], ' 카페 ')).toBe(true);
-    expect(matchesPlace(['카페 모래시계', '카페'], '모래 시계')).toBe(true);
+    expect(matchesPlace(['타임리스커피', '카페'], ' 카페 ')).toBe(true);
+    expect(matchesPlace(['타임리스커피', '카페'], '타임 리스')).toBe(true);
     expect(matchesPlace(['Cafe Sand', null], 'cafe s')).toBe(true);
-    expect(matchesPlace(['서천 밥상', '한식'], '한식')).toBe(true);
+    expect(matchesPlace(['모모식당', '한식'], '한식')).toBe(true);
   });
 
   it('어느 글에도 없으면 false, null은 건너뛴다', () => {

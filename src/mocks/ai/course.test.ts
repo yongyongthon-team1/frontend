@@ -70,7 +70,7 @@ describe('generateCourseDraft', () => {
     expect(stops.some((s) => s.partnershipId !== null)).toBe(true);
   });
 
-  it('시연 초안 전체: 예술·디자인대학 → 서천 밥상 → 카페 모래시계와 이유 · 관심사', () =>
+  it('시연 초안 전체: 예술·디자인대학 → 렌토 → 타임리스커피와 이유 · 관심사', () =>
     expect(generateCourseDraft(db, 1)).toEqual({
       interests: ['전공 수업', '캠퍼스 시설', '식사', '카페'],
       stops: [
@@ -87,7 +87,7 @@ describe('generateCourseDraft', () => {
         {
           stopType: 'STORE',
           campusBuildingId: null,
-          storeId: 1, // 서천 밥상
+          storeId: 1, // 렌토
           partnershipId: 1,
           stopOrder: 2,
           visitTime: '15:10',
@@ -99,7 +99,7 @@ describe('generateCourseDraft', () => {
         {
           stopType: 'STORE',
           campusBuildingId: null,
-          storeId: 2, // 카페 모래시계
+          storeId: 2, // 타임리스커피
           partnershipId: 2,
           stopOrder: 3,
           visitTime: '16:00',
@@ -129,7 +129,7 @@ describe('generateCourseDraft', () => {
         {
           stopType: 'STORE',
           campusBuildingId: null,
-          storeId: 5, // 죽전 돼지국밥(비제휴)
+          storeId: 5, // 단(비제휴, 단국대 중심에서 84m)
           partnershipId: null,
           stopOrder: 2,
           visitTime: '11:10',
@@ -139,7 +139,7 @@ describe('generateCourseDraft', () => {
         {
           stopType: 'STORE',
           campusBuildingId: null,
-          storeId: 6, // 카페 단풍(비제휴)
+          storeId: 6, // 일삼일구(비제휴, 87m)
           partnershipId: null,
           stopOrder: 3,
           visitTime: '12:00',
@@ -159,11 +159,20 @@ describe('generateCourseDraft', () => {
     ]);
   });
 
-  it('놀거리 의도가 있으면 놀거리 상점을 식사 · 카페 뒤에 넣는다', () => {
+  it('놀거리 의도가 있으면 놀거리 상점을 식사 · 카페 뒤에 넣는다(후보가 없으면 그 의도는 지점 없이 관심사에만)', () => {
     setMotivation('haeun@demo.kr', 1, '카페에서 과제하고 보드게임도 해 보고 싶어요');
+    // 상가정보는 음식점만 거르므로 놀거리 업종(보드게임카페 · 노래방 · 공방) 상점이 없다.
+    expect(generateCourseDraft(db, 1)).toMatchObject({
+      interests: ['전공 수업', '캠퍼스 시설', '식사', '카페', '놀거리'],
+      stops: [{ storeId: null }, { storeId: 1 }, { storeId: 2 }],
+    });
+    const board = addStore(
+      { name: '보드게임 카페', category: '보드게임카페', latitude: 37.2441, longitude: 127.079 },
+      99,
+    );
     const { stops, interests } = generateCourseDraft(db, 1);
     expect(interests).toEqual(['전공 수업', '캠퍼스 시설', '식사', '카페', '놀거리']);
-    expect(storeIdsOf(stops)).toEqual([null, 1, 2, 4]);
+    expect(storeIdsOf(stops)).toEqual([null, 1, 2, board.id]);
     expect(stops.map((s) => [s.stopOrder, s.visitTime])).toEqual([
       [1, '14:00'],
       [2, '15:10'],
@@ -171,24 +180,40 @@ describe('generateCourseDraft', () => {
       [4, '16:15'],
     ]);
     expect(stops[3]).toMatchObject({
-      partnershipId: 4,
+      partnershipId: 99,
       recommendationReason:
         '신청자 1명이 "카페에서 과제하고 보드게임도 해 보고"를 궁금해했어요. 학생들이 자주 찾는 곳이에요.',
     });
   });
 
   it('반경 1km 밖 상점은 고르지 않는다(거리는 대학 중심에서 잰다)', () => {
-    store(1).latitude += 0.02; // 서천 밥상을 약 2km 밖으로
-    expect(storeIdsOf(generateCourseDraft(db, 1).stops)).toEqual([null, 3, 2]); // 영통 분식집
+    store(1).latitude += 0.02; // 렌토를 약 2km 밖으로
+    expect(store(233).name).toBe('키친드마망'); // 다음으로 가까운 식사 상점(양식, 636m, 비제휴)
+    expect(storeIdsOf(generateCourseDraft(db, 1).stops)).toEqual([null, 233, 2]);
   });
 
   it('가장 가까운 상점은 캠퍼스 장소가 아니라 대학 중심에서 잰다', () => {
-    // 대학 중심에서 83m · 예술·디자인대학에서 306m(카페 모래시계는 각각 139m · 85m)
+    // 대학 중심에서 416m · 예술·디자인대학에서 596m(타임리스커피는 각각 570m · 569m)
     const nearCenter = addStore(
-      { name: '카페 정문', category: '카페', latitude: 37.2392, longitude: 127.084 },
+      { name: '카페 정문', category: '카페', latitude: 37.2397, longitude: 127.088 },
       99,
     );
     expect(storeIdsOf(generateCourseDraft(db, 1).stops)).toEqual([null, 1, nearCenter.id]);
+  });
+
+  it('캠퍼스 안 매장(대학과 같은 주소)은 상점 후보가 아니다 — 대학가 상권에서 고른다', () => {
+    const khu = db.universities.find((u) => u.id === 2)!;
+    const inCampus = db.stores.filter((s) => s.address === khu.address);
+    // 경희대 국제캠퍼스 안 매장 14곳은 대학 주소로 지오코딩된 2m 간격의 두 좌표(중심에서 186 · 188m)에 있다.
+    expect(inCampus).toHaveLength(14);
+    const ids = storeIdsOf(generateCourseDraft(db, 1).stops);
+    expect(ids).toEqual([null, 1, 2]);
+    expect(inCampus.some((s) => ids.includes(s.id))).toBe(false);
+
+    // 같은 상점이라도 주소가 대학 주소가 아니면 후보다.
+    const cafe = inCampus.find((s) => s.category === '카페')!;
+    cafe.address = '경기도 용인시 기흥구 서천동';
+    expect(storeIdsOf(generateCourseDraft(db, 1).stops)).toEqual([null, 1, cafe.id]);
   });
 
   it('같은 거리면 이름 순으로 고른다', () => {
@@ -204,17 +229,19 @@ describe('generateCourseDraft', () => {
   it('고른 상점이 모두 비제휴면 같은 업종의 가장 가까운 제휴 상점으로 첫 상점을 바꾼다', () => {
     dropPartnerships(1, 2);
     const { stops } = generateCourseDraft(db, 1);
-    expect(storeIdsOf(stops)).toEqual([null, 3, 2]); // 서천 밥상 → 영통 분식집(분식, 제휴)
-    expect(partnershipIdsOf(stops)).toEqual([null, 3, null]);
+    // 렌토 → 모모식당(한식, 제휴, 756m — 땡큐꼬마김밥 791m보다 가깝다)
+    expect(storeIdsOf(stops)).toEqual([null, 4, 2]);
+    expect(partnershipIdsOf(stops)).toEqual([null, 4, null]);
     expect(stops[1].recommendationReason).toBe(
       '신청자 2명이 "학생들이 자주 가는 밥집이 궁금해요"를 궁금해했어요. 학생들이 자주 찾는 곳이에요.',
     );
   });
 
   it('첫 상점 업종에 제휴 후보가 없으면 다음 상점 업종의 제휴 상점으로 바꾼다', () => {
-    dropPartnerships(1, 2, 3);
+    dropPartnerships(1, 2, 3, 4);
+    // 대학 중심에서 667m — 가장 가까운 카페(타임리스커피 570m)는 아니다
     const cafe = addStore(
-      { name: '카페 새벽', category: '카페', latitude: 37.242, longitude: 127.086 },
+      { name: '카페 새벽', category: '카페', latitude: 37.2457, longitude: 127.0833 },
       99,
     );
     const { stops } = generateCourseDraft(db, 1);
@@ -223,7 +250,12 @@ describe('generateCourseDraft', () => {
   });
 
   it('관련 업종 상점이 모두 비제휴면 제휴 지점 없이 만든다(다른 업종 제휴 상점은 붙이지 않는다)', () => {
-    dropPartnerships(1, 2, 3); // 보드게임 카페 다이스(놀거리)만 제휴로 남는다
+    dropPartnerships(1, 2, 3, 4);
+    // 놀거리 제휴 상점만 남는다 — 승인자 의도는 식사 · 카페뿐이다.
+    addStore(
+      { name: '보드게임 카페', category: '보드게임카페', latitude: 37.2441, longitude: 127.079 },
+      99,
+    );
     const { stops } = generateCourseDraft(db, 1);
     expect(storeIdsOf(stops)).toEqual([null, 1, 2]);
     expect(partnershipIdsOf(stops)).toEqual([null, null, null]);
@@ -235,8 +267,8 @@ describe('generateCourseDraft', () => {
 
     db.partnerships.find((p) => p.storeId === 2)!.startDate = '2026-11-16';
     const { stops } = generateCourseDraft(db, 1);
-    expect(storeIdsOf(stops)).toEqual([null, 3, 2]);
-    expect(partnershipIdsOf(stops)).toEqual([null, 3, null]);
+    expect(storeIdsOf(stops)).toEqual([null, 4, 2]); // 모모식당(한식, 제휴)
+    expect(partnershipIdsOf(stops)).toEqual([null, 4, null]);
   });
 
   it('탐방이 없으면 NOT_FOUND', () =>

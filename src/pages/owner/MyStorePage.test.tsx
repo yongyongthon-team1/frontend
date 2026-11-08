@@ -37,7 +37,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     expect(screen.getByText('동네 탐방과 함께 새로운 손님을 맞이해요.')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'UNIRO' })).toBeInTheDocument();
     expect(screen.getByText('MY LOCAL SHOP')).toBeInTheDocument();
-    expect(screen.getByText('서천 밥상')).toBeInTheDocument();
+    expect(screen.getByText('렌토')).toBeInTheDocument();
     expect(screen.getByText('식사 금액 10% 할인 운영 중')).toBeInTheDocument();
     expect(screen.getByText('제휴 운영 중')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '쿠폰 코드 입력하기' })).toHaveAttribute(
@@ -53,7 +53,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
 
   it('O01: 쿠폰 사용 방법 아래에 방문 · 리뷰 리포트 링크(› 는 장식), 쿠폰 코드 입력하기는 그대로', async () => {
     await renderStore();
-    await screen.findByText('서천 밥상');
+    await screen.findByText('렌토');
     const link = screen.getByRole('link', { name: '방문 · 리뷰 리포트' });
     expect(link).toHaveAttribute('href', '/owner/report');
     expect(link).toHaveTextContent('방문 · 리뷰 리포트 ›');
@@ -101,7 +101,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
 
   it('O01: 리포트 링크와 같은 줄에 제휴 혜택 수정 › · 가게 정보 수정 › (› 는 장식), 쿠폰 코드 입력하기는 그대로', async () => {
     await renderStore();
-    await screen.findByText('서천 밥상');
+    await screen.findByText('렌토');
     const report = screen.getByRole('link', { name: '방문 · 리뷰 리포트' });
     const partnership = screen.getByRole('link', { name: '제휴 혜택 수정' });
     const edit = screen.getByRole('link', { name: '가게 정보 수정' });
@@ -170,16 +170,16 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     expect(screen.queryByText('아직 연결된 가게가 없어요.')).not.toBeInTheDocument();
     server.resetHandlers();
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
-    expect(await screen.findByText('서천 밥상')).toBeInTheDocument();
+    expect(await screen.findByText('렌토')).toBeInTheDocument();
   });
 
   it('다시 불러오다 실패해도 받은 가게는 그대로 보인다', async () => {
     const { queryClient } = await renderStore();
-    await screen.findByText('서천 밥상');
+    await screen.findByText('렌토');
     server.use(http.get('/api/users/me/store', () => wireFail('E400')));
     await queryClient.refetchQueries({ queryKey: qk.myStore });
     expect(queryClient.getQueryState(qk.myStore)?.status).toBe('error');
-    expect(screen.getByText('서천 밥상')).toBeInTheDocument();
+    expect(screen.getByText('렌토')).toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument();
   });
 
@@ -202,7 +202,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
     });
     try {
       const { user, router } = await renderStore();
-      await screen.findByText('서천 밥상');
+      await screen.findByText('렌토');
       const button = screen.getByRole('button', { name: '로그아웃' });
       await user.dblClick(button);
       expect(button).toBeDisabled();
@@ -215,7 +215,7 @@ describe('사장님 내 가게 (O01 · O01-E, owner-s02)', () => {
 
   it('하단 탭: 내 가게가 현재 탭', async () => {
     await renderStore();
-    await screen.findByText('서천 밥상');
+    await screen.findByText('렌토');
     const nav = screen.getByRole('navigation', { name: '주요 메뉴' });
     expect(within(nav).getByRole('link', { name: '내 가게' })).toHaveAttribute(
       'aria-current',

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { computeCouponState } from '@/features/coupons/model';
 import { getLandingPath } from '@/features/auth/landing';
+import { LIFESTYLE_CATEGORIES } from '@/mocks/ai/interests';
 import { toMe } from '@/mocks/rules/views';
 import {
   DEMO_BUSINESS,
@@ -10,9 +11,10 @@ import {
   DEMO_P1_ACCOUNTS,
   DEMO_STORE_OWNERS,
 } from '@/shared/config/demoAccounts';
+import yonginStores from './data/yonginStores.json';
 import { distanceMeters } from './geo';
 import { MOCK_DOC_SAMPLE } from './files';
-import { createSeed, DEMO_TOUR_ID, DEMO_UNIVERSITY_ID } from './seed';
+import { createSeed, DEMO_STORE_SOURCE_IDS, DEMO_TOUR_ID, DEMO_UNIVERSITY_ID } from './seed';
 import { MOCK_DB_VERSION } from './schema';
 import type { DB } from './schema';
 
@@ -42,10 +44,10 @@ function maxId(db: DB): number {
 }
 
 describe('createSeed', () => {
-  it('희망 사항 4행(김민지는 없다) · DB 버전 4', () => {
+  it('희망 사항 4행(김민지는 없다) · DB 버전 5', () => {
     const db = createSeed(today);
-    expect(db.version).toBe(4);
-    expect(MOCK_DB_VERSION).toBe(4);
+    expect(db.version).toBe(5);
+    expect(MOCK_DB_VERSION).toBe(5);
     const emailOf = (userId: number) => db.users.find((u) => u.id === userId)?.email;
     expect(
       db.tourWishes.map((w) => [
@@ -151,83 +153,158 @@ describe('createSeed', () => {
     expect(db.tours[0].startsAt).toBe('2026-12-01T14:00:00+09:00');
   });
 
-  it('경희대 1km 안의 식사·카페 상점은 모두 오늘 유효한 제휴이고 사장님이 있다', () => {
+  it('시연 제휴 상점 1~4는 경희대 근처 실데이터 상점이고, 오늘 유효한 제휴와 사장님이 있다', () => {
     const db = createSeed(today);
     const khu = db.universities.find((u) => u.id === DEMO_UNIVERSITY_ID)!;
-    const center = { lat: khu.latitude, lng: khu.longitude };
-    const near = db.stores.filter(
-      (s) => distanceMeters(center, { lat: s.latitude, lng: s.longitude }) < 1000,
-    );
-    expect(near.map((s) => s.id)).toEqual([1, 2, 3, 4]);
-    for (const s of near) {
+    const partners = db.stores.slice(0, 4);
+    expect(
+      partners.map((s) => [
+        s.id,
+        s.name,
+        s.category,
+        s.address,
+        s.administrativeDong,
+        s.latitude,
+        s.longitude,
+      ]),
+    ).toEqual([
+      [
+        1,
+        '렌토',
+        '양식',
+        '경기도 용인시 기흥구 서천동로43번길 5-10',
+        '서농동',
+        37.2370451,
+        127.0774219,
+      ],
+      [
+        2,
+        '타임리스커피',
+        '카페',
+        '경기도 용인시 기흥구 서천동로43번길 11-9',
+        '서농동',
+        37.2368285,
+        127.0779626,
+      ],
+      [
+        3,
+        '땡큐꼬마김밥',
+        '분식',
+        '경기도 용인시 기흥구 서천서로12번길 4-18',
+        '서농동',
+        37.2403539,
+        127.0744049,
+      ],
+      [
+        4,
+        '모모식당',
+        '한식',
+        '경기도 용인시 기흥구 서천서로12번길 8-20',
+        '서농동',
+        37.240678,
+        127.0748447,
+      ],
+    ]);
+    for (const s of partners) {
       const p = db.partnerships.filter((x) => x.storeId === s.id);
       expect(p).toHaveLength(1);
       expect(p[0].startDate <= '2026-11-15' && '2026-11-15' <= p[0].endDate).toBe(true);
       expect(s.ownerId).not.toBeNull();
+      expect(
+        distanceMeters(
+          { lat: khu.latitude, lng: khu.longitude },
+          { lat: s.latitude, lng: s.longitude },
+        ),
+      ).toBeLessThan(1000);
     }
-    expect(db.stores.map((s) => s.category).slice(0, 4)).toEqual([
-      '한식',
-      '카페',
-      '분식',
-      '보드게임카페',
-    ]);
   });
 
-  it('서천 밥상이 가장 가까운 식당, 카페 모래시계가 가장 가까운 카페', () => {
-    const db = createSeed(today);
-    const khu = db.universities.find((u) => u.id === DEMO_UNIVERSITY_ID)!;
-    const d = (id: number) => {
-      const s = db.stores.find((x) => x.id === id)!;
-      return distanceMeters(
-        { lat: khu.latitude, lng: khu.longitude },
-        { lat: s.latitude, lng: s.longitude },
-      );
-    };
-    const meals = db.stores.filter((s) => ['한식', '분식'].includes(s.category));
-    const cafes = db.stores.filter((s) => s.category === '카페');
-    const nearest = (rows: typeof meals) => rows.reduce((a, b) => (d(a.id) <= d(b.id) ? a : b)).id;
-    expect(db.stores[0].name).toBe('서천 밥상');
-    expect(nearest(meals)).toBe(1);
-    expect(db.stores[1].name).toBe('카페 모래시계');
-    expect(nearest(cafes)).toBe(2);
-  });
-
-  it('경희대 중심과 예술·디자인대학 모두에서 서천 밥상이 가장 가까운 식당, 카페 모래시계가 가장 가까운 카페', () => {
+  it('캠퍼스 밖에서는 경희대 중심 · 예술·디자인대학 모두에서 렌토가 가장 가까운 식사 상점, 타임리스커피가 가장 가까운 카페', () => {
     const db = createSeed(today);
     const khu = db.universities.find((u) => u.id === DEMO_UNIVERSITY_ID)!;
     const design = db.campusPlaces.find(
       (p) => p.universityId === DEMO_UNIVERSITY_ID && p.name === '예술·디자인대학',
     )!;
+    // 캠퍼스 안 매장(대학과 같은 주소)은 코스 초안의 상점 후보가 아니다.
+    const outside = db.stores.filter((s) => s.address !== khu.address);
+    expect(db.stores.length - outside.length).toBe(14);
     for (const origin of [
       { lat: khu.latitude, lng: khu.longitude },
       { lat: design.latitude, lng: design.longitude },
     ]) {
-      const distance = (id: number) => {
-        const s = db.stores.find((x) => x.id === id)!;
-        return distanceMeters(origin, { lat: s.latitude, lng: s.longitude });
-      };
       const nearest = (categories: string[]) =>
-        db.stores
+        outside
           .filter((s) => categories.includes(s.category))
-          .sort((a, b) => distance(a.id) - distance(b.id))[0].name;
-      expect(nearest(['한식', '분식'])).toBe('서천 밥상');
-      expect(nearest(['카페'])).toBe('카페 모래시계');
+          .map((s) => ({ s, d: distanceMeters(origin, { lat: s.latitude, lng: s.longitude }) }))
+          .sort((a, b) => a.d - b.d)[0].s.id;
+      expect(nearest(LIFESTYLE_CATEGORIES.식사)).toBe(1);
+      expect(nearest(LIFESTYLE_CATEGORIES.카페)).toBe(2);
     }
   });
 
-  it('경희대 밖 비제휴 상점 2곳은 단국대 근처다', () => {
+  it('비제휴 시연 상점 5 · 6은 단국대 근처 실데이터 상점이다', () => {
     const db = createSeed(today);
     const khu = db.universities[1];
     const dku = db.universities[2];
-    const far = db.stores.filter((s) => s.id > 4);
-    expect(far).toHaveLength(2);
-    expect(far.map((s) => s.category)).toEqual(['한식', '카페']);
-    for (const s of far) {
+    const pair = db.stores.slice(4, 6);
+    expect(pair.map((s) => [s.id, s.name, s.category, s.address, s.administrativeDong])).toEqual([
+      [5, '단', '한식', '경기도 용인시 수지구 죽전로144번길 15-4', '죽전3동'],
+      [6, '일삼일구', '카페', '경기도 용인시 수지구 죽전로144번길 15-14', '죽전3동'],
+    ]);
+    for (const s of pair) {
       expect(db.partnerships.some((p) => p.storeId === s.id)).toBe(false);
       expect(s.ownerId).toBeNull();
       const p = { lat: s.latitude, lng: s.longitude };
       expect(distanceMeters({ lat: khu.latitude, lng: khu.longitude }, p)).toBeGreaterThan(1000);
       expect(distanceMeters({ lat: dku.latitude, lng: dku.longitude }, p)).toBeLessThan(1000);
+    }
+  });
+
+  it('나머지 실데이터 상점 584곳은 7번부터 원본 순서로, 사장님 · 제휴 · 리뷰 없이 붙는다', () => {
+    const db = createSeed(today);
+    expect(db.stores).toHaveLength(590);
+    expect(db.stores.map((s) => s.id)).toEqual(Array.from({ length: 590 }, (_, i) => i + 1));
+    const row = (s: (typeof yonginStores.stores)[number]) => ({
+      name: s.name,
+      address: s.address,
+      category: s.category,
+      administrativeDong: s.administrativeDong,
+      latitude: s.lat,
+      longitude: s.lng,
+    });
+    const demoIds: readonly string[] = DEMO_STORE_SOURCE_IDS;
+    const rest = yonginStores.stores.filter((s) => !demoIds.includes(s.sourceId));
+    expect(rest).toHaveLength(584);
+    expect(db.stores.slice(6)).toEqual(
+      rest.map((s, i) => ({
+        id: i + 7,
+        ownerId: null,
+        ...row(s),
+        createdAt: '2026-09-16T09:00:00+09:00',
+        updatedAt: '2026-09-16T09:00:00+09:00',
+      })),
+    );
+    // 시연 상점 1~6은 DEMO_STORE_SOURCE_IDS 순서의 원본 행 그대로다.
+    expect(
+      db.stores.slice(0, 6).map(({ id, ...s }) => [id, s.name, s.latitude, s.longitude]),
+    ).toEqual(
+      DEMO_STORE_SOURCE_IDS.map((sourceId, i) => {
+        const r = yonginStores.stores.find((x) => x.sourceId === sourceId)!;
+        return [i + 1, r.name, r.lat, r.lng];
+      }),
+    );
+    for (const [i, sourceId] of DEMO_STORE_SOURCE_IDS.entries()) {
+      const { id, ownerId, createdAt, updatedAt, ...fields } = db.stores[i];
+      expect([id, createdAt, updatedAt]).toEqual([
+        i + 1,
+        '2026-09-16T09:00:00+09:00',
+        '2026-09-16T09:00:00+09:00',
+      ]);
+      expect(ownerId === null).toBe(i >= 4);
+      expect(fields).toEqual(row(yonginStores.stores.find((x) => x.sourceId === sourceId)!));
+    }
+    for (const table of [db.partnerships, db.coupons, db.reviews, db.reviewSummaries]) {
+      expect(table.every((r) => r.storeId <= 4)).toBe(true);
     }
   });
 
@@ -380,8 +457,8 @@ describe('createSeed', () => {
     expect(db.partnerships.map((p) => p.discountDescription)).toEqual([
       '식사 금액 10% 할인',
       '음료 1,000원 할인',
-      '떡볶이 세트 1,500원 할인',
-      '1시간 무료 연장',
+      '김밥 세트 1,500원 할인',
+      '공깃밥 무료 추가',
     ]);
     expect(
       db.partnerships.every((p) => p.startDate === '2026-10-16' && p.endDate === '2027-02-13'),
@@ -649,11 +726,12 @@ describe('P1 상태 계정(시드 v3)', () => {
     ).toBe(true);
   });
 
-  it('후보 상점 5 · 6은 주인이 없는 일반 상점이다', () => {
-    expect(db.stores.filter((s) => s.id >= 5).map((s) => [s.id, s.ownerId])).toEqual([
-      [5, null],
-      [6, null],
+  it('후보 상점 5 · 6(과 7번부터의 실데이터 상점)은 주인이 없는 일반 상점이다', () => {
+    expect(db.stores.slice(4, 6).map((s) => [s.id, s.name, s.ownerId])).toEqual([
+      [5, '단', null],
+      [6, '일삼일구', null],
     ]);
+    expect(db.stores.filter((s) => s.id >= 5 && s.ownerId !== null)).toEqual([]);
   });
 
   it('견본 학생증 경로', () => {
@@ -714,7 +792,7 @@ describe('체크포인트 시드', () => {
     expect(db.coupons.filter((c) => c.applicationId === minjiApp(db)!.id)).toEqual([]);
   });
 
-  it('CONFIRMED: + 초안 생성 · 확정 → 캠퍼스 → 서천 밥상 → 카페 모래시계, 승인 3명 × 제휴 2곳 = 쿠폰 6장', () => {
+  it('CONFIRMED: + 초안 생성 · 확정 → 캠퍼스 → 렌토 → 타임리스커피, 승인 3명 × 제휴 2곳 = 쿠폰 6장', () => {
     const db = createSeed(today, 'CONFIRMED');
     expect(db.courses).toEqual([
       {

@@ -29,9 +29,9 @@ describe('내 가게 조회 (GET /users/me/store)', () => {
   it('owner1 → 가게 1과 지금 운영 중인 제휴(ACTIVE)', () => {
     expect(myStoreOf(db, owner(1), now)).toEqual({
       id: 1,
-      name: '서천 밥상',
-      address: '경기도 용인시 기흥구 서천동 서천로 21',
-      category: '한식',
+      name: '렌토',
+      address: '경기도 용인시 기흥구 서천동로43번길 5-10',
+      category: '양식',
       // 2C-R26: `fromWireMyStore(toWireMyStore(…))` 합성이라 명세에 없는 제휴 id · 조건은 0 · null이다.
       partnership: {
         id: 0,
@@ -197,8 +197,14 @@ describe('주변 상점 (GET /stores/nearby, 2B′-R15)', () => {
         ).toBeGreaterThan(COURSE_RADIUS_M);
       }
     }
-    expect(nearbyStores(db, 2, null).map((s) => s.id)).toEqual([1, 2, 3, 4]);
-    expect(nearbyStores(db, 3, null).map((s) => s.id)).toEqual([5, 6]);
+    // 시드 상점 id: 시연 1~4(경희대) · 5~6(단국대), 그 뒤 실데이터는 캠퍼스 순으로 7~191 · 192~293 · 294~476 · …
+    const ids = (from: number, to: number) =>
+      Array.from({ length: to - from + 1 }, (_, i) => from + i);
+    expect(nearbyStores(db, 1, null).map((s) => s.id)).toEqual(ids(7, 191));
+    expect(nearbyStores(db, 2, null).map((s) => s.id)).toEqual([1, 2, 3, 4, ...ids(192, 293)]);
+    expect(nearbyStores(db, 3, null).map((s) => s.id)).toEqual([5, 6, ...ids(294, 476)]);
+    expect(nearbyStores(db, 4, null).map((s) => s.id)).toEqual(ids(477, 580));
+    expect(nearbyStores(db, 5, null).map((s) => s.id)).toEqual(ids(581, 590));
   });
 
   it('category가 있으면 같은 업종만(없으면 전부)', () => {
@@ -324,13 +330,23 @@ describe('상점 검색 (GET /stores/search)', () => {
   });
 
   it('상호 부분 일치(공백 · 대소문자 무시), 이름(ko) → id 순', () => {
-    expect(searchStores(db, '카페').map((s) => s.name)).toEqual([
-      '보드게임 카페 다이스',
-      '카페 단풍',
-      '카페 모래시계',
+    expect(searchStores(db, '마라탕').map((s) => s.name)).toEqual([
+      '니하오마라탕죽전단국대점',
+      '라홍방마라탕강남대역점',
+      '라홍방마라탕서천점',
+      '마라원칙마라탕',
+      '일품마라탕',
+      '탕화쿵푸마라탕',
+      '탕화쿵푸마라탕보정점',
+      '향리원마라탕',
     ]);
-    expect(searchStores(db, '보드게임카페').map((s) => s.name)).toEqual(['보드게임 카페 다이스']);
-    expect(searchStores(db, '  단 풍 ').map((s) => s.name)).toEqual(['카페 단풍']);
+    // 상호 + 지점명(`스타벅스` + `죽전단국대`)은 공백으로 이어져 있다.
+    expect(searchStores(db, '스타벅스죽전').map((s) => s.name)).toEqual(['스타벅스 죽전단국대']);
+    expect(searchStores(db, 'theuniverse').map((s) => s.name)).toEqual([
+      '매머드커피익스프레스삼성전자TheuniverSE점',
+      '삼성웰스토리TheUniverSECafeteria',
+    ]);
+    expect(searchStores(db, '  일삼 일구 ').map((s) => s.name)).toEqual(['일삼일구']);
     expect(searchStores(db, '없는가게')).toEqual([]);
   });
 });
@@ -344,19 +360,20 @@ describe('가게 연결 · 등록 (POST /users/me/store)', () => {
     latitude: 37.2397,
     longitude: 127.0833,
   };
-  const dangpung = () => db.stores.find((s) => s.name === '카페 단풍')!;
+  /** 가게 찾기 · 연결 시연 대상(상점 6, 단국대 근처 비제휴 카페). */
+  const target = () => db.stores.find((s) => s.name === '일삼일구')!;
 
   it('사업자 미인증이면 403 BIZ_NOT_VERIFIED(가장 먼저)', () => {
-    expect(() =>
-      linkStore(db, userOf('owner-new@demo.kr'), { storeId: dangpung().id }, now),
-    ).toThrow(expect.objectContaining({ status: 403, code: 'BIZ_NOT_VERIFIED' }));
+    expect(() => linkStore(db, userOf('owner-new@demo.kr'), { storeId: target().id }, now)).toThrow(
+      expect.objectContaining({ status: 403, code: 'BIZ_NOT_VERIFIED' }),
+    );
     expect(() => linkStore(db, userOf('owner-new@demo.kr'), {}, now)).toThrow(
       expect.objectContaining({ code: 'BIZ_NOT_VERIFIED' }),
     );
   });
 
   it('이미 가게가 있으면 409 STORE_LIMIT', () => {
-    expect(() => linkStore(db, userOf('owner1@demo.kr'), { storeId: dangpung().id }, now)).toThrow(
+    expect(() => linkStore(db, userOf('owner1@demo.kr'), { storeId: target().id }, now)).toThrow(
       expect.objectContaining({ status: 409, code: 'STORE_LIMIT' }),
     );
   });
@@ -373,10 +390,10 @@ describe('가게 연결 · 등록 (POST /users/me/store)', () => {
 
   it('검색에서 고른 상점은 ownerId만 연결한다', () => {
     const before = db.stores.length;
-    const row = linkStore(db, nostore(), { storeId: dangpung().id }, now);
-    expect(row).toMatchObject({ id: dangpung().id, name: '카페 단풍', ownerId: nostore() });
+    const row = linkStore(db, nostore(), { storeId: target().id }, now);
+    expect(row).toMatchObject({ id: 6, name: '일삼일구', ownerId: nostore() });
     expect(db.stores).toHaveLength(before);
-    expect(myStoreOf(db, nostore(), now).name).toBe('카페 단풍');
+    expect(myStoreOf(db, nostore(), now).name).toBe('일삼일구');
   });
 
   it('직접 등록: 새 상점(ownerId · 행정동 null · 받은 좌표)', () => {
@@ -420,9 +437,9 @@ describe('가게 수정 (PATCH /users/me/store)', () => {
     const row = updateStore(db, owner(1), { address: ' 새 주소 ' }, now);
     expect(row).toMatchObject({
       id: 1,
-      name: '서천 밥상',
+      name: '렌토',
       address: '새 주소',
-      category: '한식',
+      category: '양식',
     });
     expect(myStoreOf(db, owner(1), now).address).toBe('새 주소');
   });
@@ -437,7 +454,7 @@ describe('가게 수정 (PATCH /users/me/store)', () => {
     expect(() => updateStore(db, owner(1), { category: '' }, now)).toThrow(
       expect.objectContaining({ fieldErrors: { category: '업종을 입력해 주세요.' } }),
     );
-    expect(db.stores.find((s) => s.id === 1)!.name).toBe('서천 밥상');
+    expect(db.stores.find((s) => s.id === 1)!.name).toBe('렌토');
   });
 
   it('가게가 없으면 404 STORE_NOT_LINKED(검증보다 먼저)', () => {

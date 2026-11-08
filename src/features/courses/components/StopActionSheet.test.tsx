@@ -9,8 +9,8 @@ const STOP: CourseStop = {
   order: 2,
   visitTime: '15:10',
   type: 'STORE',
-  name: '서천 밥상',
-  category: '한식',
+  name: '렌토',
+  category: '양식',
   lat: 0,
   lng: 0,
   description: null,
@@ -50,7 +50,7 @@ const ACTIONS = ['위로 이동', '아래로 이동', '한줄평', '빼기'];
 describe('StopActionSheet (G03 ≡ 시트)', () => {
   it('제목은 지점 이름, 버튼은 위로 이동 · 아래로 이동 · 한줄평 · 빼기', () => {
     renderSheet();
-    const sheet = screen.getByRole('dialog', { name: '서천 밥상' });
+    const sheet = screen.getByRole('dialog', { name: '렌토' });
     for (const name of ACTIONS) {
       expect(within(sheet).getByRole('button', { name })).toBeEnabled();
     }
@@ -99,7 +99,7 @@ describe('StopActionSheet (G03 ≡ 시트)', () => {
   it('onReplace를 주면 한줄평 다음 · 빼기 앞에 `다른 장소로 교체`, 누르면 시트를 먼저 닫고 시작한다 (2B′-R14)', async () => {
     const onReplace = vi.fn();
     const { calls, user } = renderSheet({ onReplace: () => (onReplace(), calls.push('replace')) });
-    const sheet = screen.getByRole('dialog', { name: '서천 밥상' });
+    const sheet = screen.getByRole('dialog', { name: '렌토' });
     expect(within(sheet).getAllByRole('button', { name: /이동|한줄평|교체|빼기/ })).toEqual([
       within(sheet).getByRole('button', { name: '위로 이동' }),
       within(sheet).getByRole('button', { name: '아래로 이동' }),

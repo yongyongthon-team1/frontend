@@ -53,7 +53,7 @@ describe('H12 방문 리뷰 쓰기', () => {
     expect(screen.getByRole('heading', { level: 1, name: '방문 리뷰 작성' })).toBeInTheDocument();
     expect(screen.getByText('경험을 남기면 다른 학생에게도 도움이 돼요.')).toBeInTheDocument();
     expect(screen.getByText('참여 완료')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '서천 밥상' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '렌토' })).toBeInTheDocument();
     expect(await screen.findByText('경희대학교 국제캠퍼스 주변')).toBeInTheDocument();
     expect(screen.getByText('방문 경험을 평가해 주세요')).toBeInTheDocument();
     expect(
@@ -75,7 +75,7 @@ describe('H12 방문 리뷰 쓰기', () => {
     );
     expect(posts).toEqual([{ coupon_id: expect.any(Number), rating: 4, content: '양이 많아요' }]);
     expect(await screen.findByText('리뷰를 등록했어요.')).toBeInTheDocument();
-    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    const sheet = await screen.findByRole('dialog', { name: '렌토' });
     const summary = within(sheet).getByText('✦ AI 리뷰 요약').nextElementSibling;
     await waitFor(() => expect(summary).toHaveTextContent(/^학생 6명이 평균 4\.5점/));
     expect(summary).toHaveTextContent('"양이 많아요"');

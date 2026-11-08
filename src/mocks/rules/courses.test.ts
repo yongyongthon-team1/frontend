@@ -144,7 +144,7 @@ describe('createDraft', () => {
 });
 
 describe('replaceSpots (C-02 전체 교체)', () => {
-  /** 탐방 1 초안의 지점 행 [캠퍼스(건물 3), 서천 밥상(상점 1), 카페 모래시계(상점 2)]. */
+  /** 탐방 1 초안의 지점 행 [캠퍼스(건물 3), 렌토(상점 1), 타임리스커피(상점 2)]. */
   const draftRows = () => {
     draft();
     return stopsOf().map((s) => ({ ...s }));
@@ -170,7 +170,7 @@ describe('replaceSpots (C-02 전체 교체)', () => {
       [rows[2].id, 3, '16:45', 'STORE', 5],
     ]);
     expect(rows[2].id).not.toBe(cafe.id);
-    expect(rows.some((s) => s.storeId === 1)).toBe(false); // 서천 밥상은 빠졌다
+    expect(rows.some((s) => s.storeId === 1)).toBe(false); // 렌토는 빠졌다
     expect(rows.map((s) => s.recommendationReason)).toEqual([
       cafe.recommendationReason,
       campus.recommendationReason,
@@ -321,7 +321,8 @@ describe('confirmCourse', () => {
   });
 
   it('관련 업종 상점이 모두 비제휴면 제휴 지점 없이 만들고, 확정은 422 COURSE_PARTNER_REQUIRED (2C-R11)', () => {
-    db.partnerships = db.partnerships.filter((p) => ![1, 2, 3].includes(p.storeId));
+    // 시연 제휴 상점 1~4는 모두 식사 · 카페 업종이다 — 넷 다 빼야 관련 업종에 제휴가 없다.
+    db.partnerships = db.partnerships.filter((p) => ![1, 2, 3, 4].includes(p.storeId));
     draft();
     expect(stopsOf().map((s) => [s.storeId, s.partnershipId])).toEqual([
       [null, null],

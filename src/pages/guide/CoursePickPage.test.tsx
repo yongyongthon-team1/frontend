@@ -45,7 +45,7 @@ const candidateNames = (list: HTMLElement) =>
 /** 이름이 정확히 그것인 후보 카드(카드 전체가 선택 버튼이고, 이름이 버튼 이름이다). */
 const card = (name: string) => screen.getByRole('button', { name });
 
-/** 승인자가 있는 탐방 1(경희대 국제캠퍼스)에서 AI 초안(예술·디자인대학 · 서천 밥상 · 카페 모래시계)을 만들어 G03을 연다. */
+/** 승인자가 있는 탐방 1(경희대 국제캠퍼스)에서 AI 초안(예술·디자인대학 · 렌토 · 타임리스커피)을 만들어 G03을 연다. */
 async function openCourse() {
   const result = await renderApp('/guide/tours/1/course/draft?generate=1', {
     as: 'guide',
@@ -119,7 +119,7 @@ function countCampusPlaceGets() {
 
 describe('코스 장소 고르기 G07 (guide-a03) — 교체', () => {
   it('상점 지점 교체: 탭 없이 가까운 주변 상점, 지금 지점 · 코스에 있음은 고를 수 없고, 고른 상점이 같은 자리 · 같은 시각에 들어간다', async () => {
-    const { user, router } = await openReplace('서천 밥상');
+    const { user, router } = await openReplace('렌토');
 
     expect(await screen.findByRole('heading', { level: 1, name: '코스 장소 교체' })).toBeVisible();
     expect(screen.getByRole('heading', { level: 2, name: '장소를 바꿔볼까요?' })).toBeVisible();
@@ -130,29 +130,49 @@ describe('코스 장소 고르기 G07 (guide-a03) — 교체', () => {
     expect(search).toHaveAttribute('placeholder', '문화체험 · 동네 카페 · 점심');
     expect(screen.getByRole('heading', { name: '가까운 주변 상점' })).toBeVisible();
 
-    // 캠퍼스 중심에서 가까운 순(2B′-R15): 모래시계 139m · 밥상 259m · 분식집 444m · 다이스 611m
+    // 캠퍼스 중심에서 가까운 순(2B′-R15), 같은 거리면 이름 순: 캠퍼스 안 매장 14곳(대학 주소의 두 좌표, 186 · 188m) →
+    // 타임리스커피 570m · 케이크하리 581m · 천겹의속삭임 584m · 렌토 598m … 땡큐꼬마김밥 791m(31번째)
     const list = await screen.findByRole('list', { name: '후보 상점' });
-    expect(candidateNames(list)).toEqual([
-      '카페 모래시계',
-      '서천 밥상',
-      '영통 분식집',
-      '보드게임 카페 다이스',
+    const names = candidateNames(list);
+    expect(names).toHaveLength(106);
+    expect(names.slice(0, 20)).toEqual([
+      '뉴욕버거경희대국제캠퍼스점',
+      '달콤커피경희대국제캠퍼스점',
+      '달콤한위로경희대국제캠퍼스점',
+      '미스터라멘경희대국제캠퍼스점',
+      '쑝쑝돈까스경희대국제캠퍼스점',
+      '카페3',
+      '컴포즈커피경희대국제캠퍼스기숙사점',
+      '컴포즈커피경희외국어대학관점',
+      '컴포즈커피경희전자국제점',
+      '콩스',
+      '투썸플레이스경희대국제캠퍼스',
+      '꾸이한끼경희대국제캠퍼스점',
+      '마라중심',
+      '청년찌개경희대국제캠퍼스점',
+      '타임리스커피',
+      '케이크하리',
+      '천겹의속삭임',
+      '렌토',
+      '사르르초코',
+      '키친드마망',
     ]);
-    expect(card('서천 밥상')).toBeDisabled();
-    expect(card('서천 밥상')).toHaveAccessibleDescription(/지금 지점/);
-    expect(card('카페 모래시계')).toBeDisabled();
-    expect(card('카페 모래시계')).toHaveAccessibleDescription(/코스에 있음/);
-    expect(card('영통 분식집')).toBeEnabled();
-    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'false');
-    expect(card('영통 분식집')).toHaveAccessibleDescription(/^제휴 상점 도보 약 6분 · 분식$/);
+    expect(names.indexOf('땡큐꼬마김밥')).toBe(30);
+    expect(card('렌토')).toBeDisabled();
+    expect(card('렌토')).toHaveAccessibleDescription(/지금 지점/);
+    expect(card('타임리스커피')).toBeDisabled();
+    expect(card('타임리스커피')).toHaveAccessibleDescription(/코스에 있음/);
+    expect(card('땡큐꼬마김밥')).toBeEnabled();
+    expect(card('땡큐꼬마김밥')).toHaveAttribute('aria-pressed', 'false');
+    expect(card('땡큐꼬마김밥')).toHaveAccessibleDescription(/^제휴 상점 도보 약 10분 · 분식$/);
 
     // 선택 전에는 적용할 수 없다(사유와 함께)
     const apply = screen.getByRole('button', { name: '이 장소로 교체' });
     expect(apply).toBeDisabled();
     expect(apply).toHaveAccessibleDescription('후보를 하나 고르면 적용할 수 있어요.');
 
-    await user.click(card('영통 분식집'));
-    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'true');
+    await user.click(card('땡큐꼬마김밥'));
+    expect(card('땡큐꼬마김밥')).toHaveAttribute('aria-pressed', 'true');
     // 사유 줄이 사라지면 Button이 감싸개 없이 다시 그려진다 — 다시 찾는다.
     const ready = screen.getByRole('button', { name: '이 장소로 교체' });
     expect(ready).toBeEnabled();
@@ -165,8 +185,8 @@ describe('코스 장소 고르기 G07 (guide-a03) — 교체', () => {
     expect(await screen.findByText('코스에 반영했어요.')).toBeInTheDocument();
     expect(stopRows()).toEqual([
       '14:00 예술·디자인대학',
-      '15:10 영통 분식집',
-      '16:00 카페 모래시계',
+      '15:10 땡큐꼬마김밥',
+      '16:00 타임리스커피',
     ]);
   });
 
@@ -176,19 +196,29 @@ describe('코스 장소 고르기 G07 (guide-a03) — 교체', () => {
     mutate((db) => {
       db.partnerships = db.partnerships.filter((p) => p.storeId !== 4);
     });
-    await router.navigate(`${PICK}?mode=replace&stopId=${stopIdOf('서천 밥상')}`);
+    await router.navigate(`${PICK}?mode=replace&stopId=${stopIdOf('렌토')}`);
     const list = await screen.findByRole('list', { name: '후보 상점' });
 
-    const [sand, meal, snack, dice] = within(list).getAllByRole('listitem');
-    expect(sand).toHaveTextContent('제휴 상점');
-    expect(sand).toHaveTextContent('도보 약 2분 · 카페');
-    expect(sand).toHaveTextContent(`✦ ${SUMMARY_2}`);
-    expect(meal).toHaveTextContent('도보 약 4분 · 한식');
+    const item = (name: string) => card(name).closest('li')!;
+    const [cafe, meal, snack, hansik] = ['타임리스커피', '렌토', '땡큐꼬마김밥', '모모식당'].map(
+      item,
+    );
+    expect(cafe).toHaveTextContent('제휴 상점');
+    expect(cafe).toHaveTextContent('도보 약 8분 · 카페');
+    expect(cafe).toHaveTextContent(`✦ ${SUMMARY_2}`);
+    expect(meal).toHaveTextContent('도보 약 8분 · 양식');
     expect(meal).toHaveTextContent(`✦ ${SUMMARY_1}`);
     // 리뷰가 없으면 요약 줄이 없다
+    expect(snack).toHaveTextContent('제휴 상점');
     expect(snack).not.toHaveTextContent('✦');
-    expect(dice).toHaveTextContent('일반 상점');
-    expect(dice).toHaveTextContent('도보 약 8분 · 보드게임카페');
+    expect(hansik).toHaveTextContent('일반 상점');
+    expect(hansik).toHaveTextContent('도보 약 10분 · 한식');
+    // 실데이터 상점(맨 앞, 캠퍼스 안 186m)은 사장님 · 제휴 · 리뷰가 없는 일반 상점이다
+    const [first] = within(list).getAllByRole('listitem');
+    expect(first).toBe(item('뉴욕버거경희대국제캠퍼스점'));
+    expect(first).toHaveTextContent('일반 상점');
+    expect(first).toHaveTextContent('도보 약 3분 · 양식');
+    expect(first).not.toHaveTextContent('✦');
     // 요약은 화면 낭독기에 AI 결과로 읽힌다
     expect(within(meal).getByText('AI 리뷰 요약:')).toHaveClass('sr-only');
     expect(within(list).queryByText(/학생 요청/)).toBeNull();
@@ -216,38 +246,38 @@ describe('코스 장소 고르기 G07 (guide-a03) — 교체', () => {
     await user.click(screen.getByRole('button', { name: '이 장소로 교체' }));
     expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(EDIT);
-    expect(stopRows()).toEqual(['14:00 학생회관', '15:10 서천 밥상', '16:00 카페 모래시계']);
+    expect(stopRows()).toEqual(['14:00 학생회관', '15:10 렌토', '16:00 타임리스커피']);
   });
 
   it('교체를 연타해도 스팟 PUT은 한 번이고, 적용 중에는 카드 · 버튼이 잠긴다', async () => {
-    const { user, router } = await openReplace('서천 밥상');
+    const { user, router } = await openReplace('렌토');
     await screen.findByRole('list', { name: '후보 상점' });
     setMockLatency({ base: 150, ai: 0 });
     const counter = countSpotPuts();
-    await user.click(card('영통 분식집'));
+    await user.click(card('땡큐꼬마김밥'));
     await user.dblClick(screen.getByRole('button', { name: '이 장소로 교체' }));
     expect(screen.getByRole('button', { name: '이 장소로 교체' })).toBeDisabled();
-    expect(card('보드게임 카페 다이스')).toBeDisabled();
+    expect(card('모모식당')).toBeDisabled();
     expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(EDIT);
     expect(counter.puts).toBe(1);
     expect(stopRows()).toEqual([
       '14:00 예술·디자인대학',
-      '15:10 영통 분식집',
-      '16:00 카페 모래시계',
+      '15:10 땡큐꼬마김밥',
+      '16:00 타임리스커피',
     ]);
   });
 
   it('교체가 실패하면 오류 토스트, 선택은 남고 화면에 머문다', async () => {
-    const { user, router } = await openReplace('서천 밥상');
+    const { user, router } = await openReplace('렌토');
     await screen.findByRole('list', { name: '후보 상점' });
     const url = router.state.location.pathname + router.state.location.search;
     server.use(http.put('/api/tours/:tourId/course/spots', () => wireFail('E500'), { once: true }));
-    await user.click(card('영통 분식집'));
+    await user.click(card('땡큐꼬마김밥'));
     await user.click(screen.getByRole('button', { name: '이 장소로 교체' }));
     expect(await screen.findByText(errorMessage('UNKNOWN'))).toBeInTheDocument();
     expect(router.state.location.pathname + router.state.location.search).toBe(url);
-    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'true');
+    expect(card('땡큐꼬마김밥')).toHaveAttribute('aria-pressed', 'true');
     await waitFor(() =>
       expect(screen.getByRole('button', { name: '이 장소로 교체' })).toBeEnabled(),
     );
@@ -308,8 +338,8 @@ describe('코스 장소 고르기 G07 — 추가', () => {
     expect(screen.getByRole('heading', { name: '일정 · 4개 장소' })).toBeInTheDocument();
     expect(stopRows()).toEqual([
       '14:00 예술·디자인대학',
-      '15:10 서천 밥상',
-      '16:00 카페 모래시계',
+      '15:10 렌토',
+      '16:00 타임리스커피',
       '16:15 중앙도서관',
     ]);
   });
@@ -317,7 +347,7 @@ describe('코스 장소 고르기 G07 — 추가', () => {
   it('탭을 바꾸면 고른 후보가 지워져 보이지 않는 장소를 추가하지 못하고, 돌아와도 눌린 카드가 없다', async () => {
     const { user } = await openPick('mode=add');
     await screen.findByRole('list', { name: '후보 상점' });
-    await user.click(card('영통 분식집'));
+    await user.click(card('땡큐꼬마김밥'));
     expect(screen.getByRole('button', { name: '이 장소 추가' })).toBeEnabled();
 
     await user.click(screen.getByRole('tab', { name: '캠퍼스 장소' }));
@@ -330,7 +360,7 @@ describe('코스 장소 고르기 G07 — 추가', () => {
     await user.click(screen.getByRole('tab', { name: '주변 상점' }));
     const storeList = await screen.findByRole('list', { name: '후보 상점' });
     expect(within(storeList).queryAllByRole('button', { pressed: true })).toHaveLength(0);
-    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'false');
+    expect(card('땡큐꼬마김밥')).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: '이 장소 추가' })).toBeDisabled();
   });
 
@@ -354,16 +384,35 @@ describe('코스 장소 고르기 G07 — 추가', () => {
     const list = await screen.findByRole('list', { name: '후보 상점' });
     const search = screen.getByRole('searchbox', { name: '주변 상점 검색' });
 
-    await user.click(card('영통 분식집'));
-    await user.type(search, '카페');
-    expect(candidateNames(list)).toEqual(['카페 모래시계', '보드게임 카페 다이스']);
-    // 고른 분식집은 가려졌지만 선택은 남아 적용할 수 있다
+    await user.click(card('땡큐꼬마김밥'));
+    await user.type(search, '커피'); // 이름에서
+    expect(candidateNames(list)).toEqual([
+      '달콤커피경희대국제캠퍼스점',
+      '컴포즈커피경희대국제캠퍼스기숙사점',
+      '컴포즈커피경희외국어대학관점',
+      '컴포즈커피경희전자국제점',
+      '타임리스커피',
+      '서천커피클락',
+      '매머드커피익스프레스삼성전자TheuniverSE점',
+      '메가엠지씨커피용인서천 파크원점',
+      '메가엠지씨커피용인서천 마을점',
+      '컴포즈커피용인서천 마을점',
+    ]);
+    // 고른 꼬마김밥은 가려졌지만 선택은 남아 적용할 수 있다
     expect(screen.getByRole('button', { name: '이 장소 추가' })).toBeEnabled();
 
     await user.clear(search);
-    await user.type(search, '분식');
-    expect(candidateNames(list)).toEqual(['영통 분식집']);
-    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'true');
+    await user.type(search, '분식'); // 업종에서
+    expect(candidateNames(list)).toEqual([
+      '땡큐꼬마김밥',
+      '하우스크림',
+      '김밥엔떡볶이',
+      '김밥엔떡볶이',
+      '김가네용인서천점',
+      '푸드플랙스',
+      '봉구스밥버거',
+    ]);
+    expect(card('땡큐꼬마김밥')).toHaveAttribute('aria-pressed', 'true');
 
     await user.clear(search);
     await user.type(search, '없는가게');
@@ -372,8 +421,8 @@ describe('코스 장소 고르기 G07 — 추가', () => {
     await user.click(screen.getByRole('button', { name: '검색어 지우기' }));
     expect(search).toHaveValue('');
     expect(search).toHaveFocus();
-    expect(candidateNames(screen.getByRole('list', { name: '후보 상점' }))).toHaveLength(4);
-    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'true');
+    expect(candidateNames(screen.getByRole('list', { name: '후보 상점' }))).toHaveLength(106);
+    expect(card('땡큐꼬마김밥')).toHaveAttribute('aria-pressed', 'true');
   });
 
   it('캠퍼스 장소 검색은 이름 · 설명에서 찾는다', async () => {
@@ -391,7 +440,7 @@ describe('코스 장소 고르기 G07 — 추가', () => {
     await appendCampusStops(queryClient, [4, 5]);
     await router.navigate(`${PICK}?mode=add`);
     await screen.findByRole('list', { name: '후보 상점' });
-    await user.click(card('영통 분식집'));
+    await user.click(card('땡큐꼬마김밥'));
     const add = screen.getByRole('button', { name: '이 장소 추가' });
     expect(add).toBeDisabled();
     expect(add).toHaveAccessibleDescription(errorMessage('COURSE_STOP_LIMIT'));
@@ -425,10 +474,10 @@ describe('코스 장소 고르기 G07 — 상태 · 이동', () => {
     // 응답이 늦어야 첫 클릭의 요청이 진행 중인 채로 두 번째 클릭이 들어온다.
     setMockLatency({ base: 150, ai: 0 });
     const counter = countSpotPuts();
-    await user.click(card('영통 분식집'));
+    await user.click(card('땡큐꼬마김밥'));
     await user.dblClick(screen.getByRole('button', { name: '이 장소 추가' }));
     expect(screen.getByRole('button', { name: '이 장소 추가' })).toBeDisabled();
-    expect(card('보드게임 카페 다이스')).toBeDisabled();
+    expect(card('모모식당')).toBeDisabled();
     expect(await screen.findByRole('heading', { name: G03_TITLE })).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(EDIT);
     expect(counter.puts).toBe(1);
@@ -439,18 +488,18 @@ describe('코스 장소 고르기 G07 — 상태 · 이동', () => {
     const { user, router } = await openPick('mode=add');
     await screen.findByRole('list', { name: '후보 상점' });
     server.use(http.put('/api/tours/:tourId/course/spots', () => wireFail('E500'), { once: true }));
-    await user.click(card('영통 분식집'));
+    await user.click(card('땡큐꼬마김밥'));
     await user.click(screen.getByRole('button', { name: '이 장소 추가' }));
     expect(await screen.findByText(errorMessage('UNKNOWN'))).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(PICK);
-    expect(card('영통 분식집')).toHaveAttribute('aria-pressed', 'true');
+    expect(card('땡큐꼬마김밥')).toHaveAttribute('aria-pressed', 'true');
     await waitFor(() => expect(screen.getByRole('button', { name: '이 장소 추가' })).toBeEnabled());
   });
 
   it('그 사이 코스가 확정됐으면(409 COURSE_NOT_DRAFT) 안내 토스트 뒤 다시 읽은 코스의 확정 화면으로', async () => {
     const { user, router } = await openPick('mode=add');
     await screen.findByRole('list', { name: '후보 상점' });
-    await user.click(card('영통 분식집'));
+    await user.click(card('땡큐꼬마김밥'));
     mutate((db) => {
       db.courses.find((c) => c.tourId === 1)!.status = 'CONFIRMED';
     });
@@ -560,11 +609,11 @@ describe('코스 장소 고르기 G07 — 상태 · 이동', () => {
     );
     await router.navigate(`${PICK}?mode=add`);
     await screen.findByRole('list', { name: '후보 상점' });
-    expect(card('영통 분식집')).toBeDisabled();
+    expect(card('땡큐꼬마김밥')).toBeDisabled();
     const add = screen.getByRole('button', { name: '이 장소 추가' });
     expect(add).toBeDisabled();
     expect(add).toHaveAccessibleDescription('AI 초안을 만드는 중이에요.');
-    await waitFor(() => expect(card('영통 분식집')).toBeEnabled());
+    await waitFor(() => expect(card('땡큐꼬마김밥')).toBeEnabled());
     expect(screen.getByRole('button', { name: '이 장소 추가' })).toHaveAccessibleDescription(
       '후보를 하나 고르면 적용할 수 있어요.',
     );

@@ -34,7 +34,7 @@ describe('fromWireCourse (Review Focus 1: 확장 없는 실서버 응답)', () =
       campusBuildingId: null,
       partnership: { discount: '쿠폰 사용 가능' },
       review: { average: null, count: 0, summary: '양이 많고 가격이 착하다는 평이 많아요' },
-      dataSource: '공공데이터(인허가) 기반',
+      dataSource: '공공데이터(소상공인 상가정보) 기반',
     } satisfies CourseStop);
     expect(course.stops[1]).toEqual({
       id: 2,

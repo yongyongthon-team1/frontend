@@ -7,6 +7,7 @@ import {
   type SeedCheckpoint,
 } from '@/shared/config/demoAccounts';
 import { addDaysKey, endOfSeoulDay, seoulDateAt, seoulDateKey } from '@/shared/lib/date';
+import yonginStores from './data/yonginStores.json';
 import { MOCK_DOC_SAMPLE } from './files';
 import {
   MOCK_DB_VERSION,
@@ -15,6 +16,7 @@ import {
   type DB,
   type GuardianConsentRow,
   type ReviewRow,
+  type StoreRow,
   type TourRow,
   type VerificationRow,
 } from './schema';
@@ -30,6 +32,41 @@ const FIRST_RUNTIME_ID = 1000;
 /** 운영자(admin@demo.kr)는 사용자 목록의 마지막(18번)이다. 심사자 ID로 쓴다. */
 const ADMIN_ID = 18;
 const USED_TIMES = ['15:10', '15:20', '15:30', '15:40', '15:50'];
+
+/** 용인시 상가정보 한 행(`data/yonginStores.json` — 출처 · 거른 조건은 `docs/reference/store-data.md`). */
+type SourceStore = (typeof yonginStores.stores)[number];
+
+/**
+ * 시연 상점 1~6이 될 원본 행의 상가업소번호(이 순서가 상점 id다). 1~4는 경희대 국제캠퍼스 근처 제휴 상점(사장님 owner1~4),
+ * 5 · 6은 단국대 죽전캠퍼스 근처 비제휴 상점이고 6이 사장님 가게 찾기 · 연결 시연 대상이다. 나머지 행은 7번부터 원본 순서로 붙는다.
+ * 상호 · 업종 · 주소 · 좌표만 실데이터이고 제휴 · 리뷰 · 별점 · AI 요약 · 사장님 계정은 시연용으로 지어낸 값이다.
+ */
+export const DEMO_STORE_SOURCE_IDS = [
+  'MA0101202307A0047445', // 1 렌토(양식) — 코스 초안의 식사 상점
+  'MA0101202601A0003455', // 2 타임리스커피(카페) — 코스 초안의 카페
+  'MA010120220803865506', // 3 땡큐꼬마김밥(분식)
+  'MA010120220809860057', // 4 모모식당(한식)
+  'MA0101202512A0040156', // 5 단(한식)
+  'MA010120220813455695', // 6 일삼일구(카페) — 가게 찾기 · 연결 시연
+] as const;
+
+/** 원본 행 → 상점 행의 데이터 칸. */
+function storeFields(source: SourceStore) {
+  return {
+    name: source.name,
+    address: source.address,
+    category: source.category,
+    administrativeDong: source.administrativeDong,
+    latitude: source.lat,
+    longitude: source.lng,
+  } satisfies Partial<StoreRow>;
+}
+
+function sourceStore(sourceId: string): SourceStore {
+  const row = yonginStores.stores.find((s) => s.sourceId === sourceId);
+  if (!row) throw new Error(`상점 데이터에 상가업소번호 ${sourceId}가 없다`);
+  return row;
+}
 
 /** 테이블마다 1부터 순서대로 id를 붙여 넣는다(같은 입력이면 항상 같은 id). */
 function add<T extends { id: number }>(rows: T[], row: Omit<T, 'id'>): T {
@@ -633,93 +670,49 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
   }
 
   // ── 상점 · 제휴 ─────────────────────────────────────────────────────
-  const storeSeeds = [
-    {
-      owner: owners[0],
-      name: '서천 밥상',
-      category: '한식',
-      address: '경기도 용인시 기흥구 서천동 서천로 21',
-      lat: 37.2417,
-      lng: 127.0848,
-      dong: '서천동',
-      discount: '식사 금액 10% 할인',
-    },
-    {
-      owner: owners[1],
-      name: '카페 모래시계',
-      category: '카페',
-      address: '경기도 용인시 기흥구 서천동 서천로 8',
-      lat: 37.2405,
-      lng: 127.0821,
-      dong: '서천동',
-      discount: '음료 1,000원 할인',
-    },
-    {
-      owner: owners[2],
-      name: '영통 분식집',
-      category: '분식',
-      address: '경기도 용인시 기흥구 서천동 덕영대로 1701',
-      lat: 37.237,
-      lng: 127.087,
-      dong: '서천동',
-      discount: '떡볶이 세트 1,500원 할인',
-    },
-    {
-      owner: owners[3],
-      name: '보드게임 카페 다이스',
-      category: '보드게임카페',
-      address: '경기도 용인시 기흥구 서천동 서천로 45',
-      lat: 37.244,
-      lng: 127.079,
-      dong: '서천동',
-      discount: '1시간 무료 연장',
-    },
+  // 상점은 모두 용인시 상가정보 실데이터다. 1~4(경희대 근처)에만 사장님 · 제휴(시연 값)가 있다.
+  const [partnerIds, otherDemoIds] = [
+    DEMO_STORE_SOURCE_IDS.slice(0, 4),
+    DEMO_STORE_SOURCE_IDS.slice(4),
   ];
-  for (const s of storeSeeds) {
+  const discounts = [
+    '식사 금액 10% 할인',
+    '음료 1,000원 할인',
+    '김밥 세트 1,500원 할인',
+    '공깃밥 무료 추가',
+  ];
+  partnerIds.forEach((sourceId, i) => {
     const store = add(db.stores, {
-      ownerId: s.owner.id,
-      name: s.name,
-      address: s.address,
-      category: s.category,
-      administrativeDong: s.dong,
-      latitude: s.lat,
-      longitude: s.lng,
+      ownerId: owners[i].id,
+      ...storeFields(sourceStore(sourceId)),
       createdAt: created,
       updatedAt: created,
     });
     add(db.partnerships, {
       storeId: store.id,
-      discountDescription: s.discount,
+      discountDescription: discounts[i],
       condition: '탐방 당일 · 1회 사용 가능',
       startDate: rel(-30),
       endDate: rel(90),
       createdAt: created,
       updatedAt: created,
     });
+  });
+  // 경희대 밖의 비제휴 상점(단국대 근처) 5 · 6, 그다음 나머지 실데이터 상점(사장님 · 제휴 · 리뷰 없음)
+  const demoIds = new Set<string>(DEMO_STORE_SOURCE_IDS);
+  for (const source of [
+    ...otherDemoIds.map(sourceStore),
+    ...yonginStores.stores.filter((s) => !demoIds.has(s.sourceId)),
+  ]) {
+    add(db.stores, {
+      ownerId: null,
+      ...storeFields(source),
+      createdAt: created,
+      updatedAt: created,
+    });
   }
-  // 경희대 밖의 비제휴 상점(단국대 근처)
-  add(db.stores, {
-    ownerId: null,
-    name: '죽전 돼지국밥',
-    address: '경기도 용인시 수지구 죽전로 144',
-    category: '한식',
-    administrativeDong: '죽전1동',
-    latitude: 37.3231,
-    longitude: 127.1262,
-    createdAt: created,
-    updatedAt: created,
-  });
-  add(db.stores, {
-    ownerId: null,
-    name: '카페 단풍',
-    address: '경기도 용인시 수지구 죽전로 160',
-    category: '카페',
-    administrativeDong: '죽전1동',
-    latitude: 37.3212,
-    longitude: 127.1241,
-    createdAt: created,
-    updatedAt: created,
-  });
+  if (db.stores.length >= FIRST_RUNTIME_ID)
+    throw new Error('시드 상점 id가 런타임 id(FIRST_RUNTIME_ID)와 겹친다');
 
   // ── 지난 탐방(7)의 승인 신청 · 사용 쿠폰 · 리뷰 ────────────────────────
   const authors = [seojun, haeun, yujin, past1, past2];
@@ -733,7 +726,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
         '양이 푸짐하고 사장님이 친절하세요.',
         '가격 대비 정말 만족스러웠어요.',
         '맛있는데 점심시간엔 줄이 길어요.',
-        '된장찌개가 집밥 같아요.',
+        '혼자 와서 먹기에도 편해요.',
         '시험 기간엔 사람이 많지만 음식은 빨리 나와요.',
       ],
       codes: ['381204', '552917', '207735', '694418', '130862'],

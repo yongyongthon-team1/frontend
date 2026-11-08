@@ -73,8 +73,8 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     // 지점 카드: 이유(한줄평이 없으면 AI 추천 이유) · 머무는 분(다음 지점까지, 마지막은 탐방 종료까지)
     expect(within(stopCard('예술·디자인대학')).getByText(/전공 공간에서/)).toBeInTheDocument();
     expect(within(stopCard('예술·디자인대학')).getByText('· 70분')).toBeInTheDocument();
-    expect(within(stopCard('서천 밥상')).getByText('· 50분')).toBeInTheDocument();
-    expect(within(stopCard('카페 모래시계')).getByText('· 30분')).toBeInTheDocument();
+    expect(within(stopCard('렌토')).getByText('· 50분')).toBeInTheDocument();
+    expect(within(stopCard('타임리스커피')).getByText('· 30분')).toBeInTheDocument();
 
     const second = within(stopList()).getAllByRole('button', { name: / 편집$/ })[1]!;
     const moved = second.getAttribute('aria-label')!.replace(/ 편집$/, '');
@@ -99,22 +99,16 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
 
   it('순서를 바꿔도 시간은 14:00/15:10/16:00 — 시트는 동작을 시작하면 닫히고, 첫 지점은 위로 · 마지막 지점은 아래로를 못 누른다', async () => {
     const { user } = await openCourse();
-    expect(stopRows()).toEqual(['14:00 예술·디자인대학', '15:10 서천 밥상', '16:00 카페 모래시계']);
+    expect(stopRows()).toEqual(['14:00 예술·디자인대학', '15:10 렌토', '16:00 타임리스커피']);
 
-    const sheet = await openStopSheet(user, '서천 밥상');
+    const sheet = await openStopSheet(user, '렌토');
     await user.click(within(sheet).getByRole('button', { name: '아래로 이동' }));
     expect(screen.queryByRole('dialog')).toBeNull();
     await waitFor(() =>
-      expect(stopRows()).toEqual([
-        '14:00 예술·디자인대학',
-        '15:10 카페 모래시계',
-        '16:00 서천 밥상',
-      ]),
+      expect(stopRows()).toEqual(['14:00 예술·디자인대학', '15:10 타임리스커피', '16:00 렌토']),
     );
     // 순서 변경이 끝나면 포커스는 옮긴 지점의 새 자리 `≡`로 돌아온다(시트가 닫히며 body로 떨어지지 않는다).
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '서천 밥상 편집' })).toHaveFocus(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: '렌토 편집' })).toHaveFocus());
 
     const first = await openStopSheet(user, '예술·디자인대학');
     expect(within(first).getByRole('button', { name: '위로 이동' })).toBeDisabled();
@@ -123,7 +117,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
     expect(screen.getByRole('button', { name: '예술·디자인대학 편집' })).toHaveFocus();
 
-    const last = await openStopSheet(user, '서천 밥상');
+    const last = await openStopSheet(user, '렌토');
     expect(within(last).getByRole('button', { name: '위로 이동' })).toBeEnabled();
     expect(within(last).getByRole('button', { name: '아래로 이동' })).toBeDisabled();
   });
@@ -132,7 +126,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     const { user } = await openCourse();
     // 응답이 늦어야 요청이 진행 중인 화면을 볼 수 있다(지연이 0이면 클릭이 끝나기 전에 응답이 온다).
     setMockLatency({ base: 150, ai: 0 });
-    const sheet = await openStopSheet(user, '서천 밥상');
+    const sheet = await openStopSheet(user, '렌토');
     await user.click(within(sheet).getByRole('button', { name: '아래로 이동' }));
     for (const button of within(stopList()).getAllByRole('button')) expect(button).toBeDisabled();
     expect(screen.getByRole('button', { name: '다시 만들기' })).toBeDisabled();
@@ -164,9 +158,9 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     // 1단계의 "✦ 배지 4개"(위쪽 칩 + 지점 3곳)와 같은 뜻 — 지점의 ✦는 장식이라 숨기고 글로 읽힌다.
     expect(screen.getAllByRole('group', { name: 'AI 결과' })).toHaveLength(1);
     expect(within(stopList()).getAllByText('AI 추천 이유:')).toHaveLength(3);
-    expect(
-      within(stopCard('서천 밥상')).getByText(/^신청자 2명이/).parentElement,
-    ).toHaveTextContent(/^✦AI 추천 이유: 신청자 2명이/);
+    expect(within(stopCard('렌토')).getByText(/^신청자 2명이/).parentElement).toHaveTextContent(
+      /^✦AI 추천 이유: 신청자 2명이/,
+    );
   });
 
   it('StrictMode로 다시 마운트돼도 초안 생성 요청은 한 번이고, 성공하면 편집 주소로 replace', async () => {
@@ -277,38 +271,34 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
   it('한줄평을 저장하면 카드에 보이고, 비워서 저장하면 추천 이유로 돌아간다', async () => {
     const { user } = await openCourse();
     await user.click(
-      within(await openStopSheet(user, '서천 밥상')).getByRole('button', { name: '한줄평' }),
+      within(await openStopSheet(user, '렌토')).getByRole('button', { name: '한줄평' }),
     );
-    let sheet = await screen.findByRole('dialog', { name: '서천 밥상 한줄평' });
+    let sheet = await screen.findByRole('dialog', { name: '렌토 한줄평' });
     const field = within(sheet).getByRole('textbox', { name: '한줄평' });
     expect(field).toHaveValue('');
     await user.type(field, '양이 많아 든든해요');
     await user.click(within(sheet).getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(within(stopCard('서천 밥상')).getByText('양이 많아 든든해요')).toBeInTheDocument();
+    expect(within(stopCard('렌토')).getByText('양이 많아 든든해요')).toBeInTheDocument();
     // 가이드 한줄평에는 AI 표시가 없다
-    expect(within(stopCard('서천 밥상')).queryByText('AI 추천 이유:')).toBeNull();
+    expect(within(stopCard('렌토')).queryByText('AI 추천 이유:')).toBeNull();
     // 한줄평 창이 닫히면 포커스는 그 지점의 `≡`로 돌아온다
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '서천 밥상 편집' })).toHaveFocus(),
-    );
+    await waitFor(() => expect(screen.getByRole('button', { name: '렌토 편집' })).toHaveFocus());
 
     // 다시 열면 지금 한줄평이 채워져 있다
     await user.click(
-      within(await openStopSheet(user, '서천 밥상')).getByRole('button', { name: '한줄평' }),
+      within(await openStopSheet(user, '렌토')).getByRole('button', { name: '한줄평' }),
     );
-    sheet = await screen.findByRole('dialog', { name: '서천 밥상 한줄평' });
+    sheet = await screen.findByRole('dialog', { name: '렌토 한줄평' });
     expect(within(sheet).getByRole('textbox', { name: '한줄평' })).toHaveValue(
       '양이 많아 든든해요',
     );
     await user.clear(within(sheet).getByRole('textbox', { name: '한줄평' }));
     await user.click(within(sheet).getByRole('button', { name: '저장' }));
     await waitFor(() => expect(screen.queryByRole('dialog')).toBeNull());
-    expect(within(stopCard('서천 밥상')).getByText(/^신청자 2명이/)).toBeInTheDocument();
-    expect(within(stopCard('서천 밥상')).getByText('AI 추천 이유:')).toBeInTheDocument();
-    await waitFor(() =>
-      expect(screen.getByRole('button', { name: '서천 밥상 편집' })).toHaveFocus(),
-    );
+    expect(within(stopCard('렌토')).getByText(/^신청자 2명이/)).toBeInTheDocument();
+    expect(within(stopCard('렌토')).getByText('AI 추천 이유:')).toBeInTheDocument();
+    await waitFor(() => expect(screen.getByRole('button', { name: '렌토 편집' })).toHaveFocus());
   });
 
   it('마지막 한 곳은 뺄 수 없다 — 두 곳을 빼면 일정 · 1개 장소, 남은 지점의 빼기는 비활성 + 사유, 포커스는 이웃 지점 · 소제목으로', async () => {
@@ -342,10 +332,10 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
       );
     }
     expect(screen.getByRole('heading', { name: '일정 · 1개 장소' })).toBeInTheDocument();
-    expect(stopRows()).toEqual(['14:00 카페 모래시계']);
+    expect(stopRows()).toEqual(['14:00 타임리스커피']);
     expect(screen.getByRole('button', { name: '이 코스로 확정하기' })).toBeEnabled();
     // 백엔드는 지점이 1곳 이상이어야 코스를 바꿀 수 있다(2C-R12 ②) — 마지막 지점의 빼기는 사유와 함께 잠긴다.
-    const sheet = await openStopSheet(user, '카페 모래시계');
+    const sheet = await openStopSheet(user, '타임리스커피');
     const remove = within(sheet).getByRole('button', { name: '빼기' });
     expect(remove).toBeDisabled();
     expect(remove).toHaveAccessibleDescription('지점은 1곳 이상 있어야 해요.');
@@ -402,7 +392,7 @@ describe('G03 → 장소 고르기(G07) 진입점 (2B′-R5 ⑥ · R14)', () => 
     expect(await screen.findByRole('heading', { name: '코스 장소 추가' })).toBeInTheDocument();
   });
 
-  it.each(['서천 밥상', '예술·디자인대학'])(
+  it.each(['렌토', '예술·디자인대학'])(
     '%s 지점 시트의 `다른 장소로 교체` → 그 지점의 교체 모드(상점 · 캠퍼스 지점 모두)',
     async (name) => {
       const { user, router } = await openCourse();
@@ -447,7 +437,7 @@ describe('G03 → 장소 고르기(G07) 진입점 (2B′-R5 ⑥ · R14)', () => 
   it('편집 요청이 진행 중이면 `+ 장소 추가`도 잠긴다', async () => {
     const { user } = await openCourse();
     setMockLatency({ base: 150, ai: 0 });
-    const sheet = await openStopSheet(user, '서천 밥상');
+    const sheet = await openStopSheet(user, '렌토');
     await user.click(within(sheet).getByRole('button', { name: '아래로 이동' }));
     expect(screen.getByRole('button', { name: '+ 장소 추가' })).toBeDisabled();
     await waitFor(() => expect(screen.getByRole('button', { name: '+ 장소 추가' })).toBeEnabled());

@@ -30,7 +30,7 @@ export const LIFESTYLE_KEYWORDS: Record<LifestyleIntent, string[]> = {
   놀거리: ['놀', '보드게임', '노래방', '산책'],
 };
 
-/** 생활 의도 → 상점 업종(`stores.category`, 인허가 데이터의 업종명). */
+/** 생활 의도 → 상점 업종(`stores.category` — 상가정보 업종을 앱 업종으로 옮긴 값, `docs/reference/store-data.md`). */
 export const LIFESTYLE_CATEGORIES: Record<LifestyleIntent, string[]> = {
   식사: ['한식', '분식', '중식', '일식', '양식', '식당'],
   카페: ['카페'],

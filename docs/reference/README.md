@@ -11,6 +11,7 @@
 | [wireframes.md](wireframes.md) | 와이어프레임 36장 인벤토리 + 화면 이미지(`wireframes/*.png`) | 피그잼 `용용톤2026_Design` |
 | [design-v2.md](design-v2.md) | **하이파이 V2(UNIRO)** 41장 색인 · 토큰 · 문구 + 화면 이미지(`design-v2/*.png`). V2가 있는 화면은 와이어보다 앞선다(결정 0010) | 피그마 개발용 Design 파일(원본 FigJam `용용톤2026_Design (복사)`) |
 | [hackathon.md](hackathon.md) | 해커톤 규정 · 심사 기준 · 팀 일정 · 회의록 요점 | 해커톤 안내 페이지, 팀 홈 |
+| [store-data.md](store-data.md) | 목업 상점 데이터(용인시 상가정보 590곳): 출처 · 거른 조건 · 업종 대응표 · 다시 만드는 법 · 시연 값 범위 | 공공데이터포털 15083033(2026-09 기준) |
 
 - 노션 팀 홈(일정 캘린더 · 보드): https://app.notion.com/p/1-405e0c1995d6800997a6f50af8225e2e
 - 피그잼: https://www.figma.com/board/VeUqh8ihXdgzUkpMTaPXsr

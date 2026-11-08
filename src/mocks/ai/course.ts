@@ -14,8 +14,11 @@ import {
 } from './interests';
 
 // C-01 코스 초안 흉내(결정 0008). 승인자들의 "하고 싶은 것"에서 생활 의도를 모아 캠퍼스 장소 + 관련 업종 상점으로
-// 코스를 짜고, 관련 후보(반경 안 · 의도 업종) 중에 제휴 상점이 있으면 최소 1곳을 넣는다. 관련 업종에 제휴가 없으면
-// 관련 없는 업종의 제휴 상점을 덧붙이지 않고 그대로 둔다(제휴 0곳 코스는 확정이 422 COURSE_PARTNER_REQUIRED). 거리는 모두 대학 중심에서 잰다.
+// 코스를 짜고, 관련 후보(반경 안 · 캠퍼스 밖 · 의도 업종) 중에 제휴 상점이 있으면 최소 1곳을 넣는다. 관련 업종에 제휴가
+// 없으면 관련 없는 업종의 제휴 상점을 덧붙이지 않고 그대로 둔다(제휴 0곳 코스는 확정이 422 COURSE_PARTNER_REQUIRED).
+// 순위는 거리 → 이름 → id뿐이고 제휴 여부는 순위에 쓰지 않는다(기능 명세 C-01 11/7). 거리는 모두 대학 중심에서 잰다.
+// 캠퍼스 안 매장(대학과 같은 주소 — 상가정보에서는 대학 주소의 좌표 한두 곳에 모여 있다)은 상점 지점 후보가 아니다: 캠퍼스는 캠퍼스 지점이
+// 맡고, 상점 지점은 방학에 손님이 줄어드는 대학가 상권에서 고른다(2026-11-08 실데이터 전환).
 
 /** 상점 후보 반경(대학 중심에서, 미터). */
 export const COURSE_RADIUS_M = 1000;
@@ -67,8 +70,8 @@ function summaryLead(db: DB, storeId: number): string | null {
 
 /**
  * 탐방의 코스 초안을 만든다(DB는 바꾸지 않는다). ① 승인자 동기(신청 id 순서)에서 생활 의도를 모으고(없으면 식사 ·
- * 카페) ② 캠퍼스 장소 하나를 첫 지점으로 ③ 의도 순서(식사 → 카페 → 놀거리)마다 반경 1km 안 해당 업종에서 가장
- * 가까운 상점(같으면 이름 · id 순)을 고른다 ④ 고른 상점이 탐방 날짜에 모두 비제휴면 고른 순서대로 같은 업종의 가장
+ * 카페) ② 캠퍼스 장소 하나를 첫 지점으로 ③ 의도 순서(식사 → 카페 → 놀거리)마다 반경 1km 안 · 캠퍼스 밖(주소가 대학
+ * 주소와 다름) 해당 업종에서 가장 가까운 상점(같으면 이름 · id 순)을 고른다 ④ 고른 상점이 탐방 날짜에 모두 비제휴면 고른 순서대로 같은 업종의 가장
  * 가까운 제휴 상점으로 하나를 바꾼다 ⑤ 시간은 위치 슬롯 ⑥ 지점마다 이유를 붙인다.
  */
 export function generateCourseDraft(db: DB, tourId: number): CourseDraft {
@@ -97,7 +100,8 @@ export function generateCourseDraft(db: DB, tourId: number): CourseDraft {
       .filter(
         (s) =>
           LIFESTYLE_CATEGORIES[intent].includes(s.category) &&
-          distance.get(s.id)! <= COURSE_RADIUS_M,
+          distance.get(s.id)! <= COURSE_RADIUS_M &&
+          s.address !== university.address,
       )
       .sort((a, b) => distance.get(a.id)! - distance.get(b.id)! || byNameThenId(a, b));
   const partnershipOn = (storeId: number) =>

@@ -147,7 +147,7 @@ describe('레이아웃', () => {
     const { router } = await renderApp('/owner/me', { as: 'owner' });
     await waitFor(() => expect(router.state.location.pathname).toBe('/owner/store'));
     expect(router.state.historyAction).toBe('REPLACE');
-    expect(await screen.findByText('서천 밥상')).toBeInTheDocument();
+    expect(await screen.findByText('렌토')).toBeInTheDocument();
   });
 
   it('자리 화면: /explore만 남는다(2B′-R24)', async () => {

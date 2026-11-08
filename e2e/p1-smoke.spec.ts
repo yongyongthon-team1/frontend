@@ -153,9 +153,9 @@ test('사장님 온보딩: 사업자 인증 → 가게 연결 → 제휴 저장 
   await page.getByRole('button', { name: '사업자 정보 확인' }).click();
 
   await expectOpen(page, /\/owner\/store\/connect$/, '가게 찾기 · 연결');
-  await page.getByRole('textbox', { name: '가게 이름 검색' }).fill('카페 단풍');
+  await page.getByRole('textbox', { name: '가게 이름 검색' }).fill('일삼일구');
   await page.getByRole('button', { name: '검색' }).click();
-  await page.getByRole('button', { name: '카페 단풍 이 가게 연결하기' }).click();
+  await page.getByRole('button', { name: '일삼일구 이 가게 연결하기' }).click();
   await page.getByRole('button', { name: '다음으로' }).click();
   await page.getByRole('button', { name: '연결하기', exact: true }).click();
 
@@ -165,7 +165,7 @@ test('사장님 온보딩: 사업자 인증 → 가게 연결 → 제휴 저장 
   await page.getByRole('button', { name: '제휴 혜택 저장' }).click();
 
   await expectOpen(page, /\/owner\/store$/);
-  await expect(page.getByText('카페 단풍', { exact: true })).toBeVisible();
+  await expect(page.getByText('일삼일구', { exact: true })).toBeVisible();
   // 방금 저장한 제휴 혜택이 내 가게 화면에 보인다.
   await expect(page.getByText('음료 10% 할인')).toBeVisible();
 });

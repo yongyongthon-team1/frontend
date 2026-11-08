@@ -36,9 +36,9 @@ describe('businessNotice', () => {
 describe('diffStoreEdit', () => {
   const before: MyStore = {
     id: 1,
-    name: '서천 밥상',
-    address: '경기도 용인시 기흥구 서천동 서천로 21',
-    category: '한식',
+    name: '렌토',
+    address: '경기도 용인시 기흥구 서천동로43번길 5-10',
+    category: '양식',
     partnership: null,
   };
   const same = { name: before.name, address: before.address, category: before.category };

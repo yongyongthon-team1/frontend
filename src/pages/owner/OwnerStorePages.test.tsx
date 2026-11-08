@@ -228,24 +228,26 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
     expect(searches.count()).toBe(0);
   });
 
-  it('카페 검색 → 소제목 · 칩 · 주소 · 업종, 연결된 가게는 비활성 + 사유, 고르면 선택됨', async () => {
+  it('꼬마 검색 → 소제목 · 칩 · 주소 · 업종, 연결된 가게는 비활성 + 사유, 고르면 선택됨', async () => {
     const { user } = await renderApp('/owner/store/connect', { as: OWNER_NOSTORE });
     await screen.findByRole('search');
-    await search(user, '카페');
+    await search(user, '꼬마'); // 꼬꼬마루(연결 전) · 땡큐꼬마김밥(상점 3, owner3)
     expect(await screen.findByRole('heading', { name: '검색 결과' })).toBeInTheDocument();
     expect(screen.queryByText('가게 이름으로 찾아 주세요')).not.toBeInTheDocument();
 
-    const free = (await screen.findByText('카페 단풍')).closest('li')!;
+    const free = (await screen.findByText('꼬꼬마루')).closest('li')!;
     expect(within(free).getByText('검색 결과')).toBeInTheDocument();
-    expect(within(free).getByText('경기도 용인시 수지구 죽전로 160 · 카페')).toBeInTheDocument();
-    const taken = screen.getByText('카페 모래시계').closest('li')!;
+    expect(
+      within(free).getByText('경기도 용인시 수지구 죽전로144번길 4-13 · 기타'),
+    ).toBeInTheDocument();
+    const taken = screen.getByText('땡큐꼬마김밥').closest('li')!;
     const takenButton = within(taken).getByRole('button', {
-      name: '카페 모래시계 이 가게 연결하기',
+      name: '땡큐꼬마김밥 이 가게 연결하기',
     });
     expect(takenButton).toBeDisabled();
     expect(within(taken).getByText('이미 다른 사장님 계정에 연결된 가게예요.')).toBeInTheDocument();
 
-    const pick = within(free).getByRole('button', { name: '카페 단풍 이 가게 연결하기' });
+    const pick = within(free).getByRole('button', { name: '꼬꼬마루 이 가게 연결하기' });
     expect(pick).toHaveTextContent('이 가게 연결하기');
     expect(pick).toHaveAttribute('aria-pressed', 'false');
     expect(screen.getByRole('button', { name: '다음으로' })).toBeDisabled();
@@ -278,24 +280,24 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
   it('2자 → 1자로 줄이면 이전 결과는 숨는다(제출하든 입력만 줄이든)', async () => {
     const { user } = await renderApp('/owner/store/connect', { as: OWNER_NOSTORE });
     await screen.findByRole('search');
-    await search(user, '카페');
-    expect(await screen.findByText('카페 단풍')).toBeInTheDocument();
+    await search(user, '일삼');
+    expect(await screen.findByText('일삼일구')).toBeInTheDocument();
 
     // 입력만 줄여도 숨고, 다시 늘리면 돌아온다
     await user.type(screen.getByLabelText('가게 이름 검색'), '{Backspace}');
-    expect(screen.queryByText('카페 단풍')).not.toBeInTheDocument();
+    expect(screen.queryByText('일삼일구')).not.toBeInTheDocument();
     expect(screen.getByText('가게 이름으로 찾아 주세요')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: '다음으로' })).toBeDisabled();
-    await user.type(screen.getByLabelText('가게 이름 검색'), '페');
-    expect(await screen.findByText('카페 단풍')).toBeInTheDocument();
+    await user.type(screen.getByLabelText('가게 이름 검색'), '삼');
+    expect(await screen.findByText('일삼일구')).toBeInTheDocument();
     expect(screen.queryByText('가게 이름으로 찾아 주세요')).not.toBeInTheDocument();
     await user.type(screen.getByLabelText('가게 이름 검색'), '{Backspace}');
-    expect(screen.queryByText('카페 단풍')).not.toBeInTheDocument();
+    expect(screen.queryByText('일삼일구')).not.toBeInTheDocument();
 
     // 1자를 제출해도 같다
-    await search(user, '카');
+    await search(user, '일');
     expect(screen.getByText('가게 이름을 2자 이상 입력해 주세요.')).toBeInTheDocument();
-    expect(screen.queryByText('카페 단풍')).not.toBeInTheDocument();
+    expect(screen.queryByText('일삼일구')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { name: '검색 결과' })).not.toBeInTheDocument();
   });
 
@@ -303,16 +305,16 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
     const posts = capture('POST', '/users/me/store');
     const { user, router } = await renderApp('/owner/store/connect', { as: OWNER_NOSTORE });
     await screen.findByRole('search');
-    await search(user, '카페');
-    const free = (await screen.findByText('카페 단풍')).closest('li')!;
-    await user.click(within(free).getByRole('button', { name: '카페 단풍 이 가게 연결하기' }));
+    await search(user, '일삼일구');
+    const free = (await screen.findByText('일삼일구')).closest('li')!;
+    await user.click(within(free).getByRole('button', { name: '일삼일구 이 가게 연결하기' }));
     await user.click(screen.getByRole('button', { name: '다음으로' }));
 
     const dialog = await screen.findByRole('alertdialog');
     expect(within(dialog).getByText('내 가게로 연결할까요?')).toBeInTheDocument();
     expect(
       within(dialog).getByText(
-        '카페 단풍 · 경기도 용인시 수지구 죽전로 160 — 계정당 가게는 1개만 연결할 수 있어요.',
+        '일삼일구 · 경기도 용인시 수지구 죽전로144번길 15-14 — 계정당 가게는 1개만 연결할 수 있어요.',
       ),
     ).toBeInTheDocument();
     // 확인 전에는 요청이 없다
@@ -330,7 +332,7 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
     await user.type(screen.getByLabelText('혜택 이름'), '음료 500원 할인');
     await user.click(screen.getByRole('button', { name: '제휴 혜택 저장' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/owner/store'));
-    expect(await screen.findByText('카페 단풍')).toBeInTheDocument();
+    expect(await screen.findByText('일삼일구')).toBeInTheDocument();
     expect(screen.getByText('음료 500원 할인 운영 중')).toBeInTheDocument();
   });
 
@@ -338,9 +340,9 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
     const posts = capture('POST', '/users/me/store');
     const { user, router } = await renderApp('/owner/store/connect', { as: OWNER_NOSTORE });
     await screen.findByRole('search');
-    await search(user, '카페');
-    const free = (await screen.findByText('카페 단풍')).closest('li')!;
-    await user.click(within(free).getByRole('button', { name: '카페 단풍 이 가게 연결하기' }));
+    await search(user, '일삼일구');
+    const free = (await screen.findByText('일삼일구')).closest('li')!;
+    await user.click(within(free).getByRole('button', { name: '일삼일구 이 가게 연결하기' }));
     await user.click(screen.getByRole('button', { name: '다음으로' }));
     const dialog = await screen.findByRole('alertdialog');
     await user.click(within(dialog).getByRole('button', { name: '돌아가기' }));
@@ -354,9 +356,9 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
     const posts = capture('POST', '/users/me/store');
     const { user, router } = await renderApp('/owner/store/connect', { as: OWNER_NOSTORE });
     await screen.findByRole('search');
-    await search(user, '카페');
-    const free = (await screen.findByText('카페 단풍')).closest('li')!;
-    await user.click(within(free).getByRole('button', { name: '카페 단풍 이 가게 연결하기' }));
+    await search(user, '일삼일구');
+    const free = (await screen.findByText('일삼일구')).closest('li')!;
+    await user.click(within(free).getByRole('button', { name: '일삼일구 이 가게 연결하기' }));
     await user.click(screen.getByRole('button', { name: '다음으로' }));
     const dialog = await screen.findByRole('alertdialog');
     await user.dblClick(within(dialog).getByRole('button', { name: '연결하기' }));
@@ -367,11 +369,11 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
   it('고르는 사이 다른 사장님이 먼저 연결하면: 토스트 + 그 카드가 비활성', async () => {
     const { user, router } = await renderApp('/owner/store/connect', { as: OWNER_NOSTORE });
     await screen.findByRole('search');
-    await search(user, '카페');
-    const free = (await screen.findByText('카페 단풍')).closest('li')!;
-    await user.click(within(free).getByRole('button', { name: '카페 단풍 이 가게 연결하기' }));
+    await search(user, '일삼일구');
+    const free = (await screen.findByText('일삼일구')).closest('li')!;
+    await user.click(within(free).getByRole('button', { name: '일삼일구 이 가게 연결하기' }));
     mutate((db) => {
-      db.stores.find((s) => s.name === '카페 단풍')!.ownerId = db.users.find(
+      db.stores.find((s) => s.name === '일삼일구')!.ownerId = db.users.find(
         (u) => u.email === 'owner2@demo.kr',
       )!.id;
     });
@@ -386,21 +388,21 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
     );
     await waitFor(() => expect(screen.queryByRole('alertdialog')).not.toBeInTheDocument());
     expect(router.state.location.pathname).toBe('/owner/store/connect');
-    const card = screen.getByText('카페 단풍').closest('li')!;
+    const card = screen.getByText('일삼일구').closest('li')!;
     await waitFor(() =>
       expect(
-        within(card).getByRole('button', { name: '카페 단풍 이 가게 연결하기' }),
+        within(card).getByRole('button', { name: '일삼일구 이 가게 연결하기' }),
       ).toBeDisabled(),
     );
     expect(screen.getByRole('button', { name: '다음으로' })).toBeDisabled();
   });
 
-  /** 카페 단풍을 골라 `다음으로` → `연결하기`까지 누른다. 확인 전에 `beforeConfirm`이 목업 DB를 고칠 수 있다. */
+  /** 일삼일구(상점 6, 단국대 근처 카페)를 골라 `다음으로` → `연결하기`까지 누른다. 확인 전에 `beforeConfirm`이 목업 DB를 고칠 수 있다. */
   async function linkCafe(user: User, beforeConfirm: () => void) {
     await screen.findByRole('search');
-    await search(user, '카페');
-    const free = (await screen.findByText('카페 단풍')).closest('li')!;
-    await user.click(within(free).getByRole('button', { name: '카페 단풍 이 가게 연결하기' }));
+    await search(user, '일삼일구');
+    const free = (await screen.findByText('일삼일구')).closest('li')!;
+    await user.click(within(free).getByRole('button', { name: '일삼일구 이 가게 연결하기' }));
     beforeConfirm();
     await user.click(screen.getByRole('button', { name: '다음으로' }));
     await user.click(
@@ -413,7 +415,7 @@ describe('O05 /owner/store/connect 가게 찾기 · 연결 (owner-a01, S-01)', (
     await linkCafe(user, () =>
       mutate((db) => {
         const owner = db.users.find((u) => u.email === OWNER_NOSTORE)!;
-        db.stores.find((s) => s.name === '죽전 돼지국밥')!.ownerId = owner.id;
+        db.stores.find((s) => s.name === '단')!.ownerId = owner.id;
       }),
     );
     await waitFor(() =>
@@ -583,8 +585,8 @@ describe('O06 /owner/store/partnership 제휴 설정 (S-03)', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '제휴 혜택을 설정해요.' })).toBeInTheDocument();
     expect(screen.getByText('참가자에게 제공할 혜택을 등록해 주세요.')).toBeInTheDocument();
-    expect(await screen.findByText('서천 밥상')).toBeInTheDocument();
-    expect(screen.getByText('경기도 용인시 기흥구 서천동 서천로 21 · 한식')).toBeInTheDocument();
+    expect(await screen.findByText('렌토')).toBeInTheDocument();
+    expect(screen.getByText('경기도 용인시 기흥구 서천동로43번길 5-10 · 양식')).toBeInTheDocument();
     expect(screen.queryByText('연결 완료')).not.toBeInTheDocument();
     expect(screen.getByLabelText('혜택 이름')).toHaveValue('식사 금액 10% 할인');
     expect(screen.queryByLabelText('할인 조건')).not.toBeInTheDocument();
@@ -706,9 +708,11 @@ describe('/owner/store/edit 가게 정보 수정 (S-01 PATCH)', () => {
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '가게 정보를 고쳐요.' })).toBeInTheDocument();
     expect(screen.getByText('학생들이 보는 가게 이름과 주소예요.')).toBeInTheDocument();
-    expect(await screen.findByLabelText('상호명')).toHaveValue('서천 밥상');
-    expect(screen.getByLabelText('가게 주소')).toHaveValue('경기도 용인시 기흥구 서천동 서천로 21');
-    expect(screen.getByLabelText('업종')).toHaveValue('한식');
+    expect(await screen.findByLabelText('상호명')).toHaveValue('렌토');
+    expect(screen.getByLabelText('가게 주소')).toHaveValue(
+      '경기도 용인시 기흥구 서천동로43번길 5-10',
+    );
+    expect(screen.getByLabelText('업종')).toHaveValue('양식');
     const save = screen.getByRole('button', { name: '변경사항 저장' });
     expect(save).toBeDisabled();
     expect(screen.getByText('바뀐 내용이 없어요.')).toBeInTheDocument();

@@ -33,7 +33,7 @@ function pinPositions() {
 describe('SchematicMap', () => {
   it('지점이 하나면 박스 가운데', () => {
     render(
-      <SchematicMap stops={[stop(1, 1, '카페 모래시계', 37.24, 127.08)]} onSelect={() => {}} />,
+      <SchematicMap stops={[stop(1, 1, '타임리스커피', 37.24, 127.08)]} onSelect={() => {}} />,
     );
     expect(pinPositions()).toEqual([['50%', '50%']]);
   });
@@ -41,7 +41,7 @@ describe('SchematicMap', () => {
   it('좌표가 같은 지점들도 가운데(0으로 나누지 않는다)', () => {
     render(
       <SchematicMap
-        stops={[stop(1, 1, '서천 밥상', 37.24, 127.08), stop(2, 2, '카페 모래시계', 37.24, 127.08)]}
+        stops={[stop(1, 1, '렌토', 37.24, 127.08), stop(2, 2, '타임리스커피', 37.24, 127.08)]}
         onSelect={() => {}}
       />,
     );
@@ -75,13 +75,13 @@ describe('SchematicMap', () => {
     render(
       <SchematicMap
         stops={[
-          stop(7, 1, '서천 밥상', 37.2417, 127.0848),
-          stop(8, 2, '카페 모래시계', 37.2405, 127.0821),
+          stop(7, 1, '렌토', 37.2417, 127.0848),
+          stop(8, 2, '타임리스커피', 37.2405, 127.0821),
         ]}
         onSelect={onSelect}
       />,
     );
-    await userEvent.click(screen.getByRole('button', { name: '② 카페 모래시계' }));
+    await userEvent.click(screen.getByRole('button', { name: '② 타임리스커피' }));
     expect(onSelect).toHaveBeenCalledWith(8);
   });
 });

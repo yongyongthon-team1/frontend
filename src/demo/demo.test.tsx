@@ -188,7 +188,7 @@ describe('시연 패널', () => {
     expect(await screen.findByLabelText('6자리 쿠폰 코드')).toHaveValue(code);
     // 그 쿠폰을 발급한 가게의 사장님이라 "다른 가게 쿠폰" 오류 없이 사용 가능한 쿠폰 카드가 보인다.
     expect(await screen.findByText('사용 가능')).toBeInTheDocument();
-    expect(screen.getByText('서천 밥상')).toBeInTheDocument();
+    expect(screen.getByText('렌토')).toBeInTheDocument();
     expect(screen.queryByText('만료되었거나 다른 가게 쿠폰')).toBeNull();
   });
 
@@ -460,7 +460,7 @@ describe('발표 모드', () => {
     expect(queryClient.getQueryData(qk.me)).toMatchObject({ email: DEMO_STORE_OWNERS[2] });
     expect(await screen.findByLabelText('6자리 쿠폰 코드')).toHaveValue(coupon.code);
     expect(await screen.findByText('사용 가능')).toBeInTheDocument();
-    expect(screen.getByText('카페 모래시계')).toBeInTheDocument();
+    expect(screen.getByText('타임리스커피')).toBeInTheDocument();
     expect(screen.getByText('사장님 화면')).toBeInTheDocument();
   });
 

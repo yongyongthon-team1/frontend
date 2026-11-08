@@ -49,8 +49,8 @@ describe('가이드 확정 코스 보기 (/guide/tours/:tourId/course)', () => {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });
-    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
-    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    await user.click(await screen.findByRole('button', { name: /렌토/ }));
+    const sheet = await screen.findByRole('dialog', { name: '렌토' });
     expect(within(sheet).getByText('제휴 혜택 · 식사 금액 10% 할인')).toBeInTheDocument();
     expect(within(sheet).queryByRole('link', { name: '쿠폰 보기' })).not.toBeInTheDocument();
     expect(within(sheet).getByText('별점 4.6 · 리뷰 5개')).toBeInTheDocument();

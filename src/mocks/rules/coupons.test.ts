@@ -165,7 +165,7 @@ describe('쿠폰 발급', () => {
     Object.assign(partnershipOf(1), { startDate: '2026-11-15', endDate: '2026-11-15' }); // 당일 하루
     partnershipOf(2).endDate = '2026-11-14'; // 전날 끝남
     partnershipOf(3).startDate = '2026-11-16'; // 다음 날 시작
-    // 상점 5(죽전 돼지국밥)는 제휴가 없다
+    // 상점 5(단, 단국대 근처)는 제휴가 없다
     const app = approveYujin();
     expect(couponsOf(app.id).map((c) => c.storeId)).toEqual([1]);
   });

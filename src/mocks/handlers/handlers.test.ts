@@ -193,6 +193,9 @@ function unusedCode(): string {
   return String(n).padStart(6, '0');
 }
 
+/** 시드 상점 id 구간(양 끝 포함). 시연 상점 1~6 뒤의 실데이터 상점은 캠퍼스 순으로 이어진다. */
+const idRange = (from: number, to: number) =>
+  Array.from({ length: to - from + 1 }, (_, i) => from + i);
 const DEMO_TOUR_TITLE = '경희대 국제캠퍼스 산업디자인학과 탐방';
 const DEMO_OPEN_CHAT = 'https://open.kakao.com/o/demo-khu-design';
 
@@ -1636,8 +1639,8 @@ describe('courses', () => {
     });
     expect(draft.stops.map((s) => [s.order, s.visitTime, s.type, s.name])).toEqual([
       [1, '14:00', 'CAMPUS', '예술·디자인대학'],
-      [2, '15:10', 'STORE', '서천 밥상'],
-      [3, '16:00', 'STORE', '카페 모래시계'],
+      [2, '15:10', 'STORE', '렌토'],
+      [3, '16:00', 'STORE', '타임리스커피'],
     ]);
     expect(draft.stops.map((s) => s.campusBuildingId)).toEqual([3, null, null]);
 
@@ -1722,7 +1725,7 @@ describe('courses', () => {
       stop_type: 'STORE',
       store_id: 1,
       campus_building_id: null,
-      category: '한식',
+      category: '양식',
       comment: '든든한 밥집',
       is_partner: true,
       spot_id: expect.any(Number),
@@ -1821,10 +1824,10 @@ describe('courses', () => {
       order: 2,
       visitTime: '15:10',
       type: 'STORE',
-      name: '서천 밥상',
-      category: '한식',
-      lat: 37.2417,
-      lng: 127.0848,
+      name: '렌토',
+      category: '양식',
+      lat: 37.2370451,
+      lng: 127.0774219,
       description: null,
       recommendationReason: expect.stringContaining('신청자 2명이'),
       storeId: 1,
@@ -1836,10 +1839,10 @@ describe('courses', () => {
         summary:
           '학생들은 양이 넉넉하고 사장님이 친절하다고 해요. 시험 기간엔 줄이 길다는 평이 있어요.',
       },
-      dataSource: '공공데이터(인허가) 기반',
+      dataSource: '공공데이터(소상공인 상가정보) 기반',
     });
     expect(course.stops[2]).toMatchObject({
-      name: '카페 모래시계',
+      name: '타임리스커피',
       category: '카페',
       partnership: { discount: '음료 1,000원 할인' },
       review: { average: 4.4, count: 5 },
@@ -1855,31 +1858,35 @@ describe('courses', () => {
       const [, meal, cafe] = db.courseStops
         .filter((s) => s.tourId === 1)
         .sort((a, b) => a.stopOrder - b.stopOrder);
-      meal.storeId = 5; // 죽전 돼지국밥: 제휴 · 리뷰 없음
+      meal.storeId = 5; // 단(단국대 근처): 제휴 · 리뷰 없음
       db.partnerships.find((p) => p.storeId === cafe.storeId)!.endDate = '2000-01-01';
     });
     await login('guide@demo.kr');
     const [, meal, cafe] = (await getGuideCourse(1, await listCampuses()))!.stops;
     expect(meal).toMatchObject({
-      name: '죽전 돼지국밥',
+      name: '단',
       partnership: null,
       review: { average: null, count: 0, summary: null },
-      dataSource: '공공데이터(인허가) 기반',
+      dataSource: '공공데이터(소상공인 상가정보) 기반',
     });
-    expect(cafe).toMatchObject({ name: '카페 모래시계', partnership: null });
+    expect(cafe).toMatchObject({ name: '타임리스커피', partnership: null });
   });
 });
 
 describe('주변 상점 · 캠퍼스 장소 (GET /stores/nearby · GET /campuses/:campusId/places)', () => {
   type Items = { code: string; data: { items: Record<string, unknown>[] } };
 
-  it('S-02 와이어: 명세 예시와 같은 모양(학생 토큰), 경희대는 반경 1km 안 상점 1 · 2 · 3 · 4', async () => {
+  it('S-02 와이어: 명세 예시와 같은 모양(학생 토큰), 경희대는 반경 1km 안 상점 106곳(제휴는 1 · 2 · 3 · 4)', async () => {
     const { token } = await login('student@demo.kr');
     const res = await rawFetch<Items>('/stores/nearby?campus_id=2', { method: 'GET', token });
     expect([res.status, res.body.code]).toEqual([200, 'S200']);
     expectWireShape(res.body.data, NEARBY_STORES.data);
-    expect(res.body.data.items.map((i) => i.store_id)).toEqual([1, 2, 3, 4]); // 목업은 id 순, 거리 순서는 프론트 몫
-    expect(res.body.data.items.every((i) => i.is_partner === true)).toBe(true);
+    // 목업은 id 순, 거리 순서는 프론트 몫. 시연 제휴 1~4 뒤에 경희대 근처 실데이터 상점 192~293(비제휴)
+    expect(res.body.data.items.map((i) => i.store_id)).toEqual([1, 2, 3, 4, ...idRange(192, 293)]);
+    expect(res.body.data.items.map((i) => i.is_partner)).toEqual([
+      ...Array<boolean>(4).fill(true),
+      ...Array<boolean>(102).fill(false),
+    ]);
     expect(Object.keys(res.body.data.items[0]).sort()).toEqual(
       Object.keys(NEARBY_STORES.data.items[0]).sort(),
     );
@@ -1897,19 +1904,27 @@ describe('주변 상점 · 캠퍼스 장소 (GET /stores/nearby · GET /campuses
     expect(cafes.body.data.items.every((i) => i.category === '카페')).toBe(true);
   });
 
-  it('getNearbyStores: 단국대는 [6, 5](가까운 순) · 비제휴, 경희대는 거리 오름차순 · 모두 제휴 · 상점 1은 시드 AI 요약', async () => {
+  it('getNearbyStores: 단국대는 가까운 순(단 · 밥과함께라면 · 일삼일구 …) · 모두 비제휴, 경희대는 거리 오름차순 · 제휴는 1~4 · 상점 1은 시드 AI 요약', async () => {
     await login('student@demo.kr');
     const campuses = await listCampuses();
     const dankook = await getNearbyStores(3, campuses);
-    expect(dankook.map((s) => s.storeId)).toEqual([6, 5]);
+    expect(dankook.slice(0, 3).map((s) => [s.storeId, s.name, Math.round(s.distanceM)])).toEqual([
+      [5, '단', 84],
+      [438, '밥과함께라면단국대점', 85],
+      [6, '일삼일구', 87],
+    ]);
+    expect(new Set(dankook.map((s) => s.storeId))).toEqual(new Set([5, 6, ...idRange(294, 476)]));
+    expect(dankook.map((s) => s.distanceM)).toEqual(
+      [...dankook.map((s) => s.distanceM)].sort((a, b) => a - b),
+    );
     expect(dankook.every((s) => !s.isPartner)).toBe(true);
 
     const khu = await getNearbyStores(2, campuses);
-    expect(new Set(khu.map((s) => s.storeId))).toEqual(new Set([1, 2, 3, 4]));
+    expect(new Set(khu.map((s) => s.storeId))).toEqual(new Set([1, 2, 3, 4, ...idRange(192, 293)]));
     expect(khu.map((s) => s.distanceM)).toEqual(
       [...khu.map((s) => s.distanceM)].sort((a, b) => a - b),
     );
-    expect(khu.every((s) => s.isPartner)).toBe(true);
+    expect(khu.filter((s) => s.isPartner).map((s) => s.storeId)).toEqual([2, 1, 4, 3]); // 가까운 순
     const seeded = getDb()
       .reviewSummaries.filter((r) => r.storeId === 1)
       .sort((a, b) => Date.parse(b.generatedAt) - Date.parse(a.generatedAt) || b.id - a.id)[0];
@@ -1920,7 +1935,7 @@ describe('주변 상점 · 캠퍼스 장소 (GET /stores/nearby · GET /campuses
   it('요약이 없는 상점은 reviewSummary null', async () => {
     await login('student@demo.kr');
     const dankook = await getNearbyStores(3, await listCampuses());
-    expect(dankook.map((s) => s.reviewSummary)).toEqual([null, null]);
+    expect(dankook.map((s) => s.reviewSummary)).toEqual(Array<null>(185).fill(null));
   });
 
   it('제휴 기간이 지난 상점은 isPartner false', async () => {
@@ -2024,7 +2039,7 @@ describe('coupons', () => {
     await login('student@demo.kr');
     const app = applicationOf('student@demo.kr', 1);
     const list = await getMyCoupons(undefined, campuses());
-    expect(list.map((c) => c.storeName)).toEqual(['서천 밥상', '카페 모래시계']);
+    expect(list.map((c) => c.storeName)).toEqual(['렌토', '타임리스커피']);
     expect(list[0].id).toBeLessThan(list[1].id);
     expect(list[0]).toEqual({
       id: expect.any(Number),
@@ -2033,8 +2048,8 @@ describe('coupons', () => {
       state: 'USABLE',
       discount: '식사 금액 10% 할인',
       storeId: 1,
-      storeName: '서천 밥상',
-      storeCategory: '한식',
+      storeName: '렌토',
+      storeCategory: '양식',
       applicationId: app.id,
       tourId: 1,
       tourTitle: DEMO_TOUR_TITLE,
@@ -2084,7 +2099,7 @@ describe('coupons', () => {
     expectWireShape(all.body.data, MY_COUPONS.data, ['category']);
     const items = (all.body.data as { items: { store: { category?: string } }[] }).items;
     expect(items).toHaveLength(2);
-    expect(items[0].store.category).toBe('한식');
+    expect(items[0].store.category).toBe('양식'); // 렌토(상점 1)
     expect(all.body.data).not.toHaveProperty('total'); // 쪽 없는 목록(명세)
 
     const filtered = await rawFetch<Envelope>('/users/me/coupons?tour_id=1&store_id=2', {
@@ -2109,7 +2124,7 @@ describe('coupons', () => {
       code,
       state: 'USABLE',
       discount: '식사 금액 10% 할인',
-      storeName: '서천 밥상',
+      storeName: '렌토',
       tourTitle: DEMO_TOUR_TITLE,
       tourStartsAt: expect.stringMatching(/T00:00:00\+09:00$/), // 응답에는 탐방 날짜뿐이다
       studentName: '김민지',
@@ -2484,7 +2499,7 @@ describe('사장님 내 가게 (GET /users/me/store)', () => {
     expectWireShape(res.body.data, MY_STORE.data);
     expect(res.body.data).toMatchObject({
       store_id: 1,
-      name: '서천 밥상',
+      name: '렌토',
       partnership: { discount_text: '식사 금액 10% 할인' },
     });
   });
@@ -2528,7 +2543,7 @@ describe('사장님 내 가게 (GET /users/me/store)', () => {
     await login('owner1@demo.kr');
     expect(await getMyStore()).toMatchObject({
       id: 1,
-      name: '서천 밥상',
+      name: '렌토',
       partnership: { discount: '식사 금액 10% 할인', state: 'ACTIVE' },
     });
 
@@ -3619,29 +3634,35 @@ describe('사장님 사업자 인증 · 상점 검색 · 가게 연결 · 수정
 
   it('GET /stores/search: 명세 예시와 같은 모양(쪽 정보 포함), 한 글자는 400, 사장님이 아니면 403', async () => {
     const { token } = await login('owner-nostore@demo.kr');
-    const res = await rawFetch<Envelope>('/stores/search?keyword=%EC%B9%B4%ED%8E%98', {
+    const keyword = encodeURIComponent('김밥');
+    const res = await rawFetch<Envelope>(`/stores/search?keyword=${keyword}`, {
       method: 'GET',
       token,
     });
     expect([res.status, res.body.code]).toEqual([200, STORE_SEARCH.code]);
     expectWireShape(res.body.data, STORE_SEARCH.data);
-    expect(res.body.data).toMatchObject({ page: 1, size: 20, total: 3 });
+    expect(res.body.data).toMatchObject({ page: 1, size: 20, total: 8 });
     const items = res.body.data!.items as { name: string; is_registered: boolean }[];
     expect(items.map((i) => [i.name, i.is_registered])).toEqual([
-      ['보드게임 카페 다이스', true],
-      ['카페 단풍', false],
-      ['카페 모래시계', true],
+      ['가치김밥', false],
+      ['김밥엔떡볶이', false], // 상가정보에 같은 상호 · 주소로 두 번(상가업소번호가 다르다)
+      ['김밥엔떡볶이', false],
+      ['김밥천국강남대점', false],
+      ['땡큐꼬마김밥', true],
+      ['민들레김밥죽전홀씨점', false],
+      ['얌샘김밥단국대점', false],
+      ['우리김밥', false],
     ]);
 
-    const paged = await rawFetch<Envelope>(
-      '/stores/search?keyword=%EC%B9%B4%ED%8E%98&page=2&size=2',
-      {
-        method: 'GET',
-        token,
-      },
-    );
-    expect(paged.body.data).toMatchObject({ page: 2, size: 2, total: 3 });
-    expect((paged.body.data!.items as unknown[]).length).toBe(1);
+    const paged = await rawFetch<Envelope>(`/stores/search?keyword=${keyword}&page=3&size=3`, {
+      method: 'GET',
+      token,
+    });
+    expect(paged.body.data).toMatchObject({ page: 3, size: 3, total: 8 });
+    expect((paged.body.data!.items as { name: string }[]).map((i) => i.name)).toEqual([
+      '얌샘김밥단국대점',
+      '우리김밥',
+    ]);
 
     const short = await rawFetch<Envelope>('/stores/search?keyword=%EC%B9%B4', {
       method: 'GET',
@@ -3662,7 +3683,7 @@ describe('사장님 사업자 인증 · 상점 검색 · 가게 연결 · 수정
 
   it('POST /users/me/store: 검색에서 고르면 201 + 명세 예시 모양, 다시 하면 409 E409_STORE_UNAVAILABLE', async () => {
     const { token } = await login('owner-nostore@demo.kr');
-    const target = getDb().stores.find((st) => st.name === '카페 단풍')!;
+    const target = getDb().stores.find((st) => st.name === '일삼일구')!;
     const res = await rawFetch<Envelope>('/users/me/store', {
       method: 'POST',
       token,
@@ -3671,9 +3692,9 @@ describe('사장님 사업자 인증 · 상점 검색 · 가게 연결 · 수정
     expect([res.status, res.body.code]).toEqual([201, STORE_REGISTERED.code]);
     expectWireShape(res.body.data, STORE_REGISTERED.data);
     expect(res.body.data).toEqual({
-      store_id: target.id,
-      name: '카페 단풍',
-      address: target.address,
+      store_id: 6,
+      name: '일삼일구',
+      address: '경기도 용인시 수지구 죽전로144번길 15-14',
       category: '카페',
     });
     expect(target.ownerId).toBe(getDb().users.find((u) => u.email === 'owner-nostore@demo.kr')!.id);
@@ -3750,7 +3771,7 @@ describe('사장님 사업자 인증 · 상점 검색 · 가게 연결 · 수정
     expectWireShape(res.body.data, MY_STORE.data);
     expect(res.body.data).toMatchObject({
       store_id: 1,
-      name: '서천 밥상',
+      name: '렌토',
       address: '새 주소',
       partnership: { discount_text: '식사 금액 10% 할인' },
     });

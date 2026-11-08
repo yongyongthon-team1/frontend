@@ -44,7 +44,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     await user.type(await screen.findByLabelText(CODE_LABEL), code);
     // 조회 카드: 칩 · 상점 · 혜택 · 구분선 아래 `{탐방 제목} · {MM.DD (요일)}`
     const card = (await screen.findByText('사용 가능')).closest('section')!;
-    expect(within(card).getByText('서천 밥상')).toBeInTheDocument();
+    expect(within(card).getByText('렌토')).toBeInTheDocument();
     expect(within(card).getByText('식사 금액 10% 할인')).toBeInTheDocument();
     expect(within(card).getByText(/ · \d\d\.\d\d \(.\)$/)).toBeInTheDocument();
     expect(screen.getByText('쿠폰은 한 번만 사용할 수 있어요.')).toBeInTheDocument();

@@ -37,7 +37,7 @@ describe('내 가게 API (MSW 목업)', () => {
     loginAs(DEMO_EMAILS.owner);
     expect(await getMyStore()).toMatchObject({
       id: 1,
-      name: '서천 밥상',
+      name: '렌토',
       partnership: { state: 'ACTIVE' },
     });
   });
@@ -249,14 +249,19 @@ describe('상점 검색 · 가게 연결 · 등록 API (S-01, MSW 목업)', () =
     loginAs(DEMO_EMAILS.ownerNoStore);
   });
 
-  it('getStoreSearch: 카페 → 이름순, 연결 여부(registered)를 함께', async () => {
-    const items = await getStoreSearch('카페');
+  it('getStoreSearch: 김밥 → 이름순, 연결 여부(registered)를 함께', async () => {
+    const items = await getStoreSearch('김밥');
     expect(items.map((i) => [i.name, i.registered])).toEqual([
-      ['보드게임 카페 다이스', true],
-      ['카페 단풍', false],
-      ['카페 모래시계', true],
+      ['가치김밥', false],
+      ['김밥엔떡볶이', false],
+      ['김밥엔떡볶이', false],
+      ['김밥천국강남대점', false],
+      ['땡큐꼬마김밥', true],
+      ['민들레김밥죽전홀씨점', false],
+      ['얌샘김밥단국대점', false],
+      ['우리김밥', false],
     ]);
-    expect(items[1]).toMatchObject({ storeId: expect.any(Number), category: '카페' });
+    expect(items[4]).toMatchObject({ storeId: 3, category: '분식' });
   });
 
   it('getStoreSearch: 쿼리는 keyword(공백 뺌) · page 1 · size 20 한 쪽, 한 글자는 VALIDATION', async () => {
@@ -304,21 +309,21 @@ describe('상점 검색 · 가게 연결 · 등록 API (S-01, MSW 목업)', () =
   });
 
   it('검색에서 고르면 연결되어 MyStore를 돌려주고, 다시 연결하면 STORE_LIMIT', async () => {
-    const dangpung = (await getStoreSearch('단풍'))[0];
+    const target = (await getStoreSearch('일삼'))[0]; // 일삼일구(상점 6)
     const bodies = await bodiesDuring(
       async () => {
-        expect(await postStore({ storeId: dangpung.storeId })).toMatchObject({
-          id: dangpung.storeId,
-          name: '카페 단풍',
+        expect(await postStore({ storeId: target.storeId })).toMatchObject({
+          id: target.storeId,
+          name: '일삼일구',
           partnership: null,
         });
       },
       'POST',
       '/users/me/store',
     );
-    expect(bodies).toEqual([{ store_id: dangpung.storeId }]);
-    expect(await getMyStore()).toMatchObject({ name: '카페 단풍' });
-    await expect(postStore({ storeId: dangpung.storeId })).rejects.toMatchObject({
+    expect(bodies).toEqual([{ store_id: target.storeId }]);
+    expect(await getMyStore()).toMatchObject({ name: '일삼일구' });
+    await expect(postStore({ storeId: target.storeId })).rejects.toMatchObject({
       status: 409,
       code: 'STORE_LIMIT',
       backendCode: 'E409_STORE_UNAVAILABLE',
@@ -407,7 +412,7 @@ describe('가게 수정 · 제휴 설정 API (S-01 · S-03, MSW 목업)', () => 
       async () => {
         expect(await patchMyStore({ address: '새 주소' })).toMatchObject({
           id: 1,
-          name: '서천 밥상',
+          name: '렌토',
           address: '새 주소',
           partnership: { state: 'ACTIVE' },
         });

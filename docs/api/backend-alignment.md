@@ -458,7 +458,7 @@
 | `storeId` | `store_id` | 이름 |
 | `partnership { discount }` 또는 null | `is_partner`(bool) | **할인 문구가 없다.** 시트의 `제휴 혜택 · {discount}`와 `partnerStopCount`(`features/courses/model.ts:80-82`)가 쓴다. bool은 `{ discount: '' }`로 옮길 수 있지만 문구는 요청해야 한다. 탐방 날짜 기준 제휴인지도 명세에 없음 |
 | `review { average, count, summary }`(계약은 `recent` 포함) 또는 null | `review_summary`(문자열) | 평균 · 개수가 없다. 상점마다 `GET /stores/{id}/reviews`로 채우거나 요청한다 |
-| `dataSource` | 없음 | 시트 출처 줄(`features/courses/components/StoreSheet.tsx:64`). STORE면 프론트 상수 `'공공데이터(인허가) 기반'` |
+| `dataSource` | 없음 | 시트 출처 줄(`features/courses/components/StoreSheet.tsx:64`). STORE면 프론트 상수 `'공공데이터(소상공인 상가정보) 기반'`(2026-11-08 전에는 `'공공데이터(인허가) 기반'`) |
 
 상태 · 권한: 학생이 준비 중인 코스를 열면 `E409_COURSE_NOT_READY`(409, 우리 404 `COURSE_NOT_READY`). 승인되지 않은 사람이 열 때의 응답은 명세에 없음(공통 `E403`로 본다). 가이드가 코스 없는 탐방을 열 때의 응답도 명세에 없음. 우리는 404를 "코스 없음"(null)으로 읽는다 `features/courses/api.ts:13-20`.
 

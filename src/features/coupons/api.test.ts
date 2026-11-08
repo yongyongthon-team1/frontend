@@ -50,7 +50,7 @@ describe('쿠폰 API (MSW 목업)', () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
   });
 
-  /** 김민지가 탐방 1에서 받은 서천 밥상(상점 1, 사장님 1)의 아직 안 쓴 쿠폰 코드. */
+  /** 김민지가 탐방 1에서 받은 렌토(상점 1, 사장님 1)의 아직 안 쓴 쿠폰 코드. */
   const unusedCode = () => {
     const db = getDb();
     const studentId = db.users.find((u) => u.email === STUDENT)!.id;
@@ -61,14 +61,14 @@ describe('쿠폰 API (MSW 목업)', () => {
   it('학생: 내 쿠폰은 id 오름차순이고 신청으로 거르며, 상세는 목록에서 찾는다', async () => {
     loginAs(STUDENT);
     const all = await getMyCoupons(undefined, listCampuses());
-    expect(all.map((c) => c.storeName)).toEqual(['서천 밥상', '카페 모래시계']);
+    expect(all.map((c) => c.storeName)).toEqual(['렌토', '타임리스커피']);
     expect(all[0].id).toBeLessThan(all[1].id);
     expect(all[0]).toMatchObject({
       status: 'ISSUED',
       state: 'USABLE',
       discount: '식사 금액 10% 할인',
       storeId: 1,
-      storeCategory: '한식', // 목업 확장 store.category
+      storeCategory: '양식', // 목업 확장 store.category
       tourId: 1,
       reviewWritten: false,
       usedAt: null,
@@ -116,7 +116,7 @@ describe('쿠폰 API (MSW 목업)', () => {
     expect(await getCouponLookup(code)).toMatchObject({
       code,
       state: 'USABLE',
-      storeName: '서천 밥상',
+      storeName: '렌토',
       studentName: '김민지', // 목업 확장 student_name
       usedAt: null,
     });
@@ -124,7 +124,7 @@ describe('쿠폰 API (MSW 목업)', () => {
     expect(result.coupon).toMatchObject({
       code,
       state: 'USED',
-      storeName: '서천 밥상',
+      storeName: '렌토',
       usedAt: expect.any(String),
     });
     expect(result.tourVisitorCount).toBe(1);

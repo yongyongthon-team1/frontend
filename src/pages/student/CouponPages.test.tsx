@@ -192,7 +192,7 @@ describe('리뷰 진입점 (R-01)', () => {
     await user.type(screen.getByLabelText('좋았던 점과 아쉬웠던 점'), '친절해요');
     await user.click(screen.getByRole('button', { name: '리뷰 등록하기' }));
     // 신청이 승인 상태라 코스 지도(상점 시트가 열린 채)로 착지한다 — 거기서 쿠폰 목록으로 돌아간다.
-    await screen.findByRole('dialog', { name: '서천 밥상' });
+    await screen.findByRole('dialog', { name: '렌토' });
     await router.navigate(`/my-tours/${applicationId}/coupons`);
     // 사라지는 시트에도 같은 글이 있으니, 쿠폰 목록이 그려진 뒤에 센다.
     await screen.findAllByRole('link', { name: /할인/ });
@@ -210,7 +210,7 @@ describe('리뷰 진입점 (R-01)', () => {
     await user.click(await screen.findByRole('radio', { name: '별점 4점' }));
     await user.type(screen.getByLabelText('좋았던 점과 아쉬웠던 점'), '좋아요');
     await user.click(screen.getByRole('button', { name: '리뷰 등록하기' }));
-    await screen.findByRole('dialog', { name: '서천 밥상' });
+    await screen.findByRole('dialog', { name: '렌토' });
     await router.navigate(`/coupons/${couponId}`);
     await screen.findByRole('heading', { name: '쿠폰을 사용했어요!' });
     expect(await screen.findByText('리뷰 작성 완료')).toBeInTheDocument();

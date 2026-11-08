@@ -85,8 +85,8 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     const map = await screen.findByTestId('schematic-map');
     expect(within(map).getAllByRole('button')).toHaveLength(3);
     // 지도 핀을 눌러도 같은 상점 시트가 열린다
-    await user.click(within(map).getByRole('button', { name: '② 서천 밥상' }));
-    expect(await screen.findByRole('dialog', { name: '서천 밥상' })).toBeInTheDocument();
+    await user.click(within(map).getByRole('button', { name: '② 렌토' }));
+    expect(await screen.findByRole('dialog', { name: '렌토' })).toBeInTheDocument();
     await user.keyboard('{Escape}');
     await user.click(toggle);
     expect(toggle).toHaveAttribute('aria-expanded', 'false');
@@ -100,7 +100,7 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
           '양이 넉넉한 학생 단골 밥집';
       }),
     );
-    const meal = await screen.findByRole('button', { name: /서천 밥상/ });
+    const meal = await screen.findByRole('button', { name: /렌토/ });
     expect(within(meal).getByText('양이 넉넉한 학생 단골 밥집 · 50분')).toBeInTheDocument();
     // 가이드 한줄평에는 AI 표시가 없다.
     expect(within(meal).queryByText('AI 추천 이유:')).not.toBeInTheDocument();
@@ -109,7 +109,7 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     const cafeReason = getDb().courseStops.find(
       (s) => s.tourId === 1 && s.stopOrder === 3,
     )!.recommendationReason!;
-    const cafe = screen.getByRole('button', { name: /카페 모래시계/ });
+    const cafe = screen.getByRole('button', { name: /타임리스커피/ });
     expect(within(cafe).getByText(`${cafeReason} · 30분`)).toBeInTheDocument();
     // AI 추천 이유에는 ✦(장식)와 화면 낭독기용 표시가 붙는다.
     expect(within(cafe).getByText('AI 추천 이유:')).toBeInTheDocument();
@@ -119,10 +119,10 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
 
   it('지점을 누르면 AI 리뷰 요약 시트', async () => {
     const { user, id } = await openCourseMap('CONFIRMED');
-    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
+    await user.click(await screen.findByRole('button', { name: /렌토/ }));
     expect(await screen.findByText('✦ AI 리뷰 요약')).toBeInTheDocument();
-    const sheet = screen.getByRole('dialog', { name: '서천 밥상' });
-    expect(within(sheet).getByText('15:10 · 한식')).toBeInTheDocument();
+    const sheet = screen.getByRole('dialog', { name: '렌토' });
+    expect(within(sheet).getByText('15:10 · 양식')).toBeInTheDocument();
     expect(within(sheet).getByText('추천 이유')).toBeInTheDocument();
     expect(
       within(sheet).getByText(
@@ -130,7 +130,7 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
       ),
     ).toBeInTheDocument();
     expect(within(sheet).getByText('별점 4.6 · 리뷰 5개')).toBeInTheDocument();
-    expect(within(sheet).getByText('공공데이터(인허가) 기반')).toBeInTheDocument();
+    expect(within(sheet).getByText('공공데이터(소상공인 상가정보) 기반')).toBeInTheDocument();
     expect(within(sheet).getByText('제휴 혜택 · 식사 금액 10% 할인')).toBeInTheDocument();
     const coupon = getDb().coupons.find((c) => c.applicationId === id && c.storeId === 1)!;
     expect(within(sheet).getByRole('link', { name: '쿠폰 보기' })).toHaveAttribute(
@@ -147,8 +147,8 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
         db.reviewSummaries = db.reviewSummaries.filter((r) => r.storeId !== 2);
       }),
     );
-    await user.click(await screen.findByRole('button', { name: /카페 모래시계/ }));
-    const sheet = await screen.findByRole('dialog', { name: '카페 모래시계' });
+    await user.click(await screen.findByRole('button', { name: /타임리스커피/ }));
+    const sheet = await screen.findByRole('dialog', { name: '타임리스커피' });
     expect(within(sheet).getByText('아직 리뷰가 없어요.')).toBeInTheDocument();
     expect(within(sheet).queryByText('✦ AI 리뷰 요약')).not.toBeInTheDocument();
     expect(within(sheet).getByText('제휴 혜택 · 음료 1,000원 할인')).toBeInTheDocument();
@@ -156,8 +156,12 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
   });
 
   it('리뷰 수가 없어도 AI 리뷰 요약이 있으면 요약을 보이고, 별점 줄 · 리뷰 없음 문구는 없다 (2C-R12 ⑥)', async () => {
-    // 확장 없는 명세 C-04 예시: 상점 지점에 review_summary만 있고 리뷰 평균 · 개수가 없다.
-    server.use(http.get('/api/tours/:tourId/course', () => wireOk(COURSE_VIEW.data)));
+    // 확장 없는 명세 C-04 예시: 상점 지점에 review_summary만 있고 리뷰 평균 · 개수가 없다. R-02는 받지 못한 경우(404)로
+    // 둔다 — 픽스처의 상점 201은 실데이터 시드에서는 리뷰가 없는 다른 상점의 id라 목업 R-02가 빈 요약을 돌려준다.
+    server.use(
+      http.get('/api/tours/:tourId/course', () => wireOk(COURSE_VIEW.data)),
+      http.get('/api/stores/:storeId/reviews', () => wireFail('E404')),
+    );
     const { user } = await openCourseMap('CONFIRMED');
     await user.click(await screen.findByRole('button', { name: /용인 분식/ }));
     const sheet = await screen.findByRole('dialog', { name: '용인 분식' });
@@ -170,8 +174,8 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
 
   it('상점 시트는 R-02 응답의 요약 · 별점 · 리뷰 수와 접힌 최근 리뷰 3개를 보인다 (2B′-R16)', async () => {
     const { user } = await openCourseMap('CONFIRMED');
-    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
-    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    await user.click(await screen.findByRole('button', { name: /렌토/ }));
+    const sheet = await screen.findByRole('dialog', { name: '렌토' });
     expect(within(sheet).getByText('✦ AI 리뷰 요약')).toBeInTheDocument();
     // 요약 문장은 R-02 응답(가장 최근 요약 행)의 것 — 목업이 코스 지점 값과 같은 행을 준다.
     expect(within(sheet).getByText(/^학생들은 양이 넉넉하고/)).toBeInTheDocument();
@@ -197,7 +201,7 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
         reviewGets.push(pathname);
       }
     });
-    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
+    await user.click(await screen.findByRole('button', { name: /렌토/ }));
     await screen.findByRole('button', { name: '최근 리뷰 3개' });
     expect(reviewGets).toEqual(['/api/stores/1/reviews']); // 양성 대조: 상점 지점은 부른다
     await user.keyboard('{Escape}');
@@ -213,8 +217,8 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
   it('R-02 요청이 실패하면 시트는 지점 요약 그대로이고 오류 문구 · 최근 리뷰 버튼이 없다', async () => {
     server.use(http.get('/api/stores/:storeId/reviews', () => wireFail('E500')));
     const { user, queryClient } = await openCourseMap('CONFIRMED');
-    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
-    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    await user.click(await screen.findByRole('button', { name: /렌토/ }));
+    const sheet = await screen.findByRole('dialog', { name: '렌토' });
     // 5xx는 한 번 더 시도한다 — 오류 상태가 될 때까지 기다린 뒤에 단언해야 실패 처리를 증명한다(PM4).
     await waitFor(
       () => expect(queryClient.getQueryState(qk.storeReviews(1))?.status).toBe('error'),
@@ -363,8 +367,8 @@ describe('상점 시트의 리뷰 진입 (R-01)', () => {
     const { user, id } = await openCourseMap('CONFIRMED', () => {
       redeemDemoCoupon(1);
     });
-    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
-    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    await user.click(await screen.findByRole('button', { name: /렌토/ }));
+    const sheet = await screen.findByRole('dialog', { name: '렌토' });
     const coupon = getDb().coupons.find((c) => c.applicationId === id && c.storeId === 1)!;
     expect(within(sheet).getByRole('link', { name: '리뷰 쓰기' })).toHaveAttribute(
       'href',
@@ -378,8 +382,8 @@ describe('상점 시트의 리뷰 진입 (R-01)', () => {
 
   it('아직 쓰지 않은 쿠폰의 시트에는 리뷰 쓰기가 없고 쿠폰 보기가 주 버튼이다', async () => {
     const { user } = await openCourseMap('CONFIRMED');
-    await user.click(await screen.findByRole('button', { name: /서천 밥상/ }));
-    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    await user.click(await screen.findByRole('button', { name: /렌토/ }));
+    const sheet = await screen.findByRole('dialog', { name: '렌토' });
     expect(within(sheet).getByRole('link', { name: '쿠폰 보기' }).className).toContain('bg-brand ');
     expect(within(sheet).queryByRole('link', { name: '리뷰 쓰기' })).not.toBeInTheDocument();
     expect(within(sheet).queryByText('리뷰 작성 완료')).not.toBeInTheDocument();
@@ -388,7 +392,7 @@ describe('상점 시트의 리뷰 진입 (R-01)', () => {
   it('?storeId=가 있으면 그 상점 시트를 연 채 시작하고, 닫으면 주소에서 storeId가 빠진다', async () => {
     const { router, user, id } = await openCourseMap('CONFIRMED');
     await router.navigate(`/my-tours/${id}/course?storeId=1`);
-    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    const sheet = await screen.findByRole('dialog', { name: '렌토' });
     expect(within(sheet).getByText('✦ AI 리뷰 요약')).toBeInTheDocument();
 
     await user.keyboard('{Escape}');
@@ -413,7 +417,7 @@ describe('상점 시트의 리뷰 진입 (R-01)', () => {
     await user.click(await screen.findByRole('radio', { name: '별점 5점' }));
     await user.type(screen.getByLabelText('좋았던 점과 아쉬웠던 점'), '최고예요');
     await user.click(screen.getByRole('button', { name: '리뷰 등록하기' }));
-    const sheet = await screen.findByRole('dialog', { name: '서천 밥상' });
+    const sheet = await screen.findByRole('dialog', { name: '렌토' });
     expect(await within(sheet).findByText('리뷰 작성 완료')).toBeInTheDocument();
     expect(within(sheet).queryByRole('link', { name: '리뷰 쓰기' })).not.toBeInTheDocument();
     expect(within(sheet).getByRole('link', { name: '쿠폰 보기' })).toBeInTheDocument();
