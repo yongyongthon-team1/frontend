@@ -31,7 +31,7 @@ export default tseslint.config(
     },
   },
   {
-    files: ['playwright.config.ts', 'vite.config.ts'],
+    files: ['playwright.config.ts', 'vite.config.ts', 'middleware.ts'],
     languageOptions: { globals: globals.node },
   },
   {

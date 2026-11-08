@@ -1,0 +1,25 @@
+// Vercel 라우팅 미들웨어: 배포 미리보기를 HTTP Basic 인증(브라우저 비밀번호 창)으로 잠근다.
+// Vercel의 Password Protection은 Hobby 플랜에서 쓸 수 없어 같은 효과를 미들웨어로 낸다.
+// 비밀번호는 Vercel 환경 변수 `PREVIEW_PASSWORD`(저장소에 두지 않는다). 없으면 모든 요청이 잠긴다.
+// 로컬 개발 · E2E(vite)는 이 파일을 쓰지 않는다.
+import { isAuthorized } from './src/deploy/basicAuth';
+
+export const config = {
+  // 목업 서비스 워커 스크립트는 잠그지 않는다 — 브라우저가 워커를 등록할 때 인증 정보를 안 보낼 수 있어,
+  // 잠그면 앱이 목업 없이 떠 버린다. 이 스크립트에는 앱 데이터가 없다.
+  matcher: ['/((?!mockServiceWorker\\.js).*)'],
+};
+
+export default function middleware(request: Request): Response | undefined {
+  if (isAuthorized(request.headers.get('authorization'), process.env.PREVIEW_PASSWORD)) {
+    return undefined;
+  }
+  return new Response('UNIRO 미리보기는 비밀번호가 필요해요.', {
+    status: 401,
+    headers: {
+      'WWW-Authenticate': 'Basic realm="UNIRO preview", charset="UTF-8"',
+      'Content-Type': 'text/plain; charset=utf-8',
+      'Cache-Control': 'no-store',
+    },
+  });
+}
