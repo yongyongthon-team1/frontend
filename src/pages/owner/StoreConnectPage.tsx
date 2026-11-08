@@ -265,7 +265,7 @@ function Connect({ me, link, onLinked }: { me: Me; link: LinkMutation; onLinked(
     list = (
       <InfoCard
         title="가게 이름으로 찾아 주세요"
-        description="2자 이상 입력하고 검색하면 공공데이터(인허가)에 있는 가게가 보여요."
+        description="2자 이상 입력하고 검색하면 공공데이터(소상공인 상가정보)에 있는 가게가 보여요."
       />
     );
   } else if (items.length === 0) {

@@ -88,7 +88,9 @@ describe('/owner/verify 사업자 인증 (owner-s01, U-07)', () => {
     expect(router.state.historyAction).toBe('REPLACE');
     expect(await screen.findByText('가게 이름으로 찾아 주세요')).toBeInTheDocument();
     expect(
-      screen.getByText('2자 이상 입력하고 검색하면 공공데이터(인허가)에 있는 가게가 보여요.'),
+      screen.getByText(
+        '2자 이상 입력하고 검색하면 공공데이터(소상공인 상가정보)에 있는 가게가 보여요.',
+      ),
     ).toBeInTheDocument();
     expect(screen.queryByText('주변 가게 후보')).not.toBeInTheDocument();
     expect(screen.queryByText(/후보 상점/)).not.toBeInTheDocument();

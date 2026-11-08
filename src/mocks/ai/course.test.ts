@@ -56,7 +56,7 @@ const setMotivation = (email: string, tourId: number, motivation: string) => {
 describe('상수', () => {
   it('추천 상점 기준 문구와 반경', () => {
     expect(COURSE_CRITERIA).toBe(
-      '신청자들이 적은 하고 싶은 것 → 관련 업종 상점 매칭(인허가 공공데이터) · 제휴 상점 1곳 이상 포함',
+      '신청자들이 적은 하고 싶은 것 → 관련 업종 상점 매칭(소상공인 상가정보 공공데이터) · 제휴 상점 1곳 이상 포함',
     );
     expect(COURSE_RADIUS_M).toBe(1000);
   });
