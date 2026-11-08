@@ -13,6 +13,7 @@ import { errorMessage } from '@/shared/lib/errors';
 import { BOTTOM_ACTION_PAGE, BottomAction } from '@/shared/ui/BottomAction';
 import { Button } from '@/shared/ui/Button';
 import { ErrorState } from '@/shared/ui/ErrorState';
+import { Notice } from '@/shared/ui/Notice';
 import { Page } from '@/shared/ui/Page';
 import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
@@ -115,9 +116,9 @@ export function ApplyPage() {
             />
           </div>
 
-          <p className="mt-3 rounded-lg bg-brand-soft px-4 py-3 text-[13px] text-muted">
+          <Notice className="mt-3">
             작성한 내용은 승인 후 AI 코스 초안의 추천 기준으로만 활용돼요.
-          </p>
+          </Notice>
 
           <BottomAction>
             <Button

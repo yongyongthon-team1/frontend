@@ -12,7 +12,7 @@ import { Page } from '@/shared/ui/Page';
 import { PageHeading } from '@/shared/ui/PageHeading';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { StatusChip } from '@/shared/ui/StatusChip';
-import { toneTextClass } from '@/shared/ui/tone';
+import { StatusRow } from '@/shared/ui/StatusRow';
 import { TopBar } from '@/shared/ui/TopBar';
 
 function LinkRow({ title, description }: { title: string; description: string }) {
@@ -97,12 +97,7 @@ export function MyTourDetailPage() {
         </section>
 
         <div className="mt-3 flex flex-col gap-3">
-          <div className="rounded-lg bg-surface px-5 py-4">
-            <p className="text-[13px] text-muted">가이드 승인 상태</p>
-            <p className={`mt-1 text-[17px] font-bold ${toneTextClass[status.textTone]}`}>
-              {status.label}
-            </p>
-          </div>
+          <StatusRow label="가이드 승인 상태" value={status.label} tone={status.textTone} />
 
           {app.openChatUrl ? (
             <a

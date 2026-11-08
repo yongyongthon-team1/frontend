@@ -9,8 +9,10 @@ import { errorMessage } from '@/shared/lib/errors';
 import { preventImeEnter } from '@/shared/lib/ime';
 import { BrandMark } from '@/shared/ui/BrandMark';
 import { Button } from '@/shared/ui/Button';
-import { buttonClass } from '@/shared/ui/buttonStyles';
-import { InfoCard } from '@/shared/ui/InfoCard';
+import { BOTTOM_ACTION_PAGE_TAB_ROOT, BottomAction } from '@/shared/ui/BottomAction';
+import { Notice } from '@/shared/ui/Notice';
+import { Page } from '@/shared/ui/Page';
+import { PageHeading } from '@/shared/ui/PageHeading';
 import { TextField } from '@/shared/ui/TextField';
 
 const loginSchema = z.object({
@@ -32,7 +34,10 @@ function nextPath(next: string | null): string | null {
   return next;
 }
 
-/** 로그인(hs-s01, V2에는 없는 화면 — 브랜드 표식 + 슬로건 + V2 입력 · 버튼으로 맞춘다). 성공하면 `next` 또는 내 첫 화면으로 간다. */
+/**
+ * 로그인(C01, 새 시안). 하단 GNB · 상단 바가 없는 브랜드 머리(워드마크 → 제목 · 설명) + 보이는 라벨 칸 + 안내 상자,
+ * 로그인 버튼은 하단 고정, 그 아래 텍스트 링크로 회원가입(C01A)에 간다. 성공하면 `next` 또는 내 첫 화면으로 간다.
+ */
 export function LoginPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -60,36 +65,26 @@ export function LoginPage() {
   };
 
   return (
-    <>
-      <main className="px-[var(--gutter)] pt-10 pb-8">
-        <header className="flex flex-col items-center gap-3 text-center">
-          <div aria-hidden>
-            <BrandMark variant="icon" />
-          </div>
-          <h1>
-            <span className="sr-only">유니로 </span>
-            <BrandMark variant="wordmark" />
-          </h1>
-          <p className="text-sm font-medium text-muted">“ 대학으로, 동네로, 유니로. ”</p>
-        </header>
-        <h2 className="mt-8 text-2xl leading-snug font-bold whitespace-pre-line text-ink">
-          {'대학생이 직접 안내하는\n나만의 캠퍼스 탐방'}
-        </h2>
-        <InfoCard
-          muted
-          className="mt-5"
-          title="고등학생 · 대학생 · 사장님"
-          description="각 역할에 맞는 탐방과 상권 서비스를 이용해요."
-        />
-        <h3 className="mt-7 text-lg font-bold text-ink">이메일로 시작하기</h3>
-        <form
-          className="mt-4 flex flex-col gap-3"
-          onSubmit={onSubmit}
-          onKeyDown={preventImeEnter}
-          noValidate
-        >
+    <Page className={cn(BOTTOM_ACTION_PAGE_TAB_ROOT, 'pt-9')}>
+      <div>
+        <BrandMark variant="wordmark" />
+      </div>
+      <PageHeading
+        className="mt-6"
+        title="다시 만나 반가워요."
+        description="UNIRO에서 나에게 맞는 캠퍼스를 발견해요."
+      />
+      <form
+        className="mt-6 flex flex-1 flex-col"
+        onSubmit={onSubmit}
+        onKeyDown={preventImeEnter}
+        noValidate
+      >
+        <div className="flex flex-col gap-3">
           <TextField
-            label="이메일 주소"
+            showLabel
+            label="이메일"
+            placeholder="이메일 주소를 입력해 주세요"
             type="email"
             inputMode="email"
             autoComplete="email"
@@ -97,7 +92,9 @@ export function LoginPage() {
             {...register('email', { onChange: clearServerError })}
           />
           <TextField
+            showLabel
             label="비밀번호"
+            placeholder="비밀번호를 입력해 주세요"
             type="password"
             autoComplete="current-password"
             error={errors.password?.message}
@@ -108,17 +105,20 @@ export function LoginPage() {
               {errorMessage(login.error.code)}
             </p>
           ) : null}
+          <Notice>계정이 없다면 아래 회원가입에서 시작해 주세요.</Notice>
+        </div>
+        <BottomAction>
           <Button type="submit" loading={login.isPending}>
             로그인
           </Button>
-        </form>
-        <Link to="/signup" className={cn(buttonClass('secondary'), 'mt-3')}>
-          새 계정 만들기
-        </Link>
-        <p className="mt-4 text-sm text-muted">
-          가입 시 고교생 / 대학생 / 사장님 중 역할을 선택해요.
-        </p>
-      </main>
-    </>
+          <Link
+            to="/signup"
+            className="mt-2 flex min-h-11 items-center justify-center text-[13px] text-muted"
+          >
+            아직 계정이 없나요?&nbsp;<span className="font-bold text-ink">회원가입</span>
+          </Link>
+        </BottomAction>
+      </form>
+    </Page>
   );
 }
