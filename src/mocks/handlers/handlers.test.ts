@@ -243,22 +243,27 @@ describe('auth', () => {
     expectWireShape(res.body.data, LOGIN_OK.data);
   });
 
-  it('GET /users/me 와이어: 고교생은 명세 그대로(확장 없음), 가이드는 확장 campus_id만 더한다', async () => {
+  // `university_id`는 명세 예시에 없지만 11/9 배포 백엔드가 모든 역할에 싣는 칸이다(대학생이 아니면 null).
+  it('GET /users/me 와이어: 명세 모양 + 배포 백엔드의 university_id(고교생 null · 가이드는 학교 id)', async () => {
     const student = await rawFetch<{ code: string; data: unknown }>('/users/me', {
       method: 'GET',
       token: (await login('student@demo.kr')).token,
     });
     expect(student.status).toBe(200);
     expect(student.body.code).toBe('S200');
-    expectWireShape(student.body.data, ME_HIGH_SCHOOL.data);
+    expectWireShape(student.body.data, ME_HIGH_SCHOOL.data, ['university_id']);
+    expect(student.body.data).toMatchObject({ university_id: null });
 
     const guide = await rawFetch<{ code: string; data: unknown }>('/users/me', {
       method: 'GET',
       token: (await login('guide-dku@demo.kr')).token,
     });
     expect(guide.status).toBe(200);
-    expectWireShape(guide.body.data, ME_UNIVERSITY.data, ['campus_id']);
-    expect(guide.body.data).toMatchObject({ campus_id: 3, school_name: '단국대학교 죽전캠퍼스' });
+    expectWireShape(guide.body.data, ME_UNIVERSITY.data, ['university_id']);
+    expect(guide.body.data).toMatchObject({
+      university_id: 3,
+      school_name: '단국대학교 죽전캠퍼스',
+    });
   });
 
   it('틀린 비밀번호는 INVALID_CREDENTIALS(E401_INVALID_CREDENTIALS)이고 세션 만료(onUnauthorized)를 부르지 않는다', async () => {
@@ -2779,7 +2784,7 @@ describe('가입 · 프로필 (POST /auth/signup · PATCH /users/me · PUT /user
     });
     expect(raw.status).toBe(200);
     expect(raw.body.code).toBe('S200');
-    expectWireShape(raw.body.data, ME_HIGH_SCHOOL.data);
+    expectWireShape(raw.body.data, ME_HIGH_SCHOOL.data, ['university_id']);
     // 보낸 필드만 바뀐다.
     expect(await fetchMe()).toMatchObject({
       name: '김민지3',
@@ -3386,7 +3391,10 @@ describe('재학 인증 · 보호자 동의 (U-05 · U-06)', () => {
     it('GET /users/me: 동의 대기(기한 전)인 고교생에게만 확장 guardian_consent_token', async () => {
       const waiting = await login('waiting@demo.kr');
       const me = await rawFetch<Envelope>('/users/me', { method: 'GET', token: waiting.token });
-      expectWireShape(me.body.data, ME_HIGH_SCHOOL.data, ['guardian_consent_token']);
+      expectWireShape(me.body.data, ME_HIGH_SCHOOL.data, [
+        'guardian_consent_token',
+        'university_id',
+      ]);
       expect(me.body.data).toMatchObject({
         guardian_consent_status: 'PENDING',
         guardian_consent_token: DEMO_CONSENT_TOKENS.valid,

@@ -36,7 +36,7 @@ function findUser(db: DB, userId: number): UserRow {
 
 /**
  * `GET /users/me`의 데이터. 확장 `guardianConsentToken`은 동의 대기인 고교생에게만 붙는다. 역할에 해당하지 않는 칸은 null이다: 고교생 칸(학년 · 관심 학과 · 보호자 동의)은 고교생만,
- * 학교 이름은 고교생이면 고교 이름 · 대학생이면 가이드 프로필 대학의 `campusLabel`이다. 확장 `campusId`는 대학생에게만 붙는다.
+ * 학교 이름은 고교생이면 고교 이름 · 대학생이면 가이드 프로필 대학의 `campusLabel`이다. `universityId`는 배포 백엔드처럼 늘 싣고, 대학생이 아니면 null이다.
  */
 export function toWireMe(db: DB, userId: number, now: Date): WireMe {
   const user = findUser(db, userId);
@@ -72,7 +72,7 @@ export function toWireMe(db: DB, userId: number, now: Date): WireMe {
       : null,
     guideProfile: guide ? { major: guide.major, intro: guide.introduction } : null,
   };
-  if (user.role === 'UNIVERSITY') me.campusId = guide?.universityId ?? null;
+  me.universityId = guide?.universityId ?? null;
   // 시연 확장(2B′-R10): 동의 대기(기한 전)인 고교생에게만 보호자 링크 토큰. 실서버에는 없는 키다.
   const consent = isStudent ? db.guardianConsents.find((g) => g.id === userId) : undefined;
   if (me.guardianConsentStatus === 'PENDING' && consent?.tokenHash) {

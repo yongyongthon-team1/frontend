@@ -22,7 +22,7 @@ describe('fromWireMe', () => {
     });
   });
 
-  it('대학생 명세 예시(확장 campus_id 없음): 보호자 동의 NONE · 학생 프로필 없음 · 가이드 학교는 null', () => {
+  it('대학생 명세 예시(university_id 없음): 보호자 동의 NONE · 학생 프로필 없음 · 가이드 학교는 null', () => {
     expect(fromWireMe(wire(ME_UNIVERSITY.data), null)).toEqual({
       id: 2,
       email: 'univ01@example.com',
@@ -42,9 +42,35 @@ describe('fromWireMe', () => {
     });
   });
 
-  it('확장 campus_id가 있으면 guideProfile.universityId가 된다', () => {
-    const me = fromWireMe(wire({ ...ME_UNIVERSITY.data, campus_id: 3 }), null);
+  it('배포 백엔드의 university_id가 guideProfile.universityId가 된다', () => {
+    const me = fromWireMe(wire({ ...ME_UNIVERSITY.data, university_id: 3 }), null);
     expect(me.guideProfile?.universityId).toBe(3);
+  });
+
+  it('11/9 배포 백엔드 실응답(인증 전 대학생): 모든 프로필 칸 null · 보호자 동의 null은 NONE', () => {
+    const me = fromWireMe(
+      wire({
+        id: 2,
+        email: 'smoke-university@uniro.test',
+        name: '점검UN',
+        role: 'UNIVERSITY',
+        verification_status: 'NONE',
+        reject_reason: null,
+        school_name: null,
+        university_id: null,
+        grade: null,
+        interest_major: null,
+        guardian_consent_status: null,
+        guide_profile: null,
+      }),
+      null,
+    );
+    expect(me).toMatchObject({
+      verificationStatus: 'NONE',
+      guardianStatus: 'NONE',
+      studentProfile: null,
+      guideProfile: null,
+    });
   });
 
   it('가이드 프로필이 없으면(null) guideProfile도 null', () => {
