@@ -142,6 +142,19 @@ function parseJson(text: string): unknown {
   }
 }
 
+/**
+ * Spring Boot 기본 오류 본문 `{ timestamp, status, error, path }`. 11/9 배포 백엔드는 본문 검증 실패(400)와 보안 필터의
+ * 401 · 없는 경로의 404를 봉투 없이 이 모양으로 준다.
+ */
+function isSpringError(value: unknown): boolean {
+  return (
+    isRecord(value) &&
+    typeof value.status === 'number' &&
+    typeof value.error === 'string' &&
+    typeof value.path === 'string'
+  );
+}
+
 async function toApiError(res: Response, options: RequestOptions): Promise<ApiError> {
   const parsed = parseJson(await res.text());
   // 2C-R2 해석(통제자 확정): 실패 본문은 `code`만으로 봉투다 — `data` 키는 요구하지 않는다.
@@ -149,6 +162,11 @@ async function toApiError(res: Response, options: RequestOptions): Promise<ApiEr
   // 봉투가 아닌 413(본문 없음 · 프록시의 HTML 오류 쪽)은 업로드 한도 초과다(계약 6절 18번).
   if (res.status === 413) {
     return new ApiError(413, 'FILE_TOO_LARGE', errorMessage('FILE_TOO_LARGE'));
+  }
+  // Spring 기본 오류는 상태만 믿을 수 있다 — 공통 실패 코드 `E{상태}`로 읽는다(호출의 errorMap이 앞선다). 칸 오류는 없다.
+  if (isSpringError(parsed)) {
+    const code = resolveErrorCode(`E${res.status}`, options.errorMap);
+    return new ApiError(res.status, code, errorMessage(code));
   }
   return new ApiError(res.status, 'UNKNOWN', errorMessage('UNKNOWN'));
 }

@@ -61,7 +61,7 @@ npm run e2e
 | `VITE_DEMO_PASSWORD` | 실서버 시연 계정 비밀번호(빠른 로그인용). 목업은 시드 비밀번호 `demo1234`를 쓴다                                                                                              | `demo1234`              |
 | `DEV_API_TARGET`     | `npm run dev`가 `/api`를 보낼 백엔드 주소. 번들에는 들어가지 않는다                                                                                                           | `http://localhost:8080` |
 
-`/api`가 실서버에 닿는 길: `npm run dev`는 Vite 프록시(`DEV_API_TARGET`)로 보낸다. 배포의 `/api` 프록시(`vercel.json` rewrite, 결정 0005)는 아직 없고, 백엔드 배포 주소가 정해지면 넣는다(팀 요청 13, MVP 3단계).
+`/api`가 실서버에 닿는 길: 백엔드(11/9 배포 `http://13.211.202.139`)는 경로에 `/api` 접두사가 없고 CORS를 열지 않았다. 그래서 브라우저는 늘 같은 주소의 `/api`를 부르고 프록시가 접두사를 떼어 넘긴다 — `npm run dev`는 Vite 프록시(`DEV_API_TARGET`), 배포본은 `vercel.json` rewrite(`/api/:path*` → 백엔드, 결정 0005). 배포본의 실서버 전환은 Vercel env `VITE_REAL_API`로 막거나 연다(`off`면 늘 목업).
 
 ## 시연 계정
 

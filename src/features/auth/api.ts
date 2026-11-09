@@ -21,6 +21,8 @@ export async function login(input: { email: string; password: string }): Promise
     method: 'POST',
     body: input,
     auth: false,
+    // 로그인의 401은 늘 자격 증명 오류다 — 사유 없는 `E401`이나 봉투 없는 401이 와도 "다시 로그인"이 아니라 이것으로 읽는다.
+    errorMap: { E401: 'INVALID_CREDENTIALS' },
   });
   return { token: accessToken, me: await fetchMe(accessToken, user.role) };
 }

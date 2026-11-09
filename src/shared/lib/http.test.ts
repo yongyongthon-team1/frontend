@@ -516,6 +516,53 @@ describe('오류 봉투', () => {
     expect(spy).toHaveBeenCalledTimes(1);
   });
 
+  // 11/9 배포 백엔드는 본문 검증 실패(400)와 일부 401 · 404를 봉투 없이 Spring 기본 오류 본문으로 준다.
+  const springError = (status: number, error: string, path: string) =>
+    HttpResponse.json({ timestamp: '2026-11-09T13:35:28.113Z', status, error, path }, { status });
+
+  it('Spring 기본 오류 본문은 상태 코드(E{상태})로 읽는다 — backendCode는 null', async () => {
+    server.use(
+      http.post('/api/auth/signup', () => springError(400, 'Bad Request', '/auth/signup')),
+      http.get('/api/missing', () => springError(404, 'Not Found', '/missing')),
+      http.get('/api/boom', () => springError(500, 'Internal Server Error', '/boom')),
+    );
+    await expect(request('/auth/signup', { method: 'POST', auth: false })).rejects.toMatchObject({
+      status: 400,
+      code: 'VALIDATION',
+      backendCode: null,
+      message: errorMessage('VALIDATION'),
+    });
+    await expect(request('/missing')).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
+    await expect(request('/boom')).rejects.toMatchObject({ status: 500, code: 'UNKNOWN' });
+  });
+
+  it('Spring 기본 401은 UNAUTHORIZED이고 세션 만료 처리를 부른다 · 호출의 errorMap이 앞선다', async () => {
+    const spy = vi.fn();
+    configureHttp({ onUnauthorized: spy });
+    server.use(
+      http.get('/api/users/me', () => springError(401, 'Unauthorized', '/users/me')),
+      http.post('/api/auth/login', () => springError(401, 'Unauthorized', '/auth/login')),
+    );
+    await expect(request('/users/me')).rejects.toMatchObject({ status: 401, code: 'UNAUTHORIZED' });
+    expect(spy).toHaveBeenCalledTimes(1);
+    await expect(
+      request('/auth/login', {
+        method: 'POST',
+        auth: false,
+        errorMap: { E401: 'INVALID_CREDENTIALS' },
+      }),
+    ).rejects.toMatchObject({ status: 401, code: 'INVALID_CREDENTIALS', backendCode: null });
+    expect(spy).toHaveBeenCalledTimes(1);
+  });
+
+  it('Spring 기본 본문의 413도 FILE_TOO_LARGE', async () => {
+    server.use(http.post('/api/files', () => springError(413, 'Payload Too Large', '/files')));
+    await expect(upload('/files', new FormData())).rejects.toMatchObject({
+      status: 413,
+      code: 'FILE_TOO_LARGE',
+    });
+  });
+
   it('봉투 아닌 오류: 본문 없는 413은 FILE_TOO_LARGE, HTML 502는 상태 502의 UNKNOWN(backendCode null)', async () => {
     server.use(
       http.post('/api/big', () => new HttpResponse(null, { status: 413 })),
