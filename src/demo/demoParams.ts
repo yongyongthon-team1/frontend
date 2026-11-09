@@ -6,7 +6,7 @@ import {
   type DemoRole,
   type SeedCheckpoint,
 } from '@/shared/config/demoAccounts';
-import type { ApiMode } from '@/shared/config/env';
+import { env, type ApiMode } from '@/shared/config/env';
 import { errorMessage } from '@/shared/lib/errors';
 import { ApiError } from '@/shared/lib/http';
 import { useDemoStore } from './demoStore';
@@ -53,14 +53,17 @@ export function parseDemoParams(search: string): DemoParams {
 }
 
 /**
- * 렌더 전에 시연 설정에 저장한다: demo → 시연 도구 켬, mode → API 모드 덮어쓰기(`demo=1`과 함께일 때만 — 시연 패널이
- * 없는 방문자가 실서버 모드에 갇히지 않게), present → 발표 모드, key → 초기화 키. reset은 AI 속도 · 지도 모드도
- * 기본값(보통 · 자동)으로 되돌린다 — 지난 리허설의 설정이 발표 모드(패널 토글이 안 보임)에서 몰래 남지 않게(판정 33).
+ * 렌더 전에 시연 설정에 저장한다: demo → 시연 도구 켬, mode → API 모드 덮어쓰기, present → 발표 모드, key → 초기화 키.
+ * mode는 시연 패널이 보일 때만(`demo=1` · 이미 켠 시연 도구 · 시연 도구가 켜진 빌드 `demoToolsBuild`) 저장한다 — 패널
+ * 없는 방문자가 실서버 모드에 갇히지 않게(판정 33). 저장하지 않은 mode는 이번 부팅에만 쓰이고 주소에서 지워져 새로고침하면
+ * 풀린다(11/9 배포에서 실서버가 말없이 목업으로 돌아간 원인). reset은 AI 속도 · 지도 모드도 기본값(보통 · 자동)으로
+ * 되돌린다 — 지난 리허설의 설정이 발표 모드(패널 토글이 안 보임)에서 몰래 남지 않게(판정 33).
  */
-export function applyDemoParamsBeforeRender(p: DemoParams): void {
+export function applyDemoParamsBeforeRender(p: DemoParams, demoToolsBuild = env.demoTools): void {
   const store = useDemoStore.getState();
   if (p.demo) store.setEnabled(true);
-  if (p.demo && p.mode !== null) store.setApiModeOverride(p.mode);
+  const panelVisible = p.demo || store.enabled || demoToolsBuild;
+  if (panelVisible && p.mode !== null) store.setApiModeOverride(p.mode);
   if (p.present !== null) store.setPresentMode(p.present);
   if (p.key !== null) store.setResetKey(p.key);
   if (p.reset) {

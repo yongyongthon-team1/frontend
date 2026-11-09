@@ -98,11 +98,24 @@ describe('렌더 전 적용', () => {
     });
   });
 
-  it('mode는 demo=1과 함께일 때만 저장한다(시연 패널 없는 방문자가 실서버 모드에 갇히지 않게, 판정 33)', () => {
+  it('mode는 시연 패널이 보일 때만 저장한다(패널 없는 방문자가 실서버 모드에 갇히지 않게, 판정 33)', () => {
     applyDemoParamsBeforeRender(parseDemoParams('?mode=real'));
     expect(useDemoStore.getState().apiModeOverride).toBeNull();
     applyDemoParamsBeforeRender(parseDemoParams('?demo=1&mode=real'));
     expect(useDemoStore.getState().apiModeOverride).toBe('real');
+  });
+
+  // 11/9: 시연 도구가 켜진 배포에서 `?mode=real`이 첫 부팅에만 쓰이고 주소에서 지워져, 새로고침 · 오류 화면의
+  // "다시 시도" 뒤 말없이 목업으로 돌아갔다. 패널이 보이는 곳이면 저장한다 — 패널에서 언제든 되돌릴 수 있다.
+  it('시연 도구가 켜진 빌드(VITE_DEMO_TOOLS)나 이미 켠 시연 도구에서는 mode만으로도 저장한다', () => {
+    applyDemoParamsBeforeRender(parseDemoParams('?mode=real'), true);
+    expect(useDemoStore.getState().apiModeOverride).toBe('real');
+
+    useDemoStore.setState({ apiModeOverride: null, enabled: true });
+    applyDemoParamsBeforeRender(parseDemoParams('?mode=real'));
+    expect(useDemoStore.getState().apiModeOverride).toBe('real');
+    applyDemoParamsBeforeRender(parseDemoParams('?mode=mock'));
+    expect(useDemoStore.getState().apiModeOverride).toBe('mock');
   });
 
   it('reset=1은 지난 리허설의 AI 속도 · 지도 모드도 기본값(보통 · 자동)으로 되돌린다 (판정 33)', () => {

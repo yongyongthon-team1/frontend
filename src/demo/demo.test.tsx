@@ -253,6 +253,20 @@ describe('시연 패널', () => {
     expect(await within(panel()).findByText('정상')).toBeInTheDocument();
   });
 
+  // 11/9: 실서버 모드가 말없이 목업으로 돌아가 목업 데이터를 실서버 데이터로 착각했다 — 실서버일 때는 패널 맨 위와
+  // 좁은 화면의 패널 버튼에 늘 보이게 한다.
+  it('실서버 모드면 패널 맨 위와 패널 버튼에 실서버 연결을 보인다', async () => {
+    useDemoStore.setState({ enabled: true });
+    await renderApp('/', { as: 'student' });
+    expect(within(panel()).queryByText('실서버에 연결돼 있어요')).toBeNull();
+    const toggle = within(panel()).getByRole('button', { name: '시연 패널' });
+    expect(toggle).not.toHaveTextContent('실서버');
+
+    act(() => useBootStatus.setState({ apiMode: 'real' }));
+    expect(within(panel()).getByText('실서버에 연결돼 있어요')).toBeInTheDocument();
+    expect(toggle).toHaveTextContent('실서버');
+  });
+
   it('백엔드가 없는 배포(VITE_REAL_API=off)에서는 실서버 버튼이 잠기고 사유가 보인다', async () => {
     const before = env.realApi;
     env.realApi = false;
@@ -476,7 +490,9 @@ describe('발표 모드', () => {
       useBootStatus.setState({ apiMode: 'real' });
       useDemoStore.setState({ aiSpeed: 'slow', mapMode: 'schematic' });
     });
-    expect(within(panel()).getByText('실서버')).toBeInTheDocument();
+    // 좁은 화면의 패널 버튼에도 '실서버'가 붙으므로 막대의 설정 목록에서 찾는다.
+    const status = within(panel()).getByRole('list', { name: '시연 설정' });
+    expect(within(status).getByText('실서버')).toBeInTheDocument();
     expect(within(panel()).queryByText('목업')).toBeNull();
     expect(within(panel()).getByText('AI 느리게')).toBeInTheDocument();
     expect(within(panel()).getByText('지도 도식')).toBeInTheDocument();

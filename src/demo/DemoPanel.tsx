@@ -71,6 +71,7 @@ type Action = DemoRole | 'coupon' | 'account' | 'reset';
  */
 export function DemoPanel() {
   const presentMode = useDemoStore((s) => s.presentMode) === true;
+  const isReal = useBootStatus((s) => s.apiMode) === 'real';
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   const actions = useDemoActions(() => setOpen(false));
@@ -83,9 +84,14 @@ export function DemoPanel() {
         aria-expanded={open}
         aria-controls={bodyId}
         onClick={() => setOpen((v) => !v)}
-        className="flex size-11 items-center justify-center rounded-full border border-border bg-surface text-ink min-[900px]:hidden"
+        className={cn(
+          'flex h-11 min-w-11 items-center justify-center gap-1.5 rounded-full border bg-surface text-ink min-[900px]:hidden',
+          // 실서버일 때는 접힌 버튼에도 보인다 — 목업 데이터를 실서버 데이터로 착각하지 않게(11/9).
+          isReal ? 'border-local px-3 text-xs font-bold' : 'border-border',
+        )}
       >
         <SlidersHorizontal aria-hidden className="size-5" />
+        {isReal ? <span aria-hidden>실서버</span> : null}
       </button>
       <div
         id={bodyId}
@@ -235,6 +241,11 @@ function FullPanel({ actions }: { actions: DemoActions }) {
   // 가장 작은 무대 뷰포트(1280×590 — 프레임 높이 558px)에서도 스크롤 없이 들어가게 촘촘히 둔다.
   return (
     <div className="flex w-80 max-w-[calc(100vw-24px)] flex-col gap-3 rounded-lg border border-border bg-surface p-3">
+      {apiMode === 'real' ? (
+        <StatusChip tone="warning" className="text-sm">
+          실서버에 연결돼 있어요
+        </StatusChip>
+      ) : null}
       {mockWorkerFailed ? (
         <p
           role="alert"
