@@ -1,7 +1,7 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
-import { http, HttpResponse } from 'msw';
+import { http } from 'msw';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { refetchMe, useLogin, useSignup } from '@/features/auth/queries';
 import { useSession } from '@/features/auth/session';
@@ -13,7 +13,7 @@ import { env } from '@/shared/config/env';
 import { errorMessage } from '@/shared/lib/errors';
 import { DEMO_EMAILS, DEMO_STORE_OWNERS } from '@/shared/config/demoAccounts';
 import { findApplicationId, renderApp } from '@/test/renderApp';
-import { wireFail, wireOk } from '@/test/wire';
+import { wireFail } from '@/test/wire';
 import { useBootStatus } from './bootStatus';
 import { useDemoStore } from './demoStore';
 import { connectDemoSession, quickLogin } from './quickLogin';
@@ -245,12 +245,12 @@ describe('시연 패널', () => {
     expect(useDemoStore.getState().presentMode).toBe(true);
   });
 
-  it('API 모드와 백엔드 상태를 보여 준다', async () => {
+  it('API 모드를 보여 준다(백엔드 연결 배지는 11/10에 지웠다)', async () => {
     useDemoStore.setState({ enabled: true });
     await renderApp('/', { as: 'student' });
     expect(screen.getByRole('button', { name: '목업' })).toHaveAttribute('aria-pressed', 'true');
     expect(screen.getByRole('button', { name: '실서버' })).toHaveAttribute('aria-pressed', 'false');
-    expect(await within(panel()).findByText('정상')).toBeInTheDocument();
+    expect(within(panel()).queryByText('백엔드')).toBeNull();
   });
 
   // 11/9: 실서버 모드가 말없이 목업으로 돌아가 목업 데이터를 실서버 데이터로 착각했다 — 실서버일 때는 패널 맨 위와
@@ -335,72 +335,6 @@ describe('시연 패널', () => {
     await expect(
       quickLogin('guide', { queryClient: new QueryClient(), navigate: () => {} }),
     ).rejects.toThrow('실서버에서는 시연 계정 자동 로그인을 하지 않아요.');
-  });
-
-  it('헬스 체크가 실패하면 응답 없음', async () => {
-    server.use(http.get('/api/health', () => HttpResponse.error()));
-    useDemoStore.setState({ enabled: true });
-    await renderApp('/', { as: 'student' });
-    expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
-  });
-
-  it('헬스가 404면 캠퍼스 조회로 연결을 확인한다(두 탐침 모두 토큰 없이)', async () => {
-    const auth: Record<string, string | null> = {};
-    server.use(
-      http.get('/api/health', ({ request }) => {
-        auth.health = request.headers.get('Authorization');
-        return wireFail('E404');
-      }),
-      http.get('/api/campuses', ({ request }) => {
-        auth.campuses = request.headers.get('Authorization');
-        return wireOk({ items: [] });
-      }),
-    );
-    useDemoStore.setState({ enabled: true });
-    await renderApp('/', { as: 'student' });
-    expect(useSession.getState().token).not.toBeNull(); // 세션 토큰이 있어도
-    expect(await within(panel()).findByText('정상')).toBeInTheDocument();
-    expect(auth).toEqual({ health: null, campuses: null });
-  });
-
-  it.each(['E401', 'E403'])(
-    '헬스가 %s이어도(모르는 경로에 주는 서버) 캠퍼스 조회로 확인하고 세션을 끊지 않는다',
-    async (code) => {
-      server.use(
-        http.get('/api/health', () => wireFail(code)),
-        http.get('/api/campuses', () => wireOk({ items: [] })),
-      );
-      useDemoStore.setState({ enabled: true });
-      await renderApp('/', { as: 'student' });
-      expect(await within(panel()).findByText('정상')).toBeInTheDocument();
-      expect(useSession.getState().token).not.toBeNull();
-    },
-  );
-
-  it('헬스가 404이고 캠퍼스 조회도 실패하면 응답 없음', async () => {
-    server.use(
-      http.get('/api/health', () => wireFail('E404')),
-      http.get('/api/campuses', () => wireFail('E500')),
-    );
-    useDemoStore.setState({ enabled: true });
-    await renderApp('/', { as: 'student' });
-    expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
-  });
-
-  it('헬스가 404 말고 다른 오류면 캠퍼스 조회로 대신하지 않는다', async () => {
-    let campusCalls = 0;
-    server.use(
-      http.get('/api/health', () => wireFail('E500')),
-      http.get('/api/campuses', () => {
-        campusCalls += 1;
-        return wireOk({ items: [] });
-      }),
-    );
-    useDemoStore.setState({ enabled: true });
-    // 홈 · MY는 캠퍼스 조인으로 `GET /campuses`를 직접 부른다. 헬스의 대체 호출만 세려고 캠퍼스를 쓰지 않는 화면(`/explore` 자리)에서 연다.
-    await renderApp('/explore', { as: 'student' });
-    expect(await within(panel()).findByText('응답 없음')).toBeInTheDocument();
-    expect(campusCalls).toBe(0);
   });
 
   it('초기화가 404면 버튼을 잠그고 사유를 보인다', async () => {

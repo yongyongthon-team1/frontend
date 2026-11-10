@@ -98,7 +98,7 @@
 
 ## API 연동
 
-도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 백엔드 명세([`../api/backend-spec.md`](../api/backend-spec.md))의 엔드포인트 46개와 목업 전용 확장 3개(`GET /health` · `POST /demo/reset` · `GET /campuses/:campusId/insight`)다. 2C에서 옛 프론트 계약([`../api/frontend-needs.md`](../api/frontend-needs.md), 기록으로만 남음)의 행을 백엔드 경로로 바꿨고, 목업은 백엔드 와이어(봉투 · snake_case · E 코드)로 응답한다. 목업 ✅는 46개 백엔드 경로 전부와 확장 3개, 모두 49행이며 `registry.test.ts`의 `(BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS`와 같다(`NOT_MOCKED`는 2B′ Task 13에서 비었고, Task 16에서 표 49행이 모두 목업 ✅인 것을 다시 확인했다). 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이고 묶음은 [`backend-alignment.md` 7-4](../api/backend-alignment.md)를 따른다(인사이트는 `campuses` 핸들러에 등록돼 있어 그 도메인에 적었다).
+도메인별로 시연 대본 순서대로 하나씩 연동하고, 할 때마다 해당 행을 갱신한다. 행은 백엔드 명세([`../api/backend-spec.md`](../api/backend-spec.md))의 엔드포인트 46개와 목업 전용 확장 2개(`POST /demo/reset` · `GET /campuses/:campusId/insight`)다(11/10 `GET /health`는 연결 배지와 함께 지웠다 — 백엔드 명세에 없다). 2C에서 옛 프론트 계약([`../api/frontend-needs.md`](../api/frontend-needs.md), 기록으로만 남음)의 행을 백엔드 경로로 바꿨고, 목업은 백엔드 와이어(봉투 · snake_case · E 코드)로 응답한다. 목업 ✅는 46개 백엔드 경로 전부와 확장 2개, 모두 48행이며 `registry.test.ts`의 `(BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS`와 같다(`NOT_MOCKED`는 2B′ Task 13에서 비었고, Task 16에서 표 49행이 모두 목업 ✅인 것을 다시 확인했다). 도메인 열은 `VITE_MOCK_DOMAINS`의 이름(`MockDomain`)이고 묶음은 [`backend-alignment.md` 7-4](../api/backend-alignment.md)를 따른다(인사이트는 `campuses` 핸들러에 등록돼 있어 그 도메인에 적었다).
 
 | 도메인 | 메서드 · 경로 | 쓰는 화면 | 계약 합의 | 목업 | 실서버 | 배포 확인 |
 |---|---|---|---|---|---|---|
@@ -149,7 +149,6 @@
 | admin | `GET /api/admin/verifications` | owner-s06 인증 심사 목록 ✅ 화면 연결 (U-08 보완, `status` 없이 부른다 — 서버 기본 PENDING, 오래된 제출 순. 목업은 `APPROVED` · `REJECTED`도 받고 그 밖은 400) | ⬜ | ✅ | ⬜ | ⬜ |
 | admin | `GET /api/admin/verifications/:verificationId` | owner-a02 · A03 심사 상세 ✅ 화면 연결 (U-08 보완, 사진 주소는 대기일 때만 — 처리된 건은 null이라 `파일 삭제됨`. 목업은 새로고침으로 사라진 사진을 견본 SVG로 대신한다) | ⬜ | ✅ | ⬜ | ⬜ |
 | admin | `PATCH /api/admin/verifications/:verificationId` | owner-a02 승인 · A03 반려 ✅ 화면 연결 (U-08, 본문 `{ decision, reject_reason }`, 사유는 반려일 때만 공백을 뺀 1~100자. 이미 심사된 요청 `E409_ALREADY_REVIEWED` → `ALREADY_PROCESSED`는 토스트 + 목록으로. 승인 · 반려 모두 확인 창, 연타해도 요청은 한 번) | ⬜ | ✅ | ⬜ | ⬜ |
-| demo | `GET /api/health` | 시연 패널 (확장 · 목업 전용, 봉투) | ⬜ | ✅ | ⬜ | ⬜ |
 | demo | `POST /api/demo/reset` | 시연 패널 (확장 · 목업 전용, 봉투) | ⬜ | ✅ | ⬜ | ⬜ |
 
 - 목업 사진(재학 인증 업로드)은 메모리에만 있어 새로고침하거나 시연 초기화를 하면 사라진다(운영자 화면은 그때 정적 견본 사진을 보인다, 2B-R9). 목업은 `POST /verifications/enrollment` ✅(`jpg · png 5MB`)다. 동의 대기인 고교생의 `GET /users/me`에는 목업 전용 확장 `guardian_consent_token`이 붙고, 실서버에는 없다(2B′-R10).

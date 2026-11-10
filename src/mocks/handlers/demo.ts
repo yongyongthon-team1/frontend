@@ -8,20 +8,12 @@ import { SEED_CHECKPOINTS, type SeedCheckpoint } from '@/shared/config/demoAccou
 import { ok, withWire } from '@/mocks/wire/envelope';
 import { api, readBody } from './util';
 
-// 시연 패널용 헬스 체크와 시연 데이터 초기화(목업 전용 확장 엔드포인트, 백엔드 봉투). 목업의 초기화는 `X-Demo-Key`를 보지 않는다(403은 실서버 전용).
+// 시연 데이터 초기화(목업 전용 확장 엔드포인트, 백엔드 봉투). 목업의 초기화는 `X-Demo-Key`를 보지 않는다(403은 실서버 전용).
 
 const isCheckpoint = (value: unknown): value is SeedCheckpoint =>
   SEED_CHECKPOINTS.includes(value as SeedCheckpoint);
 
 export const demoHandlers = [
-  http.get(
-    api('/health'),
-    withWire(async () => {
-      await delayBase();
-      return ok({ ok: true, mode: 'mock' });
-    }),
-  ),
-
   // 오늘 기준 시드(체크포인트를 주면 그 단계까지 진행한 시드)로 되돌린다. 모르는 체크포인트는 400이고 DB는 그대로다.
   // 시드 사용자 id는 늘 같으므로 기존 세션을 새 DB로 옮겨 로그인을 유지한다(새 DB에 없는 사용자의 세션은 버린다).
   http.post(

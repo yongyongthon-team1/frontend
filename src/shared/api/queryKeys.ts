@@ -60,5 +60,4 @@ export const qk = {
   /** 운영자 심사 대기 목록(U-08). 상세 키의 접두사라 무효화하면 상세도 다시 읽는다. */
   adminVerifications: ['adminVerifications'] as const,
   adminVerification: (id: number) => ['adminVerifications', id] as const,
-  health: ['health'] as const,
 };

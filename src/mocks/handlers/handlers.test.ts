@@ -2438,14 +2438,6 @@ describe('reviews', () => {
 });
 
 describe('demo', () => {
-  it('헬스 체크는 목업 모드(백엔드 봉투)', async () => {
-    const res = await rawFetch<{ code: string; data: unknown }>('/health', { method: 'GET' });
-    expect(res.status).toBe(200);
-    expect(res.body.code).toBe('S200');
-    expect(res.body.data).toEqual({ ok: true, mode: 'mock' });
-    expect(await request('/health')).toEqual({ ok: true, mode: 'mock' });
-  });
-
   it('시연 초기화는 체크포인트를 적용', async () => {
     await login('student@demo.kr');
     expect(await getMyCoupons(undefined, listCampuses())).toEqual([]);

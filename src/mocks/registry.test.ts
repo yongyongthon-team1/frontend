@@ -2,7 +2,7 @@ import { describe, expect, it } from 'vitest';
 import { handlersByDomain, selectHandlers } from './registry';
 
 // 등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS (2C-R24).
-// NOT_MOCKED는 2B′가 다 채워 비었다. 등록 핸들러는 46(백엔드) + 3(확장) = 49개다.
+// NOT_MOCKED는 2B′가 다 채워 비었다. 등록 핸들러는 46(백엔드) + 2(확장) = 48개다(11/10 `GET /health` 삭제).
 // 경로는 `/api`를 뗀 꼴이다(비교할 때 `label(h).replace(' /api/', ' /')`).
 
 /** `docs/api/backend-spec.md`의 `### METHOD /path` 46개(명세 순서). */
@@ -56,7 +56,7 @@ const BACKEND_CONTRACT: string[] = [
 ];
 
 /** 목업 전용 확장 엔드포인트(2C-R8). */
-const EXTENSIONS: string[] = ['GET /health', 'POST /demo/reset', 'GET /campuses/:campusId/insight'];
+const EXTENSIONS: string[] = ['POST /demo/reset', 'GET /campuses/:campusId/insight'];
 
 /** 아직 목업이 없는 백엔드 경로. 2B′가 모두 채워 비었다(Task 13). */
 const NOT_MOCKED: string[] = [];
@@ -94,12 +94,12 @@ describe('registry', () => {
     expect(NOT_MOCKED).toEqual([]);
   });
 
-  it('등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS, 모두 49개', () => {
+  it('등록 핸들러 = (BACKEND_CONTRACT − NOT_MOCKED) ∪ EXTENSIONS, 모두 48개', () => {
     const expected = new Set([
       ...BACKEND_CONTRACT.filter((e) => !NOT_MOCKED.includes(e)),
       ...EXTENSIONS,
     ]);
-    expect(expected.size).toBe(49);
+    expect(expected.size).toBe(48);
     const registered = selectHandlers('all').map(label);
     expect(new Set(registered).size).toBe(registered.length);
     expect(sorted(registered)).toEqual(sorted(expected));

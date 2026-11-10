@@ -1,9 +1,8 @@
-import { useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQueryClient } from '@tanstack/react-query';
 import { SlidersHorizontal } from 'lucide-react';
 import { useId, useRef, useState, type ReactNode } from 'react';
 import { useNavigate } from 'react-router';
 import { toast } from 'sonner';
-import { qk } from '@/shared/api/queryKeys';
 import {
   DEMO_P1_ACCOUNTS,
   DEMO_ROLES,
@@ -15,12 +14,10 @@ import { env, type ApiMode } from '@/shared/config/env';
 import { cn } from '@/shared/lib/cn';
 import { errorMessage } from '@/shared/lib/errors';
 import { ApiError } from '@/shared/lib/http';
-import type { Tone } from '@/shared/lib/types';
 import { Button } from '@/shared/ui/Button';
 import { Select } from '@/shared/ui/Select';
 import { StatusChip } from '@/shared/ui/StatusChip';
 import { useBootStatus } from './bootStatus';
-import { checkBackend } from './health';
 import { useDemoStore, validLastCoupon, type AiSpeed, type MapMode } from './demoStore';
 import { quickLogin, switchToCouponOwner, useQuickLoginAvailable } from './quickLogin';
 import {
@@ -336,21 +333,18 @@ function FullPanel({ actions }: { actions: DemoActions }) {
             onChange={setAiSpeed}
           />
         ) : null}
-        <div className="flex items-center gap-2">
-          <span className="text-sm text-ink">백엔드</span>
-          <HealthBadge />
-          {quickLoginOn ? (
+        {quickLoginOn ? (
+          <div className="flex justify-end">
             <Button
               size="sm"
               variant="secondary"
-              className="ml-auto shrink-0"
               aria-pressed={false}
               onClick={() => setPresentMode(true)}
             >
               발표 모드
             </Button>
-          ) : null}
-        </div>
+          </div>
+        ) : null}
       </Group>
     </div>
   );
@@ -484,21 +478,4 @@ function Segmented<T extends string>({
       ) : null}
     </div>
   );
-}
-
-/** 백엔드 상태: `/api/health`(실서버는 404라 `/api/campuses`로 대신 — `checkBackend`)를 15초마다 확인한다(판정 27). */
-function HealthBadge() {
-  const health = useQuery({
-    queryKey: qk.health,
-    queryFn: checkBackend,
-    refetchInterval: 15_000,
-    retry: false,
-  });
-  const [tone, label]: [Tone, string] =
-    health.status === 'success'
-      ? ['success', '정상']
-      : health.status === 'error'
-        ? ['danger', '응답 없음']
-        : ['neutral', '확인 중'];
-  return <StatusChip tone={tone}>{label}</StatusChip>;
 }
