@@ -1,14 +1,45 @@
+import { rmSync } from 'node:fs';
 import { fileURLToPath, URL } from 'node:url';
-import { loadEnv } from 'vite';
+import { loadEnv, type Plugin } from 'vite';
 import { defineConfig } from 'vitest/config';
 import react from '@vitejs/plugin-react';
 import tailwindcss from '@tailwindcss/vite';
 
+/**
+ * 목업을 번들에 넣을지(빌드 상수 `__MOCK_API__`). `VITE_MOCK_API`가 `on` · `true` · `1`이면 넣고 `off` · `false` · `0`이면
+ * 뺀다. 값이 없으면 Vercel 프로덕션 빌드(`VERCEL_ENV=production`)만 빼고 로컬 · E2E · 미리보기는 넣는다 — 라이브 링크에는
+ * 목업 모드가 들어가지 않게 한다(11/10).
+ */
+function mockApiInBuild(value: string | undefined, vercelEnv: string | undefined): boolean {
+  const v = (value ?? '').trim().toLowerCase();
+  if (['off', 'false', '0'].includes(v)) return false;
+  if (['on', 'true', '1'].includes(v)) return true;
+  return vercelEnv !== 'production';
+}
+
+/** 목업을 뺀 빌드는 public의 목업 전용 파일(MSW 워커 · 재학 인증 견본 사진)도 배포 폴더에서 지운다. */
+function dropMockPublicFiles(): Plugin {
+  return {
+    name: 'drop-mock-public-files',
+    apply: 'build',
+    closeBundle() {
+      for (const name of ['mockServiceWorker.js', 'mock-docs']) {
+        rmSync(fileURLToPath(new URL(`./dist/${name}`, import.meta.url)), {
+          recursive: true,
+          force: true,
+        });
+      }
+    },
+  };
+}
+
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), '');
+  const mockApi = mockApiInBuild(env.VITE_MOCK_API, env.VERCEL_ENV ?? process.env.VERCEL_ENV);
 
   return {
-    plugins: [react(), tailwindcss()],
+    plugins: [react(), tailwindcss(), ...(mockApi ? [] : [dropMockPublicFiles()])],
+    define: { __MOCK_API__: JSON.stringify(mockApi) },
     resolve: {
       alias: { '@': fileURLToPath(new URL('./src', import.meta.url)) },
     },

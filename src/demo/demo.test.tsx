@@ -285,6 +285,32 @@ describe('시연 패널', () => {
     }
   });
 
+  // 11/10: 라이브 배포에 목업 모드가 보이면 안 된다 — 목업을 뺀 빌드는 모드 전환 · 목업 AI 속도 · 실서버 표시가 없다.
+  it('목업을 뺀 빌드(라이브 배포)면 API 모드 · AI 속도 · 실서버 표시가 없다', async () => {
+    const before = env.mockApi;
+    env.mockApi = false;
+    try {
+      useBootStatus.setState({ apiMode: 'real' });
+      useDemoStore.setState({ enabled: true });
+      await renderApp('/', { as: 'student' });
+      const p = within(panel());
+      expect(p.queryByRole('button', { name: '목업' })).toBeNull();
+      expect(p.queryByText('API 모드')).toBeNull();
+      expect(p.queryByText('AI 속도')).toBeNull();
+      expect(p.queryByText('실서버에 연결돼 있어요')).toBeNull();
+      expect(p.getByRole('button', { name: '시연 패널' })).not.toHaveTextContent('실서버');
+      expect(p.getByText('지도')).toBeInTheDocument();
+
+      act(() => useDemoStore.setState({ presentMode: true, aiSpeed: 'slow' }));
+      const status = p.getByRole('list', { name: '시연 설정' });
+      expect(status).not.toHaveTextContent('실서버');
+      expect(status).not.toHaveTextContent('목업');
+      expect(status).not.toHaveTextContent('AI 느리게');
+    } finally {
+      env.mockApi = before;
+    }
+  });
+
   it('헬스 체크가 실패하면 응답 없음', async () => {
     server.use(http.get('/api/health', () => HttpResponse.error()));
     useDemoStore.setState({ enabled: true });

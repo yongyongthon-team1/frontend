@@ -71,7 +71,9 @@ type Action = DemoRole | 'coupon' | 'account' | 'reset';
  */
 export function DemoPanel() {
   const presentMode = useDemoStore((s) => s.presentMode) === true;
-  const isReal = useBootStatus((s) => s.apiMode) === 'real';
+  // 목업을 뺀 빌드(라이브 배포)는 늘 실서버라 모드를 따로 알리지 않는다. 목업 UI 조건은 빌드 상수 `__MOCK_API__`를 앞에
+  // 둬서 그 빌드에서는 문구까지 번들에서 지워지고, 테스트는 `env.mockApi`를 바꿔 확인한다.
+  const isReal = useBootStatus((s) => s.apiMode) === 'real' && __MOCK_API__ && env.mockApi;
   const [open, setOpen] = useState(false);
   const bodyId = useId();
   const actions = useDemoActions(() => setOpen(false));
@@ -205,6 +207,7 @@ function RoleBar({ actions }: { actions: DemoActions }) {
 /**
  * 발표 모드에서는 환경 토글이 안 보이므로 지금 API 모드(`목업` · `실서버`)를 늘 작게 보이고, 기본값이 아닌 설정
  * (AI 느리게 · 지도 도식)은 켜져 있을 때만 보인다 — 지난 리허설의 설정이 무대에서 몰래 남지 않게(판정 33).
+ * 목업을 뺀 빌드(라이브 배포)는 모드가 하나뿐이고 AI 속도는 목업 전용이라 둘 다 보이지 않는다.
  */
 function RoleBarStatus() {
   const apiMode = useBootStatus((s) => s.apiMode);
@@ -212,8 +215,10 @@ function RoleBarStatus() {
   const mapMode = useDemoStore((s) => s.mapMode);
   return (
     <ul aria-label="시연 설정" className="flex flex-col items-center gap-1 text-xs font-semibold">
-      <li className="text-muted">{apiMode === 'real' ? '실서버' : '목업'}</li>
-      {aiSpeed === 'slow' ? (
+      {__MOCK_API__ && env.mockApi ? (
+        <li className="text-muted">{apiMode === 'real' ? '실서버' : '목업'}</li>
+      ) : null}
+      {__MOCK_API__ && env.mockApi && aiSpeed === 'slow' ? (
         <li>
           <StatusChip tone="warning">AI 느리게</StatusChip>
         </li>
@@ -241,12 +246,12 @@ function FullPanel({ actions }: { actions: DemoActions }) {
   // 가장 작은 무대 뷰포트(1280×590 — 프레임 높이 558px)에서도 스크롤 없이 들어가게 촘촘히 둔다.
   return (
     <div className="flex w-80 max-w-[calc(100vw-24px)] flex-col gap-3 rounded-lg border border-border bg-surface p-3">
-      {apiMode === 'real' ? (
+      {__MOCK_API__ && env.mockApi && apiMode === 'real' ? (
         <StatusChip tone="warning" className="text-sm">
           실서버에 연결돼 있어요
         </StatusChip>
       ) : null}
-      {mockWorkerFailed ? (
+      {__MOCK_API__ && mockWorkerFailed ? (
         <p
           role="alert"
           className="rounded-sm bg-danger-soft px-3 py-2 text-sm font-bold text-danger"
@@ -318,22 +323,25 @@ function FullPanel({ actions }: { actions: DemoActions }) {
       </Group>
 
       <Group title="환경">
-        <Segmented<ApiMode>
-          label="API 모드"
-          value={apiMode}
-          options={[
-            ['mock', '목업'],
-            ['real', '실서버'],
-          ]}
-          disabledOption={
-            env.realApi ? undefined : { value: 'real', reason: REAL_API_MISSING_REASON }
-          }
-          onChange={(mode) => {
-            // 모드는 부트스트랩에서 한 번 정한다(목업 워커 · HTTP) — 저장하고 다시 불러온다.
-            setApiModeOverride(mode);
-            window.location.reload();
-          }}
-        />
+        {/* 목업을 뺀 빌드(라이브 배포)는 늘 실서버라 모드 전환과 목업 AI 속도가 없다. */}
+        {__MOCK_API__ && env.mockApi ? (
+          <Segmented<ApiMode>
+            label="API 모드"
+            value={apiMode}
+            options={[
+              ['mock', '목업'],
+              ['real', '실서버'],
+            ]}
+            disabledOption={
+              env.realApi ? undefined : { value: 'real', reason: REAL_API_MISSING_REASON }
+            }
+            onChange={(mode) => {
+              // 모드는 부트스트랩에서 한 번 정한다(목업 워커 · HTTP) — 저장하고 다시 불러온다.
+              setApiModeOverride(mode);
+              window.location.reload();
+            }}
+          />
+        ) : null}
         <Segmented<MapMode>
           label="지도"
           value={mapMode === 'schematic' ? 'schematic' : 'auto'}
@@ -343,15 +351,17 @@ function FullPanel({ actions }: { actions: DemoActions }) {
           ]}
           onChange={setMapMode}
         />
-        <Segmented<AiSpeed>
-          label="AI 속도"
-          value={aiSpeed === 'slow' ? 'slow' : 'normal'}
-          options={[
-            ['normal', '보통'],
-            ['slow', '느리게'],
-          ]}
-          onChange={setAiSpeed}
-        />
+        {__MOCK_API__ && env.mockApi ? (
+          <Segmented<AiSpeed>
+            label="AI 속도"
+            value={aiSpeed === 'slow' ? 'slow' : 'normal'}
+            options={[
+              ['normal', '보통'],
+              ['slow', '느리게'],
+            ]}
+            onChange={setAiSpeed}
+          />
+        ) : null}
         <div className="flex items-center gap-2">
           <span className="text-sm text-ink">백엔드</span>
           <HealthBadge />

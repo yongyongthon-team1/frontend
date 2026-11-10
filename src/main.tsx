@@ -22,14 +22,22 @@ import './styles/globals.css';
 
 // 부트스트랩: 원클릭 시연 링크 설정 저장 → API 모드 결정(URL ?mode= > 시연 패널 저장값 > env) → 목업이면 워커를 켜고
 // 기다림 → HTTP · 쿼리 → 링크의 초기화 · 빠른 로그인 → 주소 정리 → 라우터 → 렌더.
-// 목업 워커는 첫 API 요청 전에 켜져 있어야 한다(새로고침 · 딥링크). 동적 import는 실서버 모드 번들에서 목업을 뺀다.
+// 목업 워커는 첫 API 요청 전에 켜져 있어야 한다(새로고침 · 딥링크). 목업은 동적 import라 실서버 모드에서는 받지 않고,
+// 목업을 뺀 빌드(`__MOCK_API__` false — 라이브 배포)에서는 이 분기가 통째로 지워져 목업 코드가 번들에 들어가지 않는다.
 async function bootstrap() {
   const demoParams = parseDemoParams(window.location.search);
   applyDemoParamsBeforeRender(demoParams);
 
-  const mode = resolveApiMode(env.apiMode, readDemoOverride(), window.location.search, env.realApi);
+  const mode = resolveApiMode(
+    env.apiMode,
+    readDemoOverride(),
+    window.location.search,
+    env.realApi,
+    env.mockApi,
+  );
   useBootStatus.setState({ apiMode: mode });
-  if (mode === 'mock') {
+  if (!__MOCK_API__) forgetMockWorker();
+  if (__MOCK_API__ && mode === 'mock') {
     try {
       const mocks = await import('./mocks/browser');
       await mocks.startMockWorker(env.mockDomains);
@@ -70,6 +78,23 @@ async function bootstrap() {
       <App router={router} queryClient={queryClient} />
     </StrictMode>,
   );
+}
+
+/**
+ * 예전 목업 배포를 열었던 브라우저에 남은 MSW 서비스 워커를 지운다(목업을 뺀 빌드만). 워커 파일은 이제 배포에 없다.
+ * 실패해도 앱에는 영향이 없다.
+ */
+function forgetMockWorker() {
+  if (!('serviceWorker' in navigator)) return;
+  navigator.serviceWorker
+    .getRegistrations()
+    .then((registrations) => {
+      for (const registration of registrations) {
+        const worker = registration.active ?? registration.waiting ?? registration.installing;
+        if (worker?.scriptURL.endsWith('/mockServiceWorker.js')) void registration.unregister();
+      }
+    })
+    .catch(() => undefined);
 }
 
 void bootstrap();

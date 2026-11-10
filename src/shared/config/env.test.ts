@@ -11,6 +11,7 @@ describe('env', () => {
       kakaoMapKey: null,
       demoPassword: 'demo1234',
       realApi: true,
+      mockApi: true,
     }));
   it('도메인 목록', () =>
     expect(readEnv({ VITE_MOCK_DOMAINS: 'auth,tours' }).mockDomains).toEqual(['auth', 'tours']));
@@ -37,5 +38,15 @@ describe('env', () => {
     expect(resolveApiMode('mock', 'real', '?mode=real', false)).toBe('mock');
     expect(resolveApiMode('real', null, '', false)).toBe('mock');
     expect(resolveApiMode('mock', null, '?mode=real', true)).toBe('real');
+  });
+  it('목업을 뺀 빌드(라이브 배포)는 env가 mock이어도 기본 모드가 실서버', () => {
+    const live = readEnv({ VITE_API_MODE: 'mock' }, false);
+    expect(live.mockApi).toBe(false);
+    expect(live.apiMode).toBe('real');
+  });
+  it('목업을 뺀 빌드는 URL · 저장값 · 기본값이 무엇이든 실서버', () => {
+    expect(resolveApiMode('real', null, '?mode=mock', true, false)).toBe('real');
+    expect(resolveApiMode('real', 'mock', '', true, false)).toBe('real');
+    expect(resolveApiMode('mock', 'mock', '?mode=mock', true, false)).toBe('real');
   });
 });
