@@ -22,7 +22,7 @@ import { StatusChip } from '@/shared/ui/StatusChip';
 import { useBootStatus } from './bootStatus';
 import { checkBackend } from './health';
 import { useDemoStore, validLastCoupon, type AiSpeed, type MapMode } from './demoStore';
-import { quickLogin, switchToCouponOwner } from './quickLogin';
+import { quickLogin, switchToCouponOwner, useQuickLoginAvailable } from './quickLogin';
 import {
   RESET_FAILED,
   RESET_MISSING_REASON,
@@ -67,10 +67,12 @@ type Action = DemoRole | 'coupon' | 'account' | 'reset';
 /**
  * 시연 패널(설계 5.8). DOM 하나이고 배치만 CSS가 바꾼다(판정 Task 21): 폭 900px 이상이면 프레임 옆(`MobileFrame`의
  * aside 슬롯), 좁으면 프레임 오른쪽 위의 토글 버튼 뒤에 접힌다. 발표 모드에서는 역할 버튼 4개와 작은 설정 표시만
- * 남은 세로 막대다. 시연 도구가 켜졌을 때만 그린다(`useDemoToolsOn` — AppShell).
+ * 남은 세로 막대다. 시연 도구가 켜졌을 때만 그린다(`useDemoToolsOn` — AppShell). 역할 전환 · 발표 모드는 빠른
+ * 로그인이 되는 목업(스텁)에서만 있다 — 실서버에서는 직접 로그인한다(11/10, `useQuickLoginAvailable`).
  */
 export function DemoPanel() {
-  const presentMode = useDemoStore((s) => s.presentMode) === true;
+  const quickLoginOn = useQuickLoginAvailable();
+  const presentMode = useDemoStore((s) => s.presentMode) === true && quickLoginOn;
   // 목업을 뺀 빌드(라이브 배포)는 늘 실서버라 모드를 따로 알리지 않는다. 목업 UI 조건은 빌드 상수 `__MOCK_API__`를 앞에
   // 둬서 그 빌드에서는 문구까지 번들에서 지워지고, 테스트는 `env.mockApi`를 바꿔 확인한다.
   const isReal = useBootStatus((s) => s.apiMode) === 'real' && __MOCK_API__ && env.mockApi;
@@ -239,6 +241,7 @@ function FullPanel({ actions }: { actions: DemoActions }) {
   const mapMode = useDemoStore((s) => s.mapMode);
   const aiSpeed = useDemoStore((s) => s.aiSpeed);
   const resetMissing = useDemoStore((s) => s.resetMissing);
+  const quickLoginOn = useQuickLoginAvailable();
   const { setApiModeOverride, setMapMode, setAiSpeed, setPresentMode } = useDemoStore.getState();
   const [checkpoint, setCheckpoint] = useState<SeedCheckpoint>('START');
   const [p1Email, setP1Email] = useState(P1_ACCOUNT_OPTIONS[0]?.value ?? '');
@@ -261,40 +264,11 @@ function FullPanel({ actions }: { actions: DemoActions }) {
       ) : null}
 
       <Group title="역할 전환">
-        <div className="grid grid-cols-4 gap-2">
-          <RoleButtons actions={actions} />
-        </div>
-        <div className="flex gap-2">
-          <div className="min-w-0 flex-1">
-            <Select
-              label="P1 계정"
-              className="h-11 text-sm"
-              options={P1_ACCOUNT_OPTIONS}
-              value={p1Email}
-              onChange={(e) => setP1Email(e.target.value)}
-            />
-          </div>
-          <Button
-            size="sm"
-            variant="secondary"
-            className="shrink-0"
-            loading={actions.running === 'account'}
-            onClick={() => actions.switchAccount(p1Email)}
-          >
-            이 계정으로 전환
-          </Button>
-        </div>
-        <Button
-          size="sm"
-          className="w-full"
-          disabled={coupon === null}
-          loading={actions.running === 'coupon'}
-          hint={coupon === null ? { reason: '학생 쿠폰 화면을 먼저 열어 주세요.' } : undefined}
-          onClick={actions.switchCouponOwner}
-        >
-          쿠폰 가게 사장님으로 전환
-        </Button>
-        {coupon !== null ? <StatusChip tone="info">{`최근 쿠폰 ${coupon.code}`}</StatusChip> : null}
+        {quickLoginOn ? (
+          <RoleSwitch actions={actions} p1Email={p1Email} setP1Email={setP1Email} coupon={coupon} />
+        ) : (
+          <p className="text-sm text-muted">{QUICK_LOGIN_OFF_NOTE}</p>
+        )}
       </Group>
 
       <Group title="시연 데이터">
@@ -365,18 +339,76 @@ function FullPanel({ actions }: { actions: DemoActions }) {
         <div className="flex items-center gap-2">
           <span className="text-sm text-ink">백엔드</span>
           <HealthBadge />
-          <Button
-            size="sm"
-            variant="secondary"
-            className="ml-auto shrink-0"
-            aria-pressed={false}
-            onClick={() => setPresentMode(true)}
-          >
-            발표 모드
-          </Button>
+          {quickLoginOn ? (
+            <Button
+              size="sm"
+              variant="secondary"
+              className="ml-auto shrink-0"
+              aria-pressed={false}
+              onClick={() => setPresentMode(true)}
+            >
+              발표 모드
+            </Button>
+          ) : null}
         </div>
       </Group>
     </div>
+  );
+}
+
+/** 실서버에서 역할 전환 대신 보이는 안내(빠른 로그인은 목업에서만, 11/10). */
+const QUICK_LOGIN_OFF_NOTE =
+  '실서버에서는 빠른 로그인을 쓰지 않아요. 로그인 화면에서 직접 로그인해 주세요.';
+
+/** 역할 버튼 · P1 계정 전환 · 쿠폰 가게 사장님 전환(빠른 로그인이 되는 목업에서만). */
+function RoleSwitch({
+  actions,
+  p1Email,
+  setP1Email,
+  coupon,
+}: {
+  actions: DemoActions;
+  p1Email: string;
+  setP1Email(email: string): void;
+  coupon: ReturnType<typeof validLastCoupon>;
+}) {
+  return (
+    <>
+      <div className="grid grid-cols-4 gap-2">
+        <RoleButtons actions={actions} />
+      </div>
+      <div className="flex gap-2">
+        <div className="min-w-0 flex-1">
+          <Select
+            label="P1 계정"
+            className="h-11 text-sm"
+            options={P1_ACCOUNT_OPTIONS}
+            value={p1Email}
+            onChange={(e) => setP1Email(e.target.value)}
+          />
+        </div>
+        <Button
+          size="sm"
+          variant="secondary"
+          className="shrink-0"
+          loading={actions.running === 'account'}
+          onClick={() => actions.switchAccount(p1Email)}
+        >
+          이 계정으로 전환
+        </Button>
+      </div>
+      <Button
+        size="sm"
+        className="w-full"
+        disabled={coupon === null}
+        loading={actions.running === 'coupon'}
+        hint={coupon === null ? { reason: '학생 쿠폰 화면을 먼저 열어 주세요.' } : undefined}
+        onClick={actions.switchCouponOwner}
+      >
+        쿠폰 가게 사장님으로 전환
+      </Button>
+      {coupon !== null ? <StatusChip tone="info">{`최근 쿠폰 ${coupon.code}`}</StatusChip> : null}
+    </>
   );
 }
 

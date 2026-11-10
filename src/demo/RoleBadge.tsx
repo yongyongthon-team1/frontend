@@ -6,6 +6,7 @@ import { cn } from '@/shared/lib/cn';
 import type { Tone } from '@/shared/lib/types';
 import { Badge } from '@/shared/ui/Badge';
 import { useDemoStore } from './demoStore';
+import { useQuickLoginAvailable } from './quickLogin';
 
 // V2 톤(칩 바탕 -soft + 같은 색 테두리 · 점). 글자는 톤 색이 아니라 본문색(ink)이다 — -soft 바탕 위 대비가
 // success 약 2.7:1 · accent-local 약 1.9:1로 낮아 무대에서 읽히지 않는다. 테두리가 있어 콘텐츠 위에 겹쳐도 경계가 보인다(그림자 없음).
@@ -30,7 +31,9 @@ const TONE_BORDER: Record<Tone, string> = {
  * 크기는 무대에서 읽히는 16px 굵은 글씨이고, 화면 제목(h1: TopBar 제목 또는 탭 첫 화면의 PageHeading) 글자를 덮지 않는다(e2e/golden-path 발표 모드).
  */
 export function RoleBadge() {
-  const presentMode = useDemoStore((s) => s.presentMode) === true;
+  // 발표 모드는 빠른 로그인이 되는 목업에서만 있다(시연 패널과 같은 조건).
+  const quickLoginOn = useQuickLoginAvailable();
+  const presentMode = useDemoStore((s) => s.presentMode) === true && quickLoginOn;
   const { pathname } = useLocation();
   // 공개 화면(가입 · 보호자 동의)은 로그인한 사람의 화면이 아니다 — 배지가 가입자 · 보호자에게 엉뚱한 역할을 붙이지 않게 숨긴다.
   const isPublicRoute = pathname === '/signup' || pathname.startsWith('/consent/');

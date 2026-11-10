@@ -9,7 +9,6 @@ describe('env', () => {
       mockDomains: 'all',
       demoTools: false,
       kakaoMapKey: null,
-      demoPassword: 'demo1234',
       realApi: true,
       mockApi: true,
     }));

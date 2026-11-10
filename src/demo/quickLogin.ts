@@ -24,17 +24,31 @@ export interface QuickLoginDeps {
   next?: string;
 }
 
-/**
- * 시연 계정 비밀번호(판정 10). 로그인 요청을 목업이 받으면 시드 비밀번호, 실서버가 받으면 env `VITE_DEMO_PASSWORD`
- * (실서버 시연 계정의 비밀번호가 달라도 목업 빠른 로그인이 깨지지 않게).
- */
-function demoPassword(): string {
-  const { apiMode, mockWorkerFailed } = useBootStatus.getState();
-  const authMocked =
+/** 실서버에서 빠른 로그인을 부르면(원클릭 링크 `?as=` 등) 보이는 안내. */
+export const QUICK_LOGIN_OFF =
+  '실서버에서는 시연 계정 자동 로그인을 하지 않아요. 직접 로그인해 주세요.';
+
+function authMocked(apiMode: string, mockWorkerFailed: boolean): boolean {
+  return (
     apiMode === 'mock' &&
     !mockWorkerFailed &&
-    (env.mockDomains === 'all' || env.mockDomains.includes('auth'));
-  return authMocked ? DEMO_SEED_PASSWORD : env.demoPassword;
+    (env.mockDomains === 'all' || env.mockDomains.includes('auth'))
+  );
+}
+
+/**
+ * 빠른 로그인(역할 전환 · 원클릭 링크 `?as=` · 401 자동 재로그인)을 쓸 수 있는지. 로그인 요청을 목업(스텁)이 받을 때만이다
+ * (11/10). 실서버는 시연 계정마다 비밀번호가 다르고, 그 비밀번호를 번들에 넣으면 라이브 링크에서 누구나 꺼낼 수 있다 —
+ * 실서버에서는 로그인 화면에서 직접 로그인한다.
+ */
+export function quickLoginAvailable(): boolean {
+  const { apiMode, mockWorkerFailed } = useBootStatus.getState();
+  return authMocked(apiMode, mockWorkerFailed);
+}
+
+/** `quickLoginAvailable`의 구독 훅(시연 패널). */
+export function useQuickLoginAvailable(): boolean {
+  return useBootStatus((s) => authMocked(s.apiMode, s.mockWorkerFailed));
 }
 
 /**
@@ -43,13 +57,15 @@ function demoPassword(): string {
  * 다시 부르지 않게) → 빠른 로그인 기록 → 이동. 이동이 flushSync로 그리므로 로그인 화면도, 새 신원으로 그린 이전 화면도
  * 나오지 않는다. 토큰은 null을 거치지 않는다(빠른 로그인 기록 구독이 지우지 않는다).
  * 실패하면 아무것도 바꾸지 않고 던진다 — 로그인 요청은 세션 토큰을 붙이지 않고 그 401은 세션 만료로 처리되지 않는다.
+ * 목업이 로그인을 받지 않으면(실서버) 요청 없이 던진다(`quickLoginAvailable`).
  */
 export async function quickLogin(
   target: DemoRole | { email: string },
   deps: QuickLoginDeps,
 ): Promise<void> {
+  if (!quickLoginAvailable()) throw new Error(QUICK_LOGIN_OFF);
   const email = typeof target === 'string' ? DEMO_EMAILS[target] : target.email;
-  const { token, me } = await login({ email, password: demoPassword() });
+  const { token, me } = await login({ email, password: DEMO_SEED_PASSWORD });
   deps.queryClient.clear();
   // 시연 토큰을 먼저 기록한다 — 토큰이 바뀔 때 도는 구독(`connectDemoSession`)이 시연 밖의 변경으로 오해하지 않게.
   useDemoStore.getState().setActiveDemoToken(token);
@@ -73,14 +89,14 @@ export async function switchToCouponOwner(deps: Omit<QuickLoginDeps, 'next'>): P
 }
 
 /**
- * 세션이 끊긴(401) 시연 계정으로 조용히 다시 로그인한다(설계 5.4). 빠른 로그인한 계정이 아니면 시도하지 않는다(null).
- * 그사이 다른 로그인(역할 전환)으로 토큰이 바뀌었으면 그 토큰을 덮어쓰지 않는다.
+ * 세션이 끊긴(401) 시연 계정으로 조용히 다시 로그인한다(설계 5.4). 빠른 로그인한 계정이 아니거나 실서버면 시도하지
+ * 않는다(null). 그사이 다른 로그인(역할 전환)으로 토큰이 바뀌었으면 그 토큰을 덮어쓰지 않는다.
  */
 function recoverDemoSession(): Promise<boolean> | null {
   const email = useDemoStore.getState().activeDemoEmail;
-  if (email === null) return null;
+  if (email === null || !quickLoginAvailable()) return null;
   const failedToken = useSession.getState().token;
-  return login({ email, password: demoPassword() }).then(
+  return login({ email, password: DEMO_SEED_PASSWORD }).then(
     ({ token }) => {
       if (useSession.getState().token === failedToken) {
         useDemoStore.getState().setActiveDemoToken(token); // setToken 앞 — 구독이 기록을 지우지 않게

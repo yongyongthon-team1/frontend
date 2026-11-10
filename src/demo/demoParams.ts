@@ -10,7 +10,7 @@ import { env, type ApiMode } from '@/shared/config/env';
 import { errorMessage } from '@/shared/lib/errors';
 import { ApiError } from '@/shared/lib/http';
 import { useDemoStore } from './demoStore';
-import { quickLogin } from './quickLogin';
+import { QUICK_LOGIN_OFF, quickLogin, quickLoginAvailable } from './quickLogin';
 import { RESET_FAILED, resetDemoData, resetFailureDescription } from './resetDemo';
 
 // 원클릭 시연 링크(설계 5.8): `?demo=1&mode=mock|real&reset=1&checkpoint=CONFIRMED&as=student&present=1&key=…`
@@ -78,7 +78,8 @@ function failureDescription(error: unknown): string | undefined {
 
 /**
  * 링크의 동작을 첫 렌더 전에 실행한다(판정 29 — 로그인 화면이 깜빡이지 않게): reset → 시연 데이터 초기화,
- * as → 그 역할로 빠른 로그인. 실패하면 토스트만 남기고(Toaster가 마운트되면 보인다) 계속한다.
+ * as → 그 역할로 빠른 로그인. 실패하면 토스트만 남기고(Toaster가 마운트되면 보인다) 계속한다. 실서버에서는 빠른
+ * 로그인을 하지 않고(`quickLoginAvailable`) 직접 로그인하라는 안내만 남긴다.
  * 빠른 로그인했으면 첫 화면 경로를 돌려준다 — `/`가 아닌 주소로 연 링크는 그 주소에 머문다.
  */
 export async function runDemoParams(
@@ -93,6 +94,10 @@ export async function runDemoParams(
     }
   }
   if (p.as === null) return null;
+  if (!quickLoginAvailable()) {
+    toast(QUICK_LOGIN_OFF);
+    return null;
+  }
   let landing: string | null = null;
   try {
     await quickLogin(p.as, {

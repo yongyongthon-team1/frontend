@@ -16,7 +16,7 @@ export type DemoRole = 'student' | 'guide' | 'owner' | 'admin';
 /** 시연 패널의 역할 전환 순서(원클릭 링크 `?as=`가 받는 값). */
 export const DEMO_ROLES: readonly DemoRole[] = ['student', 'guide', 'owner', 'admin'];
 
-/** 목업 시드 계정의 비밀번호. 실서버 시연 계정은 env `VITE_DEMO_PASSWORD`를 쓴다(판정 10). */
+/** 목업 시드 계정의 비밀번호. 빠른 로그인은 목업에서만 쓴다 — 실서버는 직접 로그인한다(11/10). */
 export const DEMO_SEED_PASSWORD = 'demo1234';
 
 /** 시연 데이터 체크포인트: 골든 패스를 그 단계까지 진행한 시드(목업 시드 · 시연 초기화 `{ checkpoint }`). */

@@ -1,4 +1,4 @@
-import { QueryClientProvider } from '@tanstack/react-query';
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { act, renderHook, screen, waitFor, within } from '@testing-library/react';
 import type { ReactNode } from 'react';
 import { http, HttpResponse } from 'msw';
@@ -301,14 +301,40 @@ describe('시연 패널', () => {
       expect(p.getByRole('button', { name: '시연 패널' })).not.toHaveTextContent('실서버');
       expect(p.getByText('지도')).toBeInTheDocument();
 
+      // 실서버뿐이라 빠른 로그인이 없고, 저장된 발표 모드 · AI 속도가 있어도 막대 · 설정 표시가 나오지 않는다.
       act(() => useDemoStore.setState({ presentMode: true, aiSpeed: 'slow' }));
-      const status = p.getByRole('list', { name: '시연 설정' });
-      expect(status).not.toHaveTextContent('실서버');
-      expect(status).not.toHaveTextContent('목업');
-      expect(status).not.toHaveTextContent('AI 느리게');
+      expect(p.queryByRole('list', { name: '시연 설정' })).toBeNull();
+      expect(p.queryByText('AI 느리게')).toBeNull();
+      expect(p.queryByText('목업')).toBeNull();
     } finally {
       env.mockApi = before;
     }
+  });
+
+  // 11/10: 실서버 계정은 비밀번호가 제각각이고 번들에 넣으면 노출된다 — 빠른 로그인은 목업(스텁)에서만.
+  it('실서버 모드면 역할 전환 · 발표 모드 없이 직접 로그인 안내만 보이고, 역할 배지도 없다', async () => {
+    useBootStatus.setState({ apiMode: 'real' });
+    useDemoStore.setState({ enabled: true, presentMode: true });
+    await renderApp('/', { as: 'student' });
+    const p = within(panel());
+    expect(
+      p.getByText('실서버에서는 빠른 로그인을 쓰지 않아요. 로그인 화면에서 직접 로그인해 주세요.'),
+    ).toBeInTheDocument();
+    for (const name of ['고교생', '가이드', '사장님', '운영자', '이 계정으로 전환', '발표 모드']) {
+      expect(p.queryByRole('button', { name })).toBeNull();
+    }
+    expect(p.queryByRole('button', { name: '쿠폰 가게 사장님으로 전환' })).toBeNull();
+    expect(screen.queryByText('고교생 화면')).toBeNull();
+  });
+
+  it('목업이 로그인을 받지 않으면(목업 워커 실패) 빠른 로그인을 하지 않는다', async () => {
+    useDemoStore.setState({ enabled: true });
+    await renderApp('/', { as: 'student' });
+    act(() => useBootStatus.setState({ mockWorkerFailed: true }));
+    expect(within(panel()).queryByRole('button', { name: '가이드' })).toBeNull();
+    await expect(
+      quickLogin('guide', { queryClient: new QueryClient(), navigate: () => {} }),
+    ).rejects.toThrow('실서버에서는 시연 계정 자동 로그인을 하지 않아요.');
   });
 
   it('헬스 체크가 실패하면 응답 없음', async () => {
@@ -512,16 +538,14 @@ describe('발표 모드', () => {
     expect(within(panel()).queryByText('AI 느리게')).toBeNull();
     expect(within(panel()).queryByText('지도 도식')).toBeNull();
 
-    act(() => {
-      useBootStatus.setState({ apiMode: 'real' });
-      useDemoStore.setState({ aiSpeed: 'slow', mapMode: 'schematic' });
-    });
-    // 좁은 화면의 패널 버튼에도 '실서버'가 붙으므로 막대의 설정 목록에서 찾는다.
-    const status = within(panel()).getByRole('list', { name: '시연 설정' });
-    expect(within(status).getByText('실서버')).toBeInTheDocument();
-    expect(within(panel()).queryByText('목업')).toBeNull();
+    act(() => useDemoStore.setState({ aiSpeed: 'slow', mapMode: 'schematic' }));
     expect(within(panel()).getByText('AI 느리게')).toBeInTheDocument();
     expect(within(panel()).getByText('지도 도식')).toBeInTheDocument();
+
+    // 발표 모드(역할 막대)는 빠른 로그인이 되는 목업에서만 있다(11/10) — 실서버면 전체 패널로 돌아간다.
+    act(() => useBootStatus.setState({ apiMode: 'real' }));
+    expect(within(panel()).queryByRole('list', { name: '시연 설정' })).toBeNull();
+    expect(within(panel()).getByText('실서버에 연결돼 있어요')).toBeInTheDocument();
   });
 
   it('역할 배지는 발표 모드에서만', async () => {
@@ -616,6 +640,19 @@ describe('시연 계정 자동 재로그인', () => {
     expect(logins.count).toBe(1);
     expect(useDemoStore.getState().activeDemoEmail).toBeNull();
     await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+  });
+
+  it('실서버면 시연 계정 기록이 남아 있어도 다시 로그인하지 않고 로그아웃 (11/10)', async () => {
+    const { router, queryClient } = await renderApp('/my-tours', { as: 'student' });
+    act(() => useDemoStore.setState({ activeDemoEmail: STUDENT }));
+    await screen.findByRole('heading', { name: '내 탐방' });
+    act(() => useBootStatus.setState({ apiMode: 'real' }));
+    const logins = countLogins();
+    dropServerSessions();
+    await act(() => queryClient.invalidateQueries({ queryKey: qk.me }));
+    await waitFor(() => expect(router.state.location.pathname).toBe('/login'));
+    expect(useSession.getState().token).toBeNull();
+    expect(logins.count).toBe(0);
   });
 
   it('시연 계정이 아니면 다시 로그인하지 않고 바로 로그아웃', async () => {

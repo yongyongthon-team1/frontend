@@ -14,6 +14,7 @@ import {
   parseDemoParams,
   runDemoParams,
 } from './demoParams';
+import { useBootStatus } from './bootStatus';
 import { useDemoStore } from './demoStore';
 
 beforeEach(() => {
@@ -193,6 +194,22 @@ describe('첫 렌더 전 실행(초기화 · 빠른 로그인)', () => {
     useDemoStore.setState({ lastCoupon: { code: '123456', storeId: 2 } });
     await runDemoParams(parseDemoParams('?demo=1&reset=1&as=student'), { queryClient, path: '/' });
     expect(useDemoStore.getState().lastCoupon).toBeNull();
+  });
+
+  it('실서버면 as로 빠른 로그인하지 않고(로그인 요청 없음) 직접 로그인 안내만 남긴다 (11/10)', async () => {
+    const queryClient = setupClient();
+    useBootStatus.setState({ apiMode: 'real' });
+    try {
+      const landing = await runDemoParams(parseDemoParams('?demo=1&as=student'), {
+        queryClient,
+        path: '/',
+      });
+      expect(landing).toBeNull();
+      expect(useSession.getState().token).toBeNull();
+      expect(useDemoStore.getState().activeDemoEmail).toBeNull();
+    } finally {
+      useBootStatus.setState({ apiMode: 'mock' });
+    }
   });
 
   it('reset=1이 404(실서버에 초기화 없음)면 사유를 보이고 패널 버튼을 잠근다 — 로그인은 이어 간다 (2C-R28)', async () => {

@@ -19,7 +19,6 @@ export interface AppEnv {
   mockDomains: MockDomain[] | 'all';
   demoTools: boolean;
   kakaoMapKey: string | null;
-  demoPassword: string;
   /** 실서버 모드를 쓸 수 있는지. 백엔드가 연결되지 않은 배포는 `VITE_REAL_API=off`로 막는다(그때는 늘 목업). */
   realApi: boolean;
   /**
@@ -68,7 +67,6 @@ export function readEnv(raw: Record<string, unknown>, mockApi = true): AppEnv {
     mockDomains: parseMockDomains(raw.VITE_MOCK_DOMAINS),
     demoTools: raw.VITE_DEMO_TOOLS === true || raw.VITE_DEMO_TOOLS === 'true',
     kakaoMapKey: str(raw.VITE_KAKAO_MAP_KEY) || null,
-    demoPassword: str(raw.VITE_DEMO_PASSWORD) || 'demo1234',
     realApi: !['off', 'false', '0'].includes(str(raw.VITE_REAL_API).toLowerCase()),
     mockApi,
   };

@@ -29,7 +29,6 @@ export default defineConfig({
           VITE_MOCK_DOMAINS: 'all',
           VITE_DEMO_TOOLS: 'true',
           VITE_KAKAO_MAP_KEY: '',
-          VITE_DEMO_PASSWORD: 'demo1234',
         },
       },
 });
