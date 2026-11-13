@@ -63,6 +63,46 @@ export function isKoreaCoordinate(lat: number, lng: number): boolean {
   );
 }
 
+/** 두 좌표 사이의 대략적인 거리(m). 코스 범위(수 km)에서는 평면 근사로 충분하다. */
+function approxMeters(a: { lat: number; lng: number }, b: { lat: number; lng: number }): number {
+  const dLat = (b.lat - a.lat) * 111_320;
+  const dLng = (b.lng - a.lng) * 111_320 * Math.cos(((a.lat + b.lat) / 2) * (Math.PI / 180));
+  return Math.hypot(dLat, dLng);
+}
+
+/** 이 거리(m) 안의 지점들은 코스 지도 기본 배율에서 핀이 겹쳐 보인다. */
+export const PIN_OVERLAP_METERS = 60;
+/** 겹치는 핀을 옆으로 벌리는 간격(px). 핀 지름(28px)에 흰 테두리 몫을 더했다. */
+export const PIN_SPREAD_PX = 32;
+
+/**
+ * 지도 핀의 가로 비켜 놓기(px). 서로 `PIN_OVERLAP_METERS` 안에 있는 지점끼리(이어진 것까지) 한 묶음으로 보고, 묶음 안에서
+ * 지점 순서대로 가운데를 기준으로 좌우로 벌린다 — 가까운 두 가게의 핀이 하나로 겹쳐 하나가 숨지 않게. 혼자인 지점은 0.
+ * 핀만 옮기고 선(경로)은 실제 좌표 그대로다.
+ */
+export function pinOffsets(points: { lat: number; lng: number }[]): number[] {
+  const groups: number[][] = [];
+  points.forEach((point, index) => {
+    const near = groups.filter((group) =>
+      group.some((i) => approxMeters(points[i]!, point) < PIN_OVERLAP_METERS),
+    );
+    // 이 지점이 둘 이상의 묶음을 잇게 되면 한 묶음으로 합친다.
+    const merged = near
+      .flat()
+      .concat(index)
+      .sort((x, y) => x - y);
+    for (const group of near) groups.splice(groups.indexOf(group), 1);
+    groups.push(merged);
+  });
+  const offsets = points.map(() => 0);
+  for (const group of groups) {
+    group.forEach((pointIndex, i) => {
+      offsets[pointIndex] = (i - (group.length - 1) / 2) * PIN_SPREAD_PX;
+    });
+  }
+  return offsets;
+}
+
 export interface CourseStop {
   id: number;
   order: number;

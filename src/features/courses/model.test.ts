@@ -5,6 +5,8 @@ import {
   isKoreaCoordinate,
   matchesPlace,
   partnerStopCount,
+  PIN_SPREAD_PX,
+  pinOffsets,
   pickTarget,
   slotTimes,
   stopDurations,
@@ -287,5 +289,37 @@ describe('isKoreaCoordinate (지도 핀 방어)', () => {
     expect(isKoreaCoordinate(455123.4, 205678.9)).toBe(false);
     expect(isKoreaCoordinate(Number.NaN, 127)).toBe(false);
     expect(isKoreaCoordinate(null as unknown as number, 127)).toBe(false);
+  });
+});
+
+describe('pinOffsets (지도 핀 겹침 벌리기)', () => {
+  const campus = { lat: 37.2411, lng: 127.0815 };
+  const rento = { lat: 37.237045, lng: 127.077422 };
+  const timeless = { lat: 37.236829, lng: 127.077963 }; // 렌토에서 약 50m
+
+  it('멀리 떨어진 지점은 그대로, 가까운 두 지점은 순서대로 좌우로 반 간격씩 벌린다', () => {
+    expect(pinOffsets([campus, rento, timeless])).toEqual([
+      0,
+      -PIN_SPREAD_PX / 2,
+      PIN_SPREAD_PX / 2,
+    ]);
+    expect(pinOffsets([rento, campus, timeless])).toEqual([
+      -PIN_SPREAD_PX / 2,
+      0,
+      PIN_SPREAD_PX / 2,
+    ]);
+  });
+
+  it('같은 자리의 세 지점은 가운데를 기준으로 한 간격씩, 한 지점뿐이면 0', () => {
+    expect(pinOffsets([rento, rento, rento])).toEqual([-PIN_SPREAD_PX, 0, PIN_SPREAD_PX]);
+    expect(pinOffsets([campus])).toEqual([0]);
+    expect(pinOffsets([])).toEqual([]);
+  });
+
+  it('두 묶음을 잇는 지점이 오면 한 묶음으로 합친다', () => {
+    const a = { lat: 37.2, lng: 127.0 };
+    const c = { lat: 37.2, lng: 127.0009 }; // a에서 약 80m — 혼자서는 안 겹친다
+    const b = { lat: 37.2, lng: 127.00045 }; // a · c 모두에서 약 40m
+    expect(pinOffsets([a, c, b])).toEqual([-PIN_SPREAD_PX, 0, PIN_SPREAD_PX]);
   });
 });

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from 'react';
 import { CustomOverlayMap, Map as KakaoMap, Polyline } from 'react-kakao-maps-sdk';
 import { useKakaoMaps } from '@/features/courses/kakaoLoader';
-import { isKoreaCoordinate, type CourseStop } from '@/features/courses/model';
+import { isKoreaCoordinate, pinOffsets, type CourseStop } from '@/features/courses/model';
 import { useWalkingRoute, WALKING_ROUTE_ATTRIBUTION } from '@/features/courses/walkingRoute';
 import { circled } from '@/shared/lib/date';
 import { Skeleton } from '@/shared/ui/Skeleton';
@@ -39,6 +39,7 @@ const average = (values: number[]) => values.reduce((sum, v) => sum + v, 0) / va
 function KakaoCourseMap({ stops, onSelect }: Pick<MapViewProps, 'stops' | 'onSelect'>) {
   const path = stops.map((s) => ({ lat: s.lat, lng: s.lng }));
   const route = useWalkingRoute(path);
+  const offsets = pinOffsets(path);
   const walking = route.data?.path ?? null;
   const center = { lat: average(path.map((p) => p.lat)), lng: average(path.map((p) => p.lng)) };
   // SDK 선 색은 CSS가 아니라 문자열로 받으므로 토큰 값을 읽어 넘긴다(결정 0003 — 색 값을 코드에 쓰지 않는다).
@@ -81,15 +82,17 @@ function KakaoCourseMap({ stops, onSelect }: Pick<MapViewProps, 'stops' | 'onSel
           strokeStyle={walking ? 'solid' : 'shortdash'}
           strokeColor={lineColor || undefined}
         />
-        {stops.map((stop) => (
+        {stops.map((stop, index) => (
           <CustomOverlayMap key={stop.id} position={{ lat: stop.lat, lng: stop.lng }} clickable>
+            {/* 아주 가까운 지점(같은 골목의 두 가게 등)은 핀을 옆으로 벌려 둘 다 보이게 한다(선은 실제 좌표 그대로). */}
             <button
               type="button"
               aria-label={`${circled(stop.order)} ${stop.name}`}
               onClick={() => onSelect(stop.id)}
+              style={offsets[index] ? { transform: `translateX(${offsets[index]}px)` } : undefined}
               className="flex size-11 items-center justify-center"
             >
-              <span className="flex size-7 items-center justify-center rounded-full bg-primary text-sm font-bold text-on-primary">
+              <span className="flex size-7 items-center justify-center rounded-full bg-primary text-sm font-bold text-on-primary ring-2 ring-surface">
                 {stop.order}
               </span>
             </button>
