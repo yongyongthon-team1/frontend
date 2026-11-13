@@ -64,7 +64,7 @@ export const TOUR_31: TourDetail = fromWireTourDetail(
 /** `POST /tours`(T-03) 성공 — 201. */
 export const TOUR_CREATED = {
   code: 'S201',
-  message: '탐방 개설 성공',
+  message: '투어 개설 성공',
   data: { tour_id: 31, status: 'RECRUITING' },
 };
 
@@ -86,27 +86,27 @@ export const TOUR_PROFILE_REQUIRED = {
 /** `POST /tours/{tourId}/cancel`(T-05) 성공 — 200. */
 export const TOUR_CANCELED = {
   code: 'S200',
-  message: '탐방 취소 완료',
+  message: '투어 취소 완료',
   data: { tour_id: 31, status: 'CANCELED' },
 };
 
 /** `POST /tours/{tourId}/cancel`(T-05) 취소할 수 없는 상태 — 409. */
 export const TOUR_CANCEL_INVALID = {
   code: 'E409_INVALID_TOUR_STATUS',
-  message: '이미 완료되었거나 취소된 탐방입니다',
+  message: '이미 완료되었거나 취소된 투어입니다',
   data: null,
 };
 
 /** `POST /tours/{tourId}/complete`(T-06) 성공 — 200. */
 export const TOUR_COMPLETED = {
   code: 'S200',
-  message: '탐방 완료 처리',
+  message: '투어 완료 처리',
   data: { tour_id: 31, status: 'COMPLETED' },
 };
 
 /** `POST /tours/{tourId}/complete`(T-06) 완료할 수 없는 상태 — 409. */
 export const TOUR_COMPLETE_INVALID = {
   code: 'E409_INVALID_TOUR_STATUS',
-  message: '탐방 날짜 이후에만 완료 처리할 수 있어요',
+  message: '투어 날짜 이후에만 완료 처리할 수 있어요',
   data: null,
 };

@@ -39,7 +39,7 @@ describe('코스 편집 탭 → GuideCourseRedirect', () => {
     expect(router.state.historyAction).toBe('REPLACE');
   });
 
-  it('다가오는 탐방이 없으면 /guide/tours', async () => {
+  it('다가오는 투어가 없으면 /guide/tours', async () => {
     const { router } = await renderApp('/explore', { as: 'guide' });
     mutate((db) => {
       db.tours.forEach((t) => (t.status = 'COMPLETED'));

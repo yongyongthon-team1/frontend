@@ -109,7 +109,7 @@ describe('createSeed', () => {
       '한국외국어대학교',
     ]));
 
-  it('시연 탐방은 오늘 14:00 · 모집 중 · 승인 2명', () => {
+  it('시연 투어는 오늘 14:00 · 모집 중 · 승인 2명', () => {
     const db = createSeed(today);
     const t = db.tours.find((x) => x.id === DEMO_TOUR_ID)!;
     expect([t.startsAt, t.endsAt, t.status]).toEqual([
@@ -124,7 +124,7 @@ describe('createSeed', () => {
     expect(db.applications.filter((a) => a.tourId === 1 && a.status === 'PENDING')).toHaveLength(1);
   });
 
-  it('탐방 7개: 상태와 날짜가 오늘 기준 상대값', () => {
+  it('투어 7개: 상태와 날짜가 오늘 기준 상대값', () => {
     const db = createSeed(today);
     expect(db.tours.map((t) => [t.id, t.status, t.startsAt.slice(0, 10)])).toEqual([
       [1, 'RECRUITING', '2026-11-15'],
@@ -137,7 +137,7 @@ describe('createSeed', () => {
     ]);
   });
 
-  it('탐방 소개는 시연 탐방만 브리프 문구이고 6번은 디자인 얘기가 없다', () => {
+  it('투어 소개는 시연 투어만 브리프 문구이고 6번은 디자인 얘기가 없다', () => {
     const db = createSeed(today);
     const intros = db.tours.map((t) => t.introduction);
     expect(intros[0]).toBe(
@@ -355,7 +355,7 @@ describe('createSeed', () => {
     expect(db.businessVerifications).toHaveLength(5);
   });
 
-  it('가이드 학과: 탐방 제목의 근거', () => {
+  it('가이드 학과: 투어 제목의 근거', () => {
     const db = createSeed(today);
     const majorOf = (tourId: number) =>
       db.guideProfiles.find((g) => g.id === db.tours.find((t) => t.id === tourId)!.guideId)!.major;
@@ -370,7 +370,7 @@ describe('createSeed', () => {
     ]);
   });
 
-  it('탐방 2는 승인 3명으로 마감', () => {
+  it('투어 2는 승인 3명으로 마감', () => {
     const db = createSeed(today);
     const approved = db.applications.filter((a) => a.tourId === 2 && a.status === 'APPROVED');
     expect(approved).toHaveLength(db.tours[1].capacity);
@@ -404,7 +404,7 @@ describe('createSeed', () => {
     );
   });
 
-  it('리뷰는 탐방 7의 승인 신청 · 사용 쿠폰에 묶이고 (작성자, 탐방, 상점)은 겹치지 않는다', () => {
+  it('리뷰는 투어 7의 승인 신청 · 사용 쿠폰에 묶이고 (작성자, 투어, 상점)은 겹치지 않는다', () => {
     const db = createSeed(today);
     const keys = db.reviews.map((r) => `${r.userId}/${r.tourId}/${r.storeId}`);
     expect(new Set(keys).size).toBe(keys.length);
@@ -432,7 +432,7 @@ describe('createSeed', () => {
     expect(new Set(codes).size).toBe(codes.length);
   });
 
-  it('신청은 (탐방, 사용자)가 겹치지 않고 activeUserId가 상태와 맞다', () => {
+  it('신청은 (투어, 사용자)가 겹치지 않고 activeUserId가 상태와 맞다', () => {
     const db = createSeed(today);
     const keys = db.applications.map((a) => `${a.tourId}/${a.userId}`);
     expect(new Set(keys).size).toBe(keys.length);
@@ -741,10 +741,10 @@ describe('P1 상태 계정(시드 v3)', () => {
     });
   });
 
-  it('탐방 · 제휴의 새 칸: title · condition은 null, 제휴 1~4만 사용 조건', () => {
+  it('투어 · 제휴의 새 칸: title · condition은 null, 제휴 1~4만 사용 조건', () => {
     expect(db.tours.every((t) => t.title === null)).toBe(true);
     expect(db.partnerships.map((p) => p.condition)).toEqual(
-      Array(4).fill('탐방 당일 · 1회 사용 가능'),
+      Array(4).fill('투어 당일 · 1회 사용 가능'),
     );
   });
 });
@@ -762,7 +762,7 @@ describe('체크포인트 시드', () => {
   it('START는 체크포인트를 주지 않은 시드와 같다', () =>
     expect(createSeed(today, 'START')).toEqual(createSeed(today)));
 
-  it('APPLIED: 김민지가 시연 동기로 탐방 1에 신청(승인 대기)', () => {
+  it('APPLIED: 김민지가 시연 동기로 투어 1에 신청(승인 대기)', () => {
     const db = createSeed(today, 'APPLIED');
     const minji = userId(db, DEMO_EMAILS.student);
     expect(minjiApp(db)).toEqual({

@@ -20,7 +20,7 @@ describe('errorMessage', () => {
 
 describe('P1에서 새로 쓰는 에러 코드', () => {
   it.each([
-    ['COMPLETE_BEFORE_TOUR_DATE', '탐방 날짜 이후에 완료할 수 있어요.'],
+    ['COMPLETE_BEFORE_TOUR_DATE', '투어 날짜 이후에 완료할 수 있어요.'],
     ['COURSE_STOP_DUPLICATE', '이미 코스에 있는 장소예요.'],
     ['COURSE_STOP_LIMIT', '지점은 최대 5곳까지 넣을 수 있어요.'],
     ['BIZ_NOT_VERIFIED', '사업자 인증을 마친 뒤에 가게를 연결할 수 있어요.'],

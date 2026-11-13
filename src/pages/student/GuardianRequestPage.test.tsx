@@ -66,7 +66,7 @@ describe('C04 보호자 동의 요청 (/verify/guardian)', () => {
     );
     expect(
       screen.getByText(
-        '입력한 이메일로 동의 링크가 전송돼요. 링크에서 탐방 참여 동의를 완료해 주세요.',
+        '입력한 이메일로 동의 링크가 전송돼요. 링크에서 투어 참여 동의를 완료해 주세요.',
       ),
     ).toBeInTheDocument();
     expect(within(progress()).getByText('진행 상태')).toBeInTheDocument();
@@ -92,7 +92,7 @@ describe('C04 보호자 동의 요청 (/verify/guardian)', () => {
   it('newbie(미요청): 진행 상태 카드가 미요청 · 동의 완료 안내', async () => {
     await renderApp('/verify/guardian', { as: 'newbie@demo.kr' });
     await expectProgress('미요청');
-    expect(screen.getByText('동의가 완료되면 탐방을 신청할 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByText('동의가 완료되면 투어를 신청할 수 있어요.')).toBeInTheDocument();
   });
 
   it('rejected(거부): 거부 안내 · 빈 폼', async () => {
@@ -124,7 +124,7 @@ describe('C04 보호자 동의 요청 (/verify/guardian)', () => {
     expect(screen.queryByRole('button', { name: SKIP })).not.toBeInTheDocument();
   });
 
-  it('student(동의 완료): 완료 카드 · 폼 없음 · 탐방 찾아보기', async () => {
+  it('student(동의 완료): 완료 카드 · 폼 없음 · 투어 찾아보기', async () => {
     await renderApp('/verify/guardian', { as: 'student@demo.kr' });
     expect(
       await within(await screen.findByRole('region', { name: '진행 상태' })).findByText(
@@ -133,7 +133,7 @@ describe('C04 보호자 동의 요청 (/verify/guardian)', () => {
     ).toBeInTheDocument();
     expect(screen.getByText('보호자가 동의했어요.')).toBeInTheDocument();
     expect(screen.queryByLabelText('보호자 성함')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '탐방 찾아보기' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: '투어 찾아보기' })).toHaveAttribute('href', '/');
   });
 
   it('pending(심사 중 · 동의 완료): 다음 행동은 인증 상태(/me/status)', async () => {

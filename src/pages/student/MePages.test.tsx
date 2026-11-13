@@ -33,23 +33,23 @@ describe('H16 /me 고교생 MY', () => {
   it('student: 제목 · 프로필 카드 · 숫자 카드 · 나의 활동 행 넷 + 로그아웃 행', async () => {
     await renderApp('/me', { as: 'student' });
     expect(await screen.findByRole('heading', { level: 1, name: 'MY' })).toBeInTheDocument();
-    expect(screen.getByText('내 정보와 탐방 기록을 한곳에서 관리해요.')).toBeInTheDocument();
+    expect(screen.getByText('내 정보와 투어 기록을 한곳에서 관리해요.')).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'UNIRO' })).toBeInTheDocument();
 
     expect(screen.getByText('김민지')).toBeInTheDocument();
-    expect(screen.getByText('고교생 · 탐방을 준비하는 중')).toBeInTheDocument();
+    expect(screen.getByText('고교생 · 투어를 준비하는 중')).toBeInTheDocument();
     expect(screen.getByText('학생증 인증 완료')).toBeInTheDocument();
 
     // 신청이 없는 시작 상태: 참여한 탐방 0회 · 관심 전공 1개(산업디자인)
     expect(await screen.findByText('0회')).toBeInTheDocument();
-    expect(screen.getByText('참여한 탐방')).toBeInTheDocument();
+    expect(screen.getByText('참여한 투어')).toBeInTheDocument();
     expect(screen.getByText('1개')).toBeInTheDocument();
     expect(screen.getByText('관심 전공')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { level: 2, name: '나의 활동' })).toBeInTheDocument();
     const links = screen.getAllByRole('link').filter((a) => !a.closest('nav'));
     expect(links.map((a) => [a.getAttribute('href'), a.textContent])).toEqual([
-      ['/my-tours?tab=past', '지난 탐방완료한 캠퍼스 탐방과 후기를 확인해요.'],
+      ['/my-tours?tab=past', '지난 투어완료한 캠퍼스 투어와 후기를 확인해요.'],
       ['/me/wishes', '내 희망 사항남긴 희망 사항을 보고 고쳐요.'],
       ['/me/edit', '내 정보 수정이름·학교·관심 분야를 관리해요.'],
       ['/me/status', '인증 상태 확인학생증 인증 및 보호자 동의 현황'],
@@ -58,12 +58,12 @@ describe('H16 /me 고교생 MY', () => {
     expect(logout).toHaveTextContent('다른 계정으로 UNIRO 사용하기');
     expect(screen.queryByText('알림 및 설정')).not.toBeInTheDocument();
     // 인증이 끝났으면 이어하기 안내가 없다
-    expect(screen.queryByText('인증을 마치면 탐방을 신청할 수 있어요.')).not.toBeInTheDocument();
+    expect(screen.queryByText('인증을 마치면 투어를 신청할 수 있어요.')).not.toBeInTheDocument();
     const nav = screen.getByRole('navigation', { name: '주요 메뉴' });
     expect(within(nav).getByRole('link', { name: 'MY' })).toHaveAttribute('aria-current', 'page');
   });
 
-  it('승인되고 끝난 탐방은 참여한 탐방에 센다', async () => {
+  it('승인되고 끝난 투어는 참여한 투어에 센다', async () => {
     const { router } = await renderApp('/explore', { as: 'student', checkpoint: 'CONFIRMED' });
     mutate((db) => {
       db.tours.find((t) => t.id === 1)!.status = 'COMPLETED';
@@ -72,7 +72,7 @@ describe('H16 /me 고교생 MY', () => {
     expect(await screen.findByText('1회')).toBeInTheDocument();
   });
 
-  it('탐방이 아직 끝나지 않았으면 승인된 신청이어도 세지 않는다', async () => {
+  it('투어가 아직 끝나지 않았으면 승인된 신청이어도 세지 않는다', async () => {
     await renderApp('/me', { as: 'student', checkpoint: 'CONFIRMED' });
     expect(await screen.findByText('0회')).toBeInTheDocument();
   });
@@ -80,7 +80,7 @@ describe('H16 /me 고교생 MY', () => {
   it('newbie: 학생증 인증 전 + 인증 이어하기 안내 → /verify', async () => {
     const { user, router } = await renderApp('/me', { as: 'newbie@demo.kr' });
     expect(await screen.findByText('학생증 인증 전')).toBeInTheDocument();
-    expect(screen.getByText('인증을 마치면 탐방을 신청할 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByText('인증을 마치면 투어를 신청할 수 있어요.')).toBeInTheDocument();
     expect(await screen.findByText('0개')).toBeInTheDocument();
     await user.click(screen.getByRole('link', { name: /^인증 이어하기/ }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/verify'));
@@ -119,7 +119,7 @@ describe('H17 /me/edit 내 정보 수정', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: '내 정보를 업데이트해요.' }),
     ).toBeVisible();
-    expect(screen.getByText('탐방 신청에 사용하는 기본 프로필이에요.')).toBeInTheDocument();
+    expect(screen.getByText('투어 신청에 사용하는 기본 프로필이에요.')).toBeInTheDocument();
     expect(screen.getByLabelText('이름')).toHaveValue('김민지');
     expect(screen.getByLabelText('학교')).toHaveValue('수원영통고등학교');
     expect(screen.getByLabelText('학교')).toHaveAttribute('placeholder', '재학 중인 고등학교');
@@ -131,7 +131,7 @@ describe('H17 /me/edit 내 정보 수정', () => {
       '예: 디자인 · 산업디자인',
     );
     expect(
-      screen.getByText('코스 추천은 각 탐방 신청서에 작성한 ‘하고 싶은 것’을 기준으로 생성돼요.'),
+      screen.getByText('코스 추천은 각 투어 신청서에 작성한 ‘하고 싶은 것’을 기준으로 생성돼요.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: SAVE })).toBeEnabled();
     const nav = screen.getByRole('navigation', { name: '주요 메뉴' });

@@ -55,14 +55,14 @@ describe('fromWireCourse (Review Focus 1: 확장 없는 실서버 응답)', () =
     } satisfies CourseStop);
   });
 
-  it('코스: 탐방 정보는 상세에서, 확정 코스의 쿠폰 수는 승인 수 × 제휴 지점 수', () => {
+  it('코스: 투어 정보는 상세에서, 확정 코스의 쿠폰 수는 승인 수 × 제휴 지점 수', () => {
     const course = fromWireCourse(view(), TOUR_31);
     expect(course).toMatchObject({
       tourId: 31,
       status: 'CONFIRMED',
       tour: {
         id: 31,
-        title: '단국대 죽전캠퍼스 컴퓨터공학과 탐방',
+        title: '단국대 죽전캠퍼스 컴퓨터공학과 투어',
         universityId: 0,
         universityShortName: '단국대',
         campusName: '죽전캠퍼스',

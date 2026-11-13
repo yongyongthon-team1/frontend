@@ -97,7 +97,7 @@ export function CourseEditPage() {
         : listRef.current?.querySelector<HTMLButtonElement>(`button[data-stop-id="${stop.id}"]`);
     (button ?? scheduleHeadingRef.current)?.focus();
   }, [overlayOpen, busy, loadedStops]);
-  const topBar = <TopBar title="탐방 코스 편집" back={`${base}/applicants`} />;
+  const topBar = <TopBar title="투어 코스 편집" back={`${base}/applicants`} />;
 
   if (course === undefined) {
     return (

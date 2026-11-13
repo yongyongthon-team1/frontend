@@ -39,7 +39,7 @@ async function openReviewForm(prepare: 'USED' | 'ISSUED' = 'USED') {
           (c) => c.applicationId === findApplicationId(STUDENT, 1) && c.storeId === 1,
         )!.id;
   await result.router.navigate(`/reviews/new?couponId=${couponId}`);
-  await screen.findByRole('heading', { name: '오늘 탐방은 어땠나요?' });
+  await screen.findByRole('heading', { name: '오늘 투어는 어땠나요?' });
   return { ...result, couponId };
 }
 
@@ -174,7 +174,7 @@ describe('H12 방문 리뷰 쓰기', () => {
 
   it('잘못된 couponId는 요청 없이 EmptyState', async () => {
     const { router } = await renderApp('/my-tours', { as: 'student', checkpoint: 'CONFIRMED' });
-    await screen.findByRole('heading', { name: '내 탐방' });
+    await screen.findByRole('heading', { name: '내 투어' });
     const couponGets: string[] = [];
     server.events.on('request:start', ({ request }) => {
       const { pathname } = new URL(request.url);
@@ -182,7 +182,7 @@ describe('H12 방문 리뷰 쓰기', () => {
     });
     await router.navigate('/reviews/new?couponId=abc');
     expect(await screen.findByText('리뷰를 쓸 쿠폰을 찾을 수 없어요.')).toBeVisible();
-    expect(screen.getByRole('link', { name: '내 탐방 확인하기' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내 투어 확인하기' })).toHaveAttribute(
       'href',
       '/my-tours',
     );
@@ -316,7 +316,7 @@ describe('H12 저장 때 서버 오류', () => {
     server.use(http.post('/api/stores/:storeId/reviews', () => wireFail('E404')));
     await fillAndSubmit(user);
     expect(await screen.findByText('리뷰를 쓸 쿠폰을 찾을 수 없어요.')).toBeVisible();
-    expect(screen.getByRole('link', { name: '내 탐방 확인하기' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내 투어 확인하기' })).toHaveAttribute(
       'href',
       '/my-tours',
     );

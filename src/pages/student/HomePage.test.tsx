@@ -15,7 +15,7 @@ import { wireFail, wireOk } from '@/test/wire';
 // T-01 홈(hs-s03 · H01 V2 부품): 학교 · 학과 · 탐방 희망 사항 · 희망 날짜(선택) → `POST /tour-wishes` 한 번 → 결과 화면(2C-R16).
 
 const field = (label: string) => screen.getByLabelText(label, { exact: true });
-const submitButton = () => screen.getByRole('button', { name: '희망 사항 남기고 탐방 찾기' });
+const submitButton = () => screen.getByRole('button', { name: '희망 사항 남기고 투어 찾기' });
 
 /** `POST /api/tour-wishes` 요청 수와 본문. */
 function watchWishPosts() {
@@ -54,18 +54,18 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     expect(field('학교')).toBeInTheDocument();
     expect(field('학과')).toHaveAttribute('placeholder', '예: 산업디자인');
     expect(field('학과')).toHaveAttribute('maxLength', '30');
-    expect(field('탐방 희망 사항')).toHaveAttribute(
+    expect(field('투어 희망 사항')).toHaveAttribute(
       'placeholder',
       '예: 디자인 작업실을 구경하고 학생 식당에도 가 보고 싶어요.',
     );
-    expect(field('탐방 희망 사항')).toHaveAttribute('maxLength', '100');
-    expect(field('탐방 희망 사항')).toHaveAccessibleDescription('한두 문장 · 100자 이내');
+    expect(field('투어 희망 사항')).toHaveAttribute('maxLength', '100');
+    expect(field('투어 희망 사항')).toHaveAccessibleDescription('한두 문장 · 100자 이내');
     expect(field('희망 날짜 (선택)')).toHaveAttribute('type', 'date');
     expect(submitButton()).toHaveAttribute('type', 'submit');
     expect(
       screen.getByText('남긴 희망 사항은 이름 없이 대학생 가이드에게 보여요.'),
     ).toBeInTheDocument();
-    expect(screen.getByText('이번 방학, 이런 탐방은 어때요?')).toBeInTheDocument();
+    expect(screen.getByText('이번 방학, 이런 투어는 어때요?')).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '뒤로 가기' })).toBeNull();
     expect(screen.queryByRole('button', { name: '뒤로 가기' })).toBeNull();
   });
@@ -89,7 +89,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     await campusesLoaded();
     expect(field('학교')).toHaveValue('');
     expect(field('학과')).toHaveValue('');
-    expect(field('탐방 희망 사항')).toHaveValue('');
+    expect(field('투어 희망 사항')).toHaveValue('');
     expect(field('희망 날짜 (선택)')).toHaveValue('');
   });
 
@@ -99,7 +99,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     await campusesLoaded();
     await waitFor(() => expect(field('학교')).toHaveValue('2'));
     expect(field('학과')).toHaveValue('산업디자인');
-    expect(field('탐방 희망 사항')).toHaveValue(DEMO_WISH.wish);
+    expect(field('투어 희망 사항')).toHaveValue(DEMO_WISH.wish);
     expect(field('희망 날짜 (선택)')).toHaveValue('');
   });
 
@@ -116,7 +116,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     await renderApp('/', { as: 'student' });
     await screen.findByRole('option', { name: '강남대학교' });
     await waitFor(() => expect(field('학과')).toHaveValue('산업디자인'));
-    expect(field('탐방 희망 사항')).toHaveValue(DEMO_WISH.wish);
+    expect(field('투어 희망 사항')).toHaveValue(DEMO_WISH.wish);
     expect(field('학교')).toHaveValue('');
   });
 
@@ -142,7 +142,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     await campusesLoaded();
     expect(field('학교')).toHaveValue('');
     expect(field('학과')).toHaveValue('경영');
-    expect(field('탐방 희망 사항')).toHaveValue(DEMO_WISH.wish);
+    expect(field('투어 희망 사항')).toHaveValue(DEMO_WISH.wish);
   });
 
   it('빈 제출: 학교 · 학과 · 희망 사항 칸 오류, 주소는 / 그대로, 요청 0', async () => {
@@ -154,7 +154,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     expect(field('학교')).toHaveAccessibleDescription('학교를 골라 주세요.');
     expect(field('학과')).toHaveAccessibleDescription('학과를 적어 주세요.');
     // 희망 사항 칸은 오류 다음에 도움말이 이어 읽힌다.
-    expect(field('탐방 희망 사항')).toHaveAccessibleDescription(
+    expect(field('투어 희망 사항')).toHaveAccessibleDescription(
       '하고 싶은 것을 한두 문장으로 적어 주세요. 한두 문장 · 100자 이내',
     );
     expect(field('학교')).toBeInvalid();
@@ -170,7 +170,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     await campusesLoaded();
     await user.selectOptions(field('학교'), '2');
     await user.type(field('학과'), ' 산업디자인 ');
-    await user.type(field('탐방 희망 사항'), '  작업실을 구경하고{Enter}학식도 먹어 보고 싶어요. ');
+    await user.type(field('투어 희망 사항'), '  작업실을 구경하고{Enter}학식도 먹어 보고 싶어요. ');
     await user.click(submitButton());
     await waitFor(() => expect(router.state.location.pathname).toBe('/tours'));
     expect(posts).toEqual([
@@ -189,7 +189,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     expect(useLastQuery.getState().search).toBe(router.state.location.search.slice(1));
     await waitFor(() =>
       expect(screen.getByRole('heading', { level: 1 })).toHaveTextContent(
-        '조건에 맞는 탐방 2개를 찾았어요.',
+        '조건에 맞는 투어 2개를 찾았어요.',
       ),
     );
   });
@@ -241,7 +241,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
 
   it.each([
     ['major', '학과', '학과를 확인해 주세요.'],
-    ['wish', '탐방 희망 사항', '희망 사항을 확인해 주세요.'],
+    ['wish', '투어 희망 사항', '희망 사항을 확인해 주세요.'],
     ['date', '희망 날짜 (선택)', '날짜를 확인해 주세요.'],
   ])(
     '서버 칸 오류(E400 · %s)는 그 칸 아래 문구로 보이고 이동하지 않는다',
@@ -300,7 +300,7 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     await campusesLoaded();
     await waitFor(() => expect(field('학교')).toHaveValue('5'));
     expect(field('학과')).toHaveValue('경영');
-    expect(field('탐방 희망 사항')).toHaveValue('첫 줄\n둘째 줄');
+    expect(field('투어 희망 사항')).toHaveValue('첫 줄\n둘째 줄');
     expect(field('희망 날짜 (선택)')).toHaveValue('2027-01-20');
   });
 
@@ -319,9 +319,9 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     );
   });
 
-  it('모집 중 탐방이 행 링크로 최대 3개 (제목 · 학교 · 날짜 · 남은 자리)', async () => {
+  it('모집 중 투어가 행 링크로 최대 3개 (제목 · 학교 · 날짜 · 남은 자리)', async () => {
     await renderApp('/', { as: 'student' });
-    const list = await screen.findByRole('list', { name: '모집 중인 탐방' });
+    const list = await screen.findByRole('list', { name: '모집 중인 투어' });
     const rows = within(list).getAllByRole('link');
     expect(rows.length).toBeGreaterThan(0);
     expect(rows.length).toBeLessThanOrEqual(3);

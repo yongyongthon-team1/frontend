@@ -140,13 +140,13 @@ export function HomePage() {
             남긴 희망 사항은 이름 없이 대학생 가이드에게 보여요.
           </p>
           <Button type="submit" loading={create.isPending}>
-            희망 사항 남기고 탐방 찾기
+            희망 사항 남기고 투어 찾기
           </Button>
         </BottomAction>
       </form>
 
       <div className="pb-6">
-        <h2 className="mt-7 mb-3 text-lg font-bold text-ink">이번 방학, 이런 탐방은 어때요?</h2>
+        <h2 className="mt-7 mb-3 text-lg font-bold text-ink">이번 방학, 이런 투어는 어때요?</h2>
         {tours.data === undefined && tours.isError ? (
           <ErrorState error={tours.error} onRetry={() => void tours.refetch()} />
         ) : tours.data === undefined ? (
@@ -154,9 +154,9 @@ export function HomePage() {
             <Skeleton className="h-[90px] rounded-[18px]" />
           </div>
         ) : open.length === 0 ? (
-          <EmptyState title="지금 모집 중인 탐방이 없어요" />
+          <EmptyState title="지금 모집 중인 투어가 없어요" />
         ) : (
-          <ul aria-label="모집 중인 탐방" className="flex flex-col gap-3">
+          <ul aria-label="모집 중인 투어" className="flex flex-col gap-3">
             {open.map((tour) => (
               <li key={tour.id}>
                 <ListRow

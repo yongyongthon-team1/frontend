@@ -74,7 +74,7 @@ export function tourTitle(
 ): string {
   const parts = [shortUniversityName(universityName)];
   if (campusName !== '본교') parts.push(campusName);
-  parts.push(major ?? '캠퍼스', '탐방');
+  parts.push(major ?? '캠퍼스', '투어');
   return parts.join(' ');
 }
 
@@ -127,17 +127,17 @@ export function applyButtonState(
       kind: 'APPLIED',
       enabled: false,
       label: '신청됨',
-      reason: '이미 신청한 탐방이에요.',
-      action: { label: '내 탐방에서 상태 확인', to: '/my-tours' },
+      reason: '이미 신청한 투어예요.',
+      action: { label: '내 투어에서 상태 확인', to: '/my-tours' },
     };
   }
-  const otherTours: ActionLink = { label: '다른 탐방 보기', to: resultsPath };
+  const otherTours: ActionLink = { label: '다른 투어 보기', to: resultsPath };
   if (mine === 'REJECTED') {
     return {
       kind: 'REJECTED',
       enabled: false,
       label: '신청 불가',
-      reason: '거절된 탐방에는 다시 신청할 수 없어요.',
+      reason: '거절된 투어에는 다시 신청할 수 없어요.',
       action: otherTours,
     };
   }
@@ -146,7 +146,7 @@ export function applyButtonState(
       kind: 'NOT_RECRUITING',
       enabled: false,
       label: '모집 종료',
-      reason: '모집이 끝난 탐방이에요.',
+      reason: '모집이 끝난 투어예요.',
       action: otherTours,
     };
   }
@@ -163,7 +163,7 @@ export function applyButtonState(
     return {
       kind: 'NEED_VERIFICATION',
       enabled: false,
-      label: '탐방 신청하기',
+      label: '투어 신청하기',
       reason: '학생증 승인·보호자 동의 완료 후 신청할 수 있어요.',
       action: { label: '역할 인증 단계로 이동', to: studentVerificationPath(me) },
     };
@@ -171,9 +171,9 @@ export function applyButtonState(
   return {
     kind: 'APPLY',
     enabled: true,
-    label: '탐방 신청하기',
+    label: '투어 신청하기',
     reason: null,
-    action: { label: '탐방 신청하기', to: `/tours/${tour.id}/apply` },
+    action: { label: '투어 신청하기', to: `/tours/${tour.id}/apply` },
   };
 }
 

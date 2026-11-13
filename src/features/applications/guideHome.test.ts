@@ -5,7 +5,7 @@ import type { GuideTourSummary } from './model';
 
 const base: TourSummary = {
   id: 7,
-  title: '경희대 컴퓨터공학과 탐방',
+  title: '경희대 컴퓨터공학과 투어',
   universityId: 1,
   universityName: '경희대학교',
   universityShortName: '경희대',

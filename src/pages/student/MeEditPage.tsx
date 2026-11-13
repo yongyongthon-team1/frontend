@@ -122,7 +122,7 @@ function EditForm({ me }: { me: Me }) {
         onChange={change('interestedMajor', setMajor)}
       />
       <p className="px-1 text-[13px] text-muted">
-        코스 추천은 각 탐방 신청서에 작성한 ‘하고 싶은 것’을 기준으로 생성돼요.
+        코스 추천은 각 투어 신청서에 작성한 ‘하고 싶은 것’을 기준으로 생성돼요.
       </p>
       <Button type="submit" loading={save.isPending} disabled={save.isPending}>
         변경사항 저장
@@ -152,7 +152,7 @@ export function MeEditPage() {
         <PageHeading
           as="h2"
           title="내 정보를 업데이트해요."
-          description="탐방 신청에 사용하는 기본 프로필이에요."
+          description="투어 신청에 사용하는 기본 프로필이에요."
         />
         {body}
       </Page>

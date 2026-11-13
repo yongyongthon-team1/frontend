@@ -20,7 +20,7 @@ describe('renderApp', () => {
 });
 
 describe('테스트 도우미', () => {
-  it('findApplicationId: 그 학생의 그 탐방 신청 id', () => {
+  it('findApplicationId: 그 학생의 그 투어 신청 id', () => {
     resetDb({ today: new Date(), checkpoint: 'APPLIED' });
     const id = findApplicationId('student@demo.kr', DEMO_TOUR_ID);
     expect(getDb().applications.find((a) => a.id === id)).toMatchObject({
@@ -45,7 +45,7 @@ describe('테스트 도우미', () => {
     expect(toast.getToasts()).toEqual([]);
   });
 
-  it('demoCouponCode: 김민지의 탐방 1 신청에 발급된 그 상점 ISSUED 쿠폰', () => {
+  it('demoCouponCode: 김민지의 투어 1 신청에 발급된 그 상점 ISSUED 쿠폰', () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
     const appId = findApplicationId('student@demo.kr', DEMO_TOUR_ID);
     for (const storeId of [1, 2]) {

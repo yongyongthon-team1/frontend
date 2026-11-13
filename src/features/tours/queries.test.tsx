@@ -42,8 +42,8 @@ function wrapper() {
   );
 }
 
-describe('탐방 훅은 캠퍼스와 병렬로 부른다', () => {
-  it('useTour: 캠퍼스 응답이 오기 전에 탐방 상세 요청이 나간다', async () => {
+describe('투어 훅은 캠퍼스와 병렬로 부른다', () => {
+  it('useTour: 캠퍼스 응답이 오기 전에 투어 상세 요청이 나간다', async () => {
     const { order, release } = holdCampuses('/api/tours/:tourId');
     const { result } = renderHook(() => useTour(31), { wrapper: wrapper() });
     await waitFor(() => expect(order).toContain('tours:start'));
@@ -54,7 +54,7 @@ describe('탐방 훅은 캠퍼스와 병렬로 부른다', () => {
     await waitFor(() => expect(result.current.data?.id).toBe(31));
   });
 
-  it('useTours: 캠퍼스 응답이 오기 전에 탐방 목록 요청이 나간다', async () => {
+  it('useTours: 캠퍼스 응답이 오기 전에 투어 목록 요청이 나간다', async () => {
     const { order, release } = holdCampuses('/api/tours');
     const { result } = renderHook(() => useTours({ status: 'RECRUITING' }), {
       wrapper: wrapper(),
@@ -66,7 +66,7 @@ describe('탐방 훅은 캠퍼스와 병렬로 부른다', () => {
     await waitFor(() => expect(result.current.data?.map((t) => t.id)).toEqual([31]));
   });
 
-  it('useWishTours: 캠퍼스 응답이 오기 전에 탐방 찾기 요청이 나가고, 검색이 없으면 부르지 않는다', async () => {
+  it('useWishTours: 캠퍼스 응답이 오기 전에 투어 찾기 요청이 나가고, 검색이 없으면 부르지 않는다', async () => {
     const { order, release } = holdCampuses('/api/tours');
     const search = { universityId: 1, major: '컴퓨터', wish: '동아리', date: null };
     const { result, rerender } = renderHook(({ s }) => useWishTours(s), {

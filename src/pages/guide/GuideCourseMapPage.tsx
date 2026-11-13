@@ -88,7 +88,7 @@ export function GuideCourseMapPage() {
           <div className="flex items-center justify-between gap-3">
             <h3 className="min-w-0 text-[17px] font-bold text-ink">
               {tour.endsAt === null
-                ? '우리의 탐방 코스'
+                ? '우리의 투어 코스'
                 : `우리의 ${formatDuration(tour.startsAt, tour.endsAt)} 코스`}
             </h3>
             <StatusChip dot={false} className="shrink-0 bg-surface text-brand">

@@ -95,7 +95,7 @@ describe('신청 API (MSW 목업)', () => {
     expect(canceled.status).toBe('CANCELED');
   });
 
-  it('신청 응답의 탐방 id로 내 탐방 행과 탐방 상세를 함께 부른다(errata G6)', async () => {
+  it('신청 응답의 투어 id로 내 투어 행과 투어 상세를 함께 부른다(errata G6)', async () => {
     loginAs(STUDENT);
     const events: string[] = [];
     server.use(
@@ -115,7 +115,7 @@ describe('신청 API (MSW 목업)', () => {
     expect(events.indexOf('tour3:start')).toBeLessThan(events.indexOf('rows:end'));
   });
 
-  it('신청자 보드는 신청자 목록 · 탐방 상세 · 코스 상태를 함께 부른다(errata G6)', async () => {
+  it('신청자 보드는 신청자 목록 · 투어 상세 · 코스 상태를 함께 부른다(errata G6)', async () => {
     loginAs(DEMO_EMAILS.guide);
     const started: string[] = [];
     let listDone = false;
@@ -143,7 +143,7 @@ describe('신청 API (MSW 목업)', () => {
     );
   });
 
-  it('코스 상태 곁가지가 500이어도 가이드 탐방 목록과 신청자 보드는 코스 없음(null)으로 살아난다', async () => {
+  it('코스 상태 곁가지가 500이어도 가이드 투어 목록과 신청자 보드는 코스 없음(null)으로 살아난다', async () => {
     resetDb({ today: new Date(), checkpoint: 'APPROVED' });
     loginAs(DEMO_EMAILS.guide);
     server.use(http.get('/api/tours/:tourId/course', () => wireFail('E500')));
@@ -156,7 +156,7 @@ describe('신청 API (MSW 목업)', () => {
     expect(board.tour.id).toBe(1);
   });
 
-  it('가이드 탐방 목록: 확정 코스는 코스를 다시 부르지 않고, 확정이 아닌 탐방만 코스 상태를 부른다', async () => {
+  it('가이드 투어 목록: 확정 코스는 코스를 다시 부르지 않고, 확정이 아닌 투어만 코스 상태를 부른다', async () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
     loginAs(DEMO_EMAILS.guide);
     let tours: Awaited<ReturnType<typeof getGuideTours>> = [];
@@ -207,7 +207,7 @@ describe('신청 오류 세분 (2C-R15, 명세 A-01 · A-02 · A-03 예시 봉�
     ['CLOSED', 'TOUR_CLOSED'],
     ['COMPLETED', 'TOUR_NOT_RECRUITING'],
     ['CANCELED', 'TOUR_NOT_RECRUITING'],
-  ] as const)('E409_TOUR_FULL: 다시 읽은 탐방이 %s면 %s', async (tourStatus, code) => {
+  ] as const)('E409_TOUR_FULL: 다시 읽은 투어가 %s면 %s', async (tourStatus, code) => {
     loginAs(STUDENT);
     applyFails(APPLY_FULL, 409);
     server.use(
@@ -220,7 +220,7 @@ describe('신청 오류 세분 (2C-R15, 명세 A-01 · A-02 · A-03 예시 봉�
     });
   });
 
-  it('세분할 탐방을 다시 읽지 못하면 기본 표의 코드(TOUR_CLOSED)로 둔다', async () => {
+  it('세분할 투어를 다시 읽지 못하면 기본 표의 코드(TOUR_CLOSED)로 둔다', async () => {
     loginAs(STUDENT);
     applyFails(APPLY_FULL, 409);
     server.use(http.get('/api/tours/:tourId', () => wireFail('E500')));
@@ -319,7 +319,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
   });
   afterEach(() => configureHttp({ getToken: () => null }));
 
-  it('coupon_count가 없으면 GET /users/me/coupons?tour_id로 센다 — 승인 행에만 주고, 탐방이 같은 행은 탐방 상세 · 쿠폰을 한 번씩만 부른다', async () => {
+  it('coupon_count가 없으면 GET /users/me/coupons?tour_id로 센다 — 승인 행에만 주고, 투어가 같은 행은 투어 상세 · 쿠폰을 한 번씩만 부른다', async () => {
     loginAs(STUDENT);
     const [row] = MY_TOURS_HIGH_SCHOOL.data.items; // 확장 없음
     const older = { ...row, application_id: 70, application_status: 'CANCELED' };
@@ -355,7 +355,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
     expect(seen.some((r) => r.includes('/coupons'))).toBe(false);
   });
 
-  it('남의 신청 · 없는 신청 id는 내 탐방 행에 없으니 404 NOT_FOUND', async () => {
+  it('남의 신청 · 없는 신청 id는 내 투어 행에 없으니 404 NOT_FOUND', async () => {
     loginAs(STUDENT);
     const others = mutate((db) => db.applications.find((a) => a.tourId === 1)!.id); // 박서준의 신청
     for (const id of [others, 999_999]) {
@@ -367,7 +367,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
   });
 });
 
-describe('탐방 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', () => {
+describe('투어 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', () => {
   beforeEach(() => {
     resetDb({ today: new Date() });
     loginAs(DEMO_EMAILS.guide);
@@ -388,7 +388,7 @@ describe('탐방 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', ()
   /** 명세 T-02 예시 상세(탐방 31)의 상태만 바꾼 응답. */
   const detailWith = (status: string) => wireOk({ ...TOUR_DETAIL.data, status });
 
-  it('postTour: 201 { tour_id } → 새 탐방 id를 돌려준다', async () => {
+  it('postTour: 201 { tour_id } → 새 투어 id를 돌려준다', async () => {
     server.use(http.post('/api/tours', () => wireOk(TOUR_CREATED.data, { status: 201 })));
     await expect(postTour(input)).resolves.toBe(31);
   });
@@ -429,7 +429,7 @@ describe('탐방 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', ()
     });
   });
 
-  it('postCompleteTour: 명세 성공 예시를 받으면 값 없이 끝나고 탐방을 다시 읽지 않는다', async () => {
+  it('postCompleteTour: 명세 성공 예시를 받으면 값 없이 끝나고 투어를 다시 읽지 않는다', async () => {
     server.use(http.post('/api/tours/:tourId/complete', () => wireOk(TOUR_COMPLETED.data)));
     const seen = await requestsDuring(async () => {
       await expect(postCompleteTour(31, listCampuses())).resolves.toBeUndefined();
@@ -447,7 +447,7 @@ describe('탐방 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', ()
     ['CLOSED', 'COMPLETE_BEFORE_TOUR_DATE'],
     ['COMPLETED', 'TOUR_ALREADY_COMPLETED'],
     ['CANCELED', 'ALREADY_PROCESSED'],
-  ] as const)('postCompleteTour: 409 하나를 탐방이 %s이면 %s로 세분한다', async (status, code) => {
+  ] as const)('postCompleteTour: 409 하나를 투어가 %s이면 %s로 세분한다', async (status, code) => {
     server.use(
       http.post('/api/tours/:tourId/complete', () =>
         wireFail(TOUR_COMPLETE_INVALID.code, { message: TOUR_COMPLETE_INVALID.message }),
@@ -465,7 +465,7 @@ describe('탐방 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', ()
     ['COMPLETED', 'TOUR_ALREADY_COMPLETED'],
     ['CANCELED', 'ALREADY_PROCESSED'],
     ['RECRUITING', 'ALREADY_PROCESSED'],
-  ] as const)('postCancelTour: 409 하나를 탐방이 %s이면 %s로 세분한다', async (status, code) => {
+  ] as const)('postCancelTour: 409 하나를 투어가 %s이면 %s로 세분한다', async (status, code) => {
     server.use(
       http.post('/api/tours/:tourId/cancel', () =>
         wireFail(TOUR_CANCEL_INVALID.code, { message: TOUR_CANCEL_INVALID.message }),
@@ -490,7 +490,7 @@ describe('탐방 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', ()
     expect(seen.some((r) => r.startsWith('GET /tours/31'))).toBe(false);
   });
 
-  it('getGuideTour: 탐방 상세와 코스 지점 수를 합성하고 actions는 어댑터 시계로 계산한다', async () => {
+  it('getGuideTour: 투어 상세와 코스 지점 수를 합성하고 actions는 어댑터 시계로 계산한다', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2027-01-15T06:00:00Z')); // 서울 2027-01-15 15:00 — 탐방 날짜 당일
     server.use(
@@ -503,7 +503,7 @@ describe('탐방 생애 API — 명세 예시 봉투 (T-03 · T-05 · T-06)', ()
     expect(detail.actions).toEqual({ completable: true, cancellable: true });
   });
 
-  it('getGuideTour: 탐방 날짜 전날이면 완료 불가, 코스가 없으면(404) 0곳', async () => {
+  it('getGuideTour: 투어 날짜 전날이면 완료 불가, 코스가 없으면(404) 0곳', async () => {
     vi.useFakeTimers({ toFake: ['Date'] });
     vi.setSystemTime(new Date('2027-01-14T06:00:00Z'));
     server.use(

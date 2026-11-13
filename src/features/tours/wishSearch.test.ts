@@ -8,7 +8,7 @@ const base: WishSearch = {
   date: null,
 };
 
-describe('탐방 찾기 검색 ↔ 주소', () => {
+describe('투어 찾기 검색 ↔ 주소', () => {
   it('키 순서는 school · major · wish, 날짜가 있으면 date', () => {
     expect([...new URLSearchParams(toWishSearch(base)).keys()]).toEqual([
       'school',

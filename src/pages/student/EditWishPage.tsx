@@ -119,7 +119,7 @@ function EditWishForm({ wish, campuses }: { wish: TourWish; campuses: University
         >
           <WishFields form={form} campuses={campuses} />
           <p className="mt-3 text-[13px] text-muted">
-            고쳐도 이미 본 탐방 결과는 바뀌지 않아요. 새로 찾으려면 홈에서 다시 남겨 주세요.
+            고쳐도 이미 본 투어 결과는 바뀌지 않아요. 새로 찾으려면 홈에서 다시 남겨 주세요.
           </p>
           <BottomAction>
             <Button

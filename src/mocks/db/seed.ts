@@ -691,7 +691,7 @@ export function createSeed(today: Date, checkpoint: SeedCheckpoint = 'START'): D
     add(db.partnerships, {
       storeId: store.id,
       discountDescription: discounts[i],
-      condition: '탐방 당일 · 1회 사용 가능',
+      condition: '투어 당일 · 1회 사용 가능',
       startDate: rel(-30),
       endDate: rel(90),
       createdAt: created,

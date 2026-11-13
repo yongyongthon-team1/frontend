@@ -28,7 +28,7 @@ function Header() {
     <>
       <BrandMark variant="wordmark" />
       <PageHeading
-        title="탐방 참여 동의"
+        title="투어 참여 동의"
         description="보호자께서 확인하는 페이지예요."
         className="mt-5"
       />
@@ -60,7 +60,7 @@ function DecidedCard({ agreed, signedIn }: { agreed: boolean; signedIn: boolean 
         title={agreed ? '동의를 마쳤어요' : '동의하지 않았어요'}
         description={
           agreed
-            ? '학생이 탐방을 신청할 수 있어요.'
+            ? '학생이 투어를 신청할 수 있어요.'
             : '마음이 바뀌면 학생에게 다시 요청해 달라고 해 주세요.'
         }
       />
@@ -154,8 +154,8 @@ function StudentCard({ studentName }: { studentName: string }) {
       <h2 className="mt-1 text-[17px] font-bold text-ink">
         {`${maskStudentName(studentName)} · 고교생`}
       </h2>
-      <p className="text-[13px] text-muted">UNIRO 캠퍼스 탐방 서비스</p>
-      <p className="text-[13px] text-muted">대학생 가이드가 개설한 비공식 탐방에 참여합니다.</p>
+      <p className="text-[13px] text-muted">UNIRO 캠퍼스 투어 서비스</p>
+      <p className="text-[13px] text-muted">대학생 가이드가 개설한 비공식 투어에 참여합니다.</p>
     </section>
   );
 }
@@ -181,7 +181,7 @@ function PendingBody({
         <StepList
           current={0}
           steps={[
-            '탐방은 학교 공식 프로그램이 아니에요.',
+            '투어는 학교 공식 프로그램이 아니에요.',
             <span key="guide" className="whitespace-pre-wrap">
               {view.guideText}
             </span>,

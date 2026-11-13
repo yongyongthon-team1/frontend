@@ -261,7 +261,7 @@ describe('generateCourseDraft', () => {
     expect(partnershipIdsOf(stops)).toEqual([null, null, null]);
   });
 
-  it('탐방 날짜에 유효하지 않은 제휴는 제휴로 치지 않는다', () => {
+  it('투어 날짜에 유효하지 않은 제휴는 제휴로 치지 않는다', () => {
     db.partnerships.find((p) => p.storeId === 1)!.endDate = '2026-11-14';
     expect(partnershipIdsOf(generateCourseDraft(db, 1).stops)).toEqual([null, null, 2]);
 
@@ -271,7 +271,7 @@ describe('generateCourseDraft', () => {
     expect(partnershipIdsOf(stops)).toEqual([null, 4, null]);
   });
 
-  it('탐방이 없으면 NOT_FOUND', () =>
+  it('투어가 없으면 NOT_FOUND', () =>
     expect(() => generateCourseDraft(db, 999)).toThrow(
       expect.objectContaining({ status: 404, code: 'NOT_FOUND' }),
     ));

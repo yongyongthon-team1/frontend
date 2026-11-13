@@ -32,16 +32,16 @@ const NOTICE_COPY: Partial<
   CLOSED: {
     chip: '모집 마감',
     chipTone: 'danger',
-    title: '이번 탐방은 자리가 없어요',
+    title: '이번 투어는 자리가 없어요',
     description: '비슷한 전공의 다른 일정을 확인해요.',
-    actionLabel: '다른 탐방 보기 ›',
+    actionLabel: '다른 투어 보기 ›',
   },
   APPLIED: {
     chip: '중복 신청',
     chipTone: 'info',
-    title: '이미 신청한 탐방이에요',
-    description: '내 탐방에서 현재 상태를 확인할 수 있어요.',
-    actionLabel: '내 탐방 확인 ›',
+    title: '이미 신청한 투어예요',
+    description: '내 투어에서 현재 상태를 확인할 수 있어요.',
+    actionLabel: '내 투어 확인 ›',
   },
 };
 
@@ -84,7 +84,7 @@ export function TourDetailPage() {
   if (tour === undefined && tourQuery.isError) {
     return (
       <>
-        <TopBar title="탐방 상세" back />
+        <TopBar title="투어 상세" back />
         <Page>
           <ErrorState error={tourQuery.error} onRetry={() => void tourQuery.refetch()} />
         </Page>
@@ -94,7 +94,7 @@ export function TourDetailPage() {
   if (tour === undefined || me.data === undefined) {
     return (
       <>
-        <TopBar title="탐방 상세" back />
+        <TopBar title="투어 상세" back />
         <Page>
           <Skeleton className="h-[140px] rounded-xl" />
           <Skeleton className="mt-4 h-8 w-3/4" />
@@ -107,7 +107,7 @@ export function TourDetailPage() {
 
   const state = applyButtonState(me.data, tour, tourResultsPath());
   const action = state.action;
-  const label = state.label === '탐방 신청하기' ? '이 탐방 신청하기' : state.label;
+  const label = state.label === '투어 신청하기' ? '이 투어 신청하기' : state.label;
   const highlights = tourHighlights(tour.introduction);
   const noticeId = `apply-notice-${tour.id}`;
   const hasNotice =
@@ -115,7 +115,7 @@ export function TourDetailPage() {
 
   return (
     <>
-      <TopBar title="탐방 상세" back />
+      <TopBar title="투어 상세" back />
       <Page className={BOTTOM_ACTION_PAGE}>
         <HeroCard
           eyebrow={campusLabel(tour.universityName, tour.campusName)}

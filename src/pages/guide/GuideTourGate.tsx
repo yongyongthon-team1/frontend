@@ -8,7 +8,7 @@ import { Page } from '@/shared/ui/Page';
 import { Skeleton } from '@/shared/ui/Skeleton';
 import { TopBar } from '@/shared/ui/TopBar';
 
-const MY_TOURS = { label: '내가 개설한 탐방', to: '/guide/tours' };
+const MY_TOURS = { label: '내가 개설한 투어', to: '/guide/tours' };
 
 /**
  * G09 · G10 공통 틀: 탐방을 불러오는 동안 `Skeleton`, 남의 탐방 · 없는 탐방(`FORBIDDEN` · `NOT_FOUND`)은 안내 + `내가 개설한 탐방`,

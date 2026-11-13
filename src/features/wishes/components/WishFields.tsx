@@ -52,7 +52,7 @@ export function WishFields({
       />
       <Textarea
         {...form.register('wish')}
-        label="탐방 희망 사항"
+        label="투어 희망 사항"
         showLabel
         placeholder="예: 디자인 작업실을 구경하고 학생 식당에도 가 보고 싶어요."
         hint="한두 문장 · 100자 이내"

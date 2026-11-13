@@ -71,7 +71,7 @@ describe('신청 취소 확인 (H11)', () => {
     expect(posts).toBe(1);
   });
 
-  it('오늘 탐방처럼 취소할 수 없는 신청이면 상세로 replace', async () => {
+  it('오늘 투어처럼 취소할 수 없는 신청이면 상세로 replace', async () => {
     const { router } = await renderApp('/', { as: 'student', checkpoint: 'APPLIED' });
     const id = findApplicationId(STUDENT, 1);
     await router.navigate(`/my-tours/${id}/cancel`);
@@ -113,7 +113,7 @@ describe('신청 취소 확인 (H11)', () => {
     expect([rowGets, tourGets]).toEqual([1, 1]);
     await user.click(screen.getByRole('button', { name: '신청 취소 확정' }));
     // 신청이 아직 대기라 E409_INVALID_APPLICATION_STATUS는 탐방 날짜 사유로 세분된다(2C-R15).
-    expect(await screen.findByText('탐방 날짜가 되어 취소할 수 없어요.')).toBeInTheDocument();
+    expect(await screen.findByText('투어 날짜가 되어 취소할 수 없어요.')).toBeInTheDocument();
     // 상세를 다시 불러온다: 행은 세분용 재조회 1번 + 다시 불러오기 1번, 탐방 상세는 다시 불러오기 1번.
     await waitFor(() => expect([rowGets, tourGets]).toEqual([3, 2]));
     expect(router.state.location.pathname).toBe(`/my-tours/${id}/cancel`);

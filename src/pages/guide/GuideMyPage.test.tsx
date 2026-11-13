@@ -26,15 +26,15 @@ describe('G12 /guide/me 가이드 MY', () => {
 
     // 시드: 정다은의 탐방 1 · 6 · 7 — 개설 3회, 진행 예정(모집 중 · 마감) 2회
     expect(await screen.findByText('3회')).toBeInTheDocument();
-    expect(screen.getByText('개설한 탐방')).toBeInTheDocument();
+    expect(screen.getByText('개설한 투어')).toBeInTheDocument();
     expect(screen.getByText('2회')).toBeInTheDocument();
     expect(screen.getByText('진행 예정')).toBeInTheDocument();
 
     expect(screen.getByRole('heading', { level: 2, name: '가이드 관리' })).toBeInTheDocument();
     expect(screenLinks()).toEqual([
       ['/guide/me/profile', '가이드 프로필 수정전공·학교·소개를 관리해요.'],
-      ['/guide/wishes', '고교생 희망 사항학생들이 남긴 희망 사항을 보고 탐방을 준비해요.'],
-      ['/guide/tours', '내가 개설한 탐방모집 상태와 참가자를 확인해요.'],
+      ['/guide/wishes', '고교생 희망 사항학생들이 남긴 희망 사항을 보고 투어를 준비해요.'],
+      ['/guide/tours', '내가 개설한 투어모집 상태와 참가자를 확인해요.'],
       ['/guide/me/status', '내 정보·인증 상태계정과 재학 인증 정보를 확인해요.'],
     ]);
     expect(screen.getByRole('button', { name: /^로그아웃/ })).toHaveTextContent(
@@ -79,7 +79,7 @@ describe('G12 /guide/me 가이드 MY', () => {
     expect(useSession.getState().token).toBeNull();
   });
 
-  it('탐방 목록을 못 받아도 프로필과 행은 그리고 숫자 자리에 오류와 다시 시도', async () => {
+  it('투어 목록을 못 받아도 프로필과 행은 그리고 숫자 자리에 오류와 다시 시도', async () => {
     server.use(http.get('/api/users/me/tours', () => wireFail('E404')));
     await renderApp('/guide/me', { as: 'guide' });
     expect(await screen.findByRole('button', { name: '다시 시도' })).toBeInTheDocument();

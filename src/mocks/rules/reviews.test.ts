@@ -154,7 +154,7 @@ describe('createReview — 검사 순서', () => {
     );
   });
 
-  it('같은 (사용자 · 탐방 · 상점)의 리뷰가 이미 있으면 다른 쿠폰이어도 REVIEW_DUPLICATE', () => {
+  it('같은 (사용자 · 투어 · 상점)의 리뷰가 이미 있으면 다른 쿠폰이어도 REVIEW_DUPLICATE', () => {
     const coupon = usedCoupon(student, 1);
     createReview(db, userId(student), 1, body(coupon.id), later);
     const app = db.applications.find((a) => a.id === coupon.applicationId)!;

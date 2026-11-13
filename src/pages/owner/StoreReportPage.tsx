@@ -82,7 +82,7 @@ function Report({ view }: { view: StoreReportView }) {
         />
 
         <div className="mt-5 grid grid-cols-3 gap-2">
-          <StatCard value={`${report.visitCount}명`} label="탐방으로 온 학생" />
+          <StatCard value={`${report.visitCount}명`} label="투어로 온 학생" />
           <StatCard
             value={report.averageRating === null ? '-' : report.averageRating.toFixed(1)}
             label="평균 별점"
@@ -93,7 +93,7 @@ function Report({ view }: { view: StoreReportView }) {
         {noActivity ? (
           <div className="mt-4">
             <EmptyState
-              title="아직 탐방으로 온 학생이 없어요"
+              title="아직 투어로 온 학생이 없어요"
               description="학생들이 쿠폰을 쓰고 리뷰를 남기면 여기에 모여요."
               action={{ to: '/owner/coupons/redeem', label: '쿠폰 사용 처리하기' }}
             />

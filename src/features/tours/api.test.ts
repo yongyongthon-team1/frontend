@@ -12,7 +12,7 @@ import { findWishTours, getTour, listTours } from './api';
 import type { TourFilter, WishToursResult } from './model';
 import type { WishSearch } from './wishSearch';
 
-describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
+describe('투어 · 캠퍼스 API (MSW 목업)', () => {
   beforeEach(() => {
     resetDb({ today: new Date() });
     configureHttp({ baseUrl: '/api', getToken: () => null, onUnauthorized: () => {} });
@@ -20,7 +20,7 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
 
   afterEach(() => configureHttp({ getToken: () => null }));
 
-  describe('findWishTours (T-01 탐방 찾기, 2C-R16 · R17)', () => {
+  describe('findWishTours (T-01 투어 찾기, 2C-R16 · R17)', () => {
     const search = (s: Partial<WishSearch>): WishSearch => ({
       universityId: 2,
       major: '산업디자인',
@@ -43,7 +43,7 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
       return seen;
     }
 
-    it('학교 · 학과에 맞는 모집 중 탐방을 날짜 빠른 순으로(대체 아님)', async () => {
+    it('학교 · 학과에 맞는 모집 중 투어를 날짜 빠른 순으로(대체 아님)', async () => {
       const campuses = await listCampuses();
       let result: WishToursResult | undefined;
       const queries = await tourQueries(async () => {
@@ -56,7 +56,7 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
       ]);
     });
 
-    it('학과에 맞는 탐방이 없으면 같은 학교 모집 중 탐방(대체) — 대체 조회는 학과 · 날짜를 뺀다', async () => {
+    it('학과에 맞는 투어가 없으면 같은 학교 모집 중 투어(대체) — 대체 조회는 학과 · 날짜를 뺀다', async () => {
       const campuses = await listCampuses();
       let result: WishToursResult | undefined;
       const queries = await tourQueries(async () => {
@@ -85,7 +85,7 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
       expect(result.fallback).toBe(false);
     });
 
-    it('같은 학교에도 모집 중 탐방이 없으면 빈 목록(대체) — 단국대는 마감 탐방뿐', async () => {
+    it('같은 학교에도 모집 중 투어가 없으면 빈 목록(대체) — 단국대는 마감 투어뿐', async () => {
       const campuses = await listCampuses();
       expect(await findWishTours(search({ universityId: 3, major: '디자인' }), campuses)).toEqual({
         tours: [],
@@ -94,7 +94,7 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
     });
   });
 
-  it('listTours: 기본은 모집 중 5개(탐방 1 · 3 · 4 · 5 · 6)이고 시작 순이다', async () => {
+  it('listTours: 기본은 모집 중 5개(투어 1 · 3 · 4 · 5 · 6)이고 시작 순이다', async () => {
     const campuses = await listCampuses();
     const tours = await listTours({}, campuses);
     expect(tours.map((t) => t.id)).toEqual([1, 3, 4, 5, 6]);
@@ -136,13 +136,13 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
     const campuses = await listCampuses();
     expect(await getTour(1, campuses)).toMatchObject({
       id: 1,
-      title: '경희대 국제캠퍼스 산업디자인학과 탐방',
+      title: '경희대 국제캠퍼스 산업디자인학과 투어',
       universityId: 2,
       endsAt: expect.stringMatching(/T16:30:00\+09:00$/),
     });
   });
 
-  it('getTour: 승인 학생과 그 탐방의 가이드는 오픈채팅이 있고 대기 학생은 없다', async () => {
+  it('getTour: 승인 학생과 그 투어의 가이드는 오픈채팅이 있고 대기 학생은 없다', async () => {
     const campuses = await listCampuses();
     for (const [email, hasChat] of [
       ['seojun@demo.kr', true],
@@ -156,7 +156,7 @@ describe('탐방 · 캠퍼스 API (MSW 목업)', () => {
     }
   });
 
-  it('getTour: 없는 탐방은 NOT_FOUND(404)', async () => {
+  it('getTour: 없는 투어는 NOT_FOUND(404)', async () => {
     const campuses = await listCampuses();
     await expect(getTour(99999, campuses)).rejects.toMatchObject({
       status: 404,

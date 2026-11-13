@@ -67,7 +67,7 @@ describe('신청 훅', () => {
   });
 });
 
-describe('탐방 생애 훅', () => {
+describe('투어 생애 훅', () => {
   const input = {
     date: '2027-01-15',
     startTime: '13:00',
@@ -91,7 +91,7 @@ describe('탐방 생애 훅', () => {
     expect(qk.guideTour(31)[0]).not.toBe(qk.guideTours[0]);
   });
 
-  it('useGuideTour: 탐방 상세와 코스 지점 수를 qk.guideTour 아래에 둔다', async () => {
+  it('useGuideTour: 투어 상세와 코스 지점 수를 qk.guideTour 아래에 둔다', async () => {
     server.use(...baseHandlers());
     const { queryClient, wrapper } = setup();
     const { result } = renderHook(() => useGuideTour(31), { wrapper });
@@ -100,7 +100,7 @@ describe('탐방 생애 훅', () => {
     expect(queryClient.getQueryState(qk.guideTour(31))?.status).toBe('success');
   });
 
-  it('useCreateTour 성공: guideTours(exact)와 탐방 전체를 무효화하고 내 정보는 건드리지 않는다', async () => {
+  it('useCreateTour 성공: guideTours(exact)와 투어 전체를 무효화하고 내 정보는 건드리지 않는다', async () => {
     server.use(
       ...baseHandlers(),
       http.post('/api/tours', () => wireOk(TOUR_CREATED.data, { status: 201 })),
@@ -150,7 +150,7 @@ describe('탐방 생애 훅', () => {
     ['useCompleteTour', useCompleteTour, '/api/tours/:tourId/complete', TOUR_COMPLETED],
     ['useCancelTour', useCancelTour, '/api/tours/:tourId/cancel', TOUR_CANCELED],
   ] as const)(
-    '%s 성공: 이 탐방 · 가이드 탐방 · 신청자 · 탐방 전체를 무효화한다',
+    '%s 성공: 이 투어 · 가이드 투어 · 신청자 · 투어 전체를 무효화한다',
     async (_name, useHook, path, ok) => {
       server.use(
         ...baseHandlers(),
@@ -177,7 +177,7 @@ describe('탐방 생애 훅', () => {
   it.each([
     ['useCompleteTour', useCompleteTour, '/api/tours/:tourId/complete'],
     ['useCancelTour', useCancelTour, '/api/tours/:tourId/cancel'],
-  ] as const)('%s 실패: 이 탐방(qk.guideTour)만 다시 받는다', async (_name, useHook, path) => {
+  ] as const)('%s 실패: 이 투어(qk.guideTour)만 다시 받는다', async (_name, useHook, path) => {
     server.use(
       ...baseHandlers(),
       http.post(path, () => wireFail('E409_INVALID_TOUR_STATUS')),

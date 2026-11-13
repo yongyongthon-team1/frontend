@@ -207,7 +207,7 @@ describe('/guide/verify 대학생 재학 인증 (C03 · C08 · 상태)', () => {
     ).toBeInTheDocument();
     expect(await screen.findByText('단국대학교 죽전캠퍼스')).toBeInTheDocument();
     expect(screen.getByText('학생증 인증').nextSibling).toHaveTextContent('심사 중');
-    expect(screen.getByText('승인 전에는 탐방을 개설할 수 없습니다.')).toBeInTheDocument();
+    expect(screen.getByText('승인 전에는 투어를 개설할 수 없습니다.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: SUBMIT })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(FILE_LABEL)).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '로그아웃' })).not.toBeInTheDocument();
@@ -217,7 +217,7 @@ describe('/guide/verify 대학생 재학 인증 (C03 · C08 · 상태)', () => {
     );
   });
 
-  it('심사 중 + 학과 있음: 내가 개설한 탐방 → /guide/tours', async () => {
+  it('심사 중 + 학과 있음: 내가 개설한 투어 → /guide/tours', async () => {
     const { router, queryClient } = await renderApp('/explore', { as: 'guide-pending@demo.kr' });
     mutate((db) => {
       const user = db.users.find((u) => u.email === 'guide-pending@demo.kr')!;
@@ -226,13 +226,13 @@ describe('/guide/verify 대학생 재학 인증 (C03 · C08 · 상태)', () => {
     await switchAccount(queryClient, 'guide-pending@demo.kr'); // 내 정보를 새로 받는다
     await act(() => router.navigate('/guide/verify'));
     expect(await screen.findByText('학생증을 심사하고 있어요.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
   });
 
-  it('정다은(승인 · 학과 있음): 승인 완료 상태 줄 + 참여 대학 + 새 탐방 개설하기 → /guide/tours/new', async () => {
+  it('정다은(승인 · 학과 있음): 승인 완료 상태 줄 + 참여 대학 + 새 투어 개설하기 → /guide/tours/new', async () => {
     await renderApp('/guide/verify', { as: 'guide' });
     expect(
       await screen.findByRole('heading', { level: 2, name: '재학 인증이 끝났어요.' }),
@@ -240,8 +240,8 @@ describe('/guide/verify 대학생 재학 인증 (C03 · C08 · 상태)', () => {
     expect(screen.getByText('학생증 인증').nextSibling).toHaveTextContent('승인 완료');
     expect(await screen.findByText('경희대학교 국제캠퍼스')).toBeInTheDocument();
     expect(screen.getByText('학생증 심사 완료 · 인증 배지 노출')).toBeInTheDocument();
-    expect(screen.queryByText('승인 전에는 탐방을 개설할 수 없습니다.')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '새 탐방 개설하기' })).toHaveAttribute(
+    expect(screen.queryByText('승인 전에는 투어를 개설할 수 없습니다.')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '새 투어 개설하기' })).toHaveAttribute(
       'href',
       '/guide/tours/new',
     );
@@ -278,7 +278,7 @@ describe('G05 가이드 프로필 (/guide/me/profile)', () => {
     expect(
       screen.getByRole('heading', { level: 2, name: '내 이야기를 소개해 주세요.' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('탐방 참가자에게 보여줄 가이드 정보예요.')).toBeInTheDocument();
+    expect(screen.getByText('투어 참가자에게 보여줄 가이드 정보예요.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: 'MY' })).toHaveAttribute('aria-current', 'page');
     await waitFor(() => expect(school()).toHaveValue('단국대학교 죽전캠퍼스'));
     expect(school()).toHaveAttribute('readonly');

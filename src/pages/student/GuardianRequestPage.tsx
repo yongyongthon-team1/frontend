@@ -53,7 +53,7 @@ function cardDescription(status: GuardianStatus): string {
     case 'AGREED':
       return '보호자가 동의했어요.';
     case 'NONE':
-      return '동의가 완료되면 탐방을 신청할 수 있어요.'; // 시안 문구
+      return '동의가 완료되면 투어를 신청할 수 있어요.'; // 시안 문구
   }
 }
 
@@ -192,7 +192,7 @@ function ConsentRequestForm({ status }: { status: GuardianStatus }) {
           }}
         />
         <Notice>
-          입력한 이메일로 동의 링크가 전송돼요. 링크에서 탐방 참여 동의를 완료해 주세요.
+          입력한 이메일로 동의 링크가 전송돼요. 링크에서 투어 참여 동의를 완료해 주세요.
         </Notice>
         <ProgressCard
           tone={GUARDIAN_TONE[status]}
@@ -244,7 +244,7 @@ function DoneView({ me }: { me: Me }) {
       </div>
       <BottomAction>
         <Link to={approved ? '/' : '/me/status'} className={buttonClass('primary')}>
-          {approved ? '탐방 찾아보기' : '인증 상태 보기'}
+          {approved ? '투어 찾아보기' : '인증 상태 보기'}
         </Link>
       </BottomAction>
     </>

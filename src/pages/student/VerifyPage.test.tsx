@@ -56,7 +56,7 @@ describe('C03 재학 인증 · 학생증 업로드 (/verify, 미제출)', () => 
     expect(
       screen.getByRole('heading', { level: 2, name: '학생증을 인증해 주세요.' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('안전한 탐방을 위해 재학 여부를 확인해요.')).toBeInTheDocument();
+    expect(screen.getByText('안전한 투어를 위해 재학 여부를 확인해요.')).toBeInTheDocument();
     expect(
       screen.getByText('고교생·대학생 모두 학생증 또는 재학증명서를 제출해요.'),
     ).toBeInTheDocument();
@@ -67,7 +67,7 @@ describe('C03 재학 인증 · 학생증 업로드 (/verify, 미제출)', () => 
     expect(screen.getByText('이름·학교명·재학 여부를 확인할 수 있게 촬영해 주세요.')).toBeVisible();
     expect(screen.getByText('jpg · png, 5MB 이하')).toBeInTheDocument();
     expect(screen.getByText('사진 확인 후 운영자가 심사해요')).toBeInTheDocument();
-    expect(screen.getByText('승인 전에는 탐방 신청·개설이 제한돼요')).toBeInTheDocument();
+    expect(screen.getByText('승인 전에는 투어 신청·개설이 제한돼요')).toBeInTheDocument();
     expect(screen.getByRole('button', { name: SUBMIT })).toBeEnabled();
     // 판정 A8: 하단 탭이 없다. 이전의 STEP 칩 · 두 카드도 없다.
     expect(screen.queryByRole('navigation', { name: '주요 메뉴' })).not.toBeInTheDocument();
@@ -299,10 +299,10 @@ describe('심사 중 · 승인 상태 (/verify)', () => {
     );
   });
 
-  it('student(둘 다 끝): 승인 완료 + 탐방 찾아보기 → /', async () => {
+  it('student(둘 다 끝): 승인 완료 + 투어 찾아보기 → /', async () => {
     await renderApp('/verify', { as: 'student@demo.kr' });
     expect(await screen.findByRole('definition')).toHaveTextContent('승인 완료');
-    expect(screen.getByRole('link', { name: '탐방 찾아보기' })).toHaveAttribute('href', '/');
+    expect(screen.getByRole('link', { name: '투어 찾아보기' })).toHaveAttribute('href', '/');
     expect(screen.queryByRole('button', { name: SUBMIT })).not.toBeInTheDocument();
   });
 

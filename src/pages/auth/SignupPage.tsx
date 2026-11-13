@@ -66,16 +66,16 @@ const ROLE_CARDS: Record<SignupRole, { badge: string; title: string; features: s
   HIGH_SCHOOL: {
     badge: '고교생',
     title: '미래의 대학을 만나고 싶어요',
-    features: '학교 · 학과와 희망 사항으로 탐방 찾기 · 탐방 신청 · 쿠폰',
+    features: '학교 · 학과와 희망 사항으로 투어 찾기 · 투어 신청 · 쿠폰',
   },
   UNIVERSITY: {
     badge: '대학생 가이드',
     title: '학교와 전공을 소개할게요',
-    features: '탐방 개설 · 신청 관리 · 코스 설계',
+    features: '투어 개설 · 신청 관리 · 코스 설계',
   },
   OWNER: {
     badge: '동네 가게 사장님',
-    title: '탐방객을 가게로 맞이할게요',
+    title: '투어 손님을 가게로 맞이할게요',
     features: '가게 연결 · 제휴 할인 · 쿠폰 사용',
   },
 };
@@ -325,7 +325,7 @@ export function SignupPage() {
               }}
             />
           </div>
-          <Notice>고교생은 탐방 신청 전 보호자 동의가 필요해요.</Notice>
+          <Notice>고교생은 투어 신청 전 보호자 동의가 필요해요.</Notice>
         </div>
         <BottomAction>
           <Button

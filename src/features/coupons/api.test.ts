@@ -73,7 +73,7 @@ describe('쿠폰 API (MSW 목업)', () => {
       reviewWritten: false,
       usedAt: null,
     });
-    expect(all[0].tourTitle).toEqual(expect.stringContaining('탐방'));
+    expect(all[0].tourTitle).toEqual(expect.stringContaining('투어'));
     expect(await getMyCoupons(all[0].applicationId, listCampuses())).toEqual(all);
     expect(await getMyCoupons(999999, listCampuses())).toEqual([]);
     expect(await getMyCoupon(all[1].id, listCampuses())).toEqual(all[1]);
@@ -92,7 +92,7 @@ describe('쿠폰 API (MSW 목업)', () => {
     }
   });
 
-  it('쿠폰 목록은 내 탐방 행 · 쿠폰 · 탐방 상세(탐방당 한 번)를 부르고 캠퍼스 목록과 함께 나간다', async () => {
+  it('쿠폰 목록은 내 투어 행 · 쿠폰 · 투어 상세(투어당 한 번)를 부르고 캠퍼스 목록과 함께 나간다', async () => {
     loginAs(STUDENT);
     const seen = await requestsDuring(() => getMyCoupons(undefined, listCampuses()));
     expect(seen.filter((r) => r.startsWith('GET /users/me/coupons'))).toHaveLength(1);
@@ -100,7 +100,7 @@ describe('쿠폰 API (MSW 목업)', () => {
     expect(seen.filter((r) => r.startsWith('GET /tours/1'))).toEqual(['GET /tours/1']); // 쿠폰 2장, 탐방 1번
   });
 
-  it('신청을 주면 쿠폰을 그 탐방으로 좁혀 부른다', async () => {
+  it('신청을 주면 쿠폰을 그 투어로 좁혀 부른다', async () => {
     loginAs(STUDENT);
     const [first] = await getMyCoupons(undefined, listCampuses());
     const seen = await requestsDuring(() => getMyCoupons(first.applicationId, listCampuses()));
@@ -175,7 +175,7 @@ describe('쿠폰 API (MSW 목업)', () => {
     });
   });
 
-  it('탐방 당일 전 쿠폰은 조회는 BEFORE_DAY, 사용 처리는 목업 확장 코드 COUPON_NOT_YET', async () => {
+  it('투어 당일 전 쿠폰은 조회는 BEFORE_DAY, 사용 처리는 목업 확장 코드 COUPON_NOT_YET', async () => {
     const code = unusedCode();
     mutate((db) => {
       const coupon = db.coupons.find((c) => c.code === code)!;
@@ -225,7 +225,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
 
   const [tourRow] = MY_TOURS_HIGH_SCHOOL.data.items; // 신청 77(승인), 탐방 31
 
-  it('S-05 예시: 신청 id는 내 탐방 행에서, 탐방 제목은 상세에서, 상점 분류는 빈 문자열, 상태는 계산', async () => {
+  it('S-05 예시: 신청 id는 내 투어 행에서, 투어 제목은 상세에서, 상점 분류는 빈 문자열, 상태는 계산', async () => {
     loginAs(STUDENT);
     server.use(
       http.get('/api/users/me/coupons', () => wireOk(MY_COUPONS.data)),
@@ -244,7 +244,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
       storeCategory: '',
       applicationId: 77,
       tourId: 31,
-      tourTitle: '단국대 죽전캠퍼스 컴퓨터공학과 탐방',
+      tourTitle: '단국대 죽전캠퍼스 컴퓨터공학과 투어',
       tourStartsAt: '2027-01-15T13:00:00+09:00',
       expiresAt: '2027-01-15T23:59:59+09:00',
       usedAt: null,
@@ -253,7 +253,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
     expect(await getMyCoupon(501, listCampuses())).toEqual(coupon);
   });
 
-  it('같은 탐방의 신청이 여럿이면 승인된 신청을, 승인이 없으면 id가 가장 큰 신청을 쿠폰의 신청으로 삼는다(2C-R27)', async () => {
+  it('같은 투어의 신청이 여럿이면 승인된 신청을, 승인이 없으면 id가 가장 큰 신청을 쿠폰의 신청으로 삼는다(2C-R27)', async () => {
     loginAs(STUDENT);
     const approved = { ...tourRow, application_id: 77 };
     const newerCanceled = { ...tourRow, application_id: 90, application_status: 'CANCELED' };
@@ -272,7 +272,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
     expect((await getMyCoupons(undefined, listCampuses()))[0].applicationId).toBe(90);
   });
 
-  it('내 탐방 행이 없는 탐방의 쿠폰은 갈 곳이 없어 빼고, 그 탐방 상세는 부르지 않는다', async () => {
+  it('내 투어 행이 없는 투어의 쿠폰은 갈 곳이 없어 빼고, 그 투어 상세는 부르지 않는다', async () => {
     loginAs(STUDENT);
     server.use(
       http.get('/api/users/me/coupons', () => wireOk(MY_COUPONS.data)),
@@ -285,7 +285,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
     expect(seen.some((r) => r.startsWith('GET /tours/'))).toBe(false);
   });
 
-  it('S-06 예시: 가게 이름은 GET /users/me/store, 탐방 제목 · 학생 이름 · 사용 시각은 대체값', async () => {
+  it('S-06 예시: 가게 이름은 GET /users/me/store, 투어 제목 · 학생 이름 · 사용 시각은 대체값', async () => {
     loginAs(DEMO_STORE_OWNERS[1]!);
     server.use(
       http.get('/api/coupons/:couponCode', () => wireOk(COUPON_LOOKUP.data)),
@@ -296,7 +296,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
       state: 'USABLE',
       discount: '음료 1,000원 할인',
       storeName: '용인 분식',
-      tourTitle: '탐방',
+      tourTitle: '투어',
       tourStartsAt: '2027-01-15T00:00:00+09:00',
       studentName: '',
       usedAt: null,
@@ -316,7 +316,7 @@ describe('확장 없는 실서버 응답 (2C-R8 대체 경로)', () => {
         state: 'USED',
         discount: '음료 1,000원 할인',
         storeName: '용인 분식',
-        tourTitle: '탐방',
+        tourTitle: '투어',
         tourStartsAt: '2027-01-15T00:00:00+09:00',
         studentName: '',
         usedAt: '2027-01-15T13:40:00+09:00',

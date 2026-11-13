@@ -36,12 +36,12 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
     expect(screen.getByText('우리의 2시간 30분 코스')).toBeInTheDocument();
     expect(screen.getByText('3개 장소')).toBeInTheDocument();
     expect(screen.getByText('학교에서 동네까지')).toBeInTheDocument();
-    expect(screen.getByText('도보로 이어지는 탐방')).toBeInTheDocument();
+    expect(screen.getByText('도보로 이어지는 투어')).toBeInTheDocument();
     expect(screen.getByText('3개 장소 · 일정을 위아래로 스크롤해 확인하세요')).toBeInTheDocument();
 
     const tour = getDb().tours.find((t) => t.id === 1)!;
     expect(
-      screen.getByText(`경희대 국제캠퍼스 산업디자인학과 탐방 · ${formatMonthDay(tour.startsAt)}`),
+      screen.getByText(`경희대 국제캠퍼스 산업디자인학과 투어 · ${formatMonthDay(tour.startsAt)}`),
     ).toBeInTheDocument();
 
     // 단계 막대: 번호 원 1~3 + 종류 라벨
@@ -253,7 +253,7 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
   it('미확정이면 준비 중', async () => {
     await openCourseMap('APPROVED');
     expect(await screen.findByRole('heading', { name: '코스 준비 중' })).toBeInTheDocument();
-    expect(screen.getByText('탐방 코스를 준비하고 있어요.')).toBeInTheDocument();
+    expect(screen.getByText('투어 코스를 준비하고 있어요.')).toBeInTheDocument();
     expect(screen.getByText('가이드가 신청자들의 관심사를 모으고 있어요.')).toBeInTheDocument();
     expect(screen.getByText('코스 확정을 기다려요')).toBeInTheDocument();
     expect(
@@ -348,7 +348,7 @@ describe('코스 보기 V2 (hs-s08 · H04 · H14)', () => {
         db.tours.find((t) => t.id === 1)!.endsAt = null;
       }),
     );
-    expect(await screen.findByText('우리의 탐방 코스')).toBeInTheDocument();
+    expect(await screen.findByText('우리의 투어 코스')).toBeInTheDocument();
     // 마지막 지점은 머무는 분을 생략한다(2A-R6)
     expect(screen.queryByText(/· 30분$/)).not.toBeInTheDocument();
     expect(screen.getByText(/· 70분$/)).toBeInTheDocument();

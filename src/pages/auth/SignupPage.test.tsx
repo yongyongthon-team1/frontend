@@ -78,7 +78,7 @@ describe('/signup 1단계 · 계정 만들기 (C01A)', () => {
     expect(screen.getByRole('checkbox', { name: TERMS })).not.toBeChecked();
     expect(screen.getByRole('checkbox', { name: PRIVACY })).not.toBeChecked();
     expect(screen.queryByText(/\[선택\]/)).not.toBeInTheDocument();
-    expect(screen.getByText('고교생은 탐방 신청 전 보호자 동의가 필요해요.')).toBeInTheDocument();
+    expect(screen.getByText('고교생은 투어 신청 전 보호자 동의가 필요해요.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '이미 계정이 있나요? 로그인' })).toHaveAttribute(
       'href',
       '/login',
@@ -222,13 +222,13 @@ describe('/signup 2단계 · 역할 선택 (C02)', () => {
     expect(within(group).getByRole('radio', { name: /^동네 가게 사장님/ })).toBeInTheDocument();
     expect(screen.getByText('미래의 대학을 만나고 싶어요')).toBeInTheDocument();
     expect(screen.getByText('학교와 전공을 소개할게요')).toBeInTheDocument();
-    expect(screen.getByText('탐방객을 가게로 맞이할게요')).toBeInTheDocument();
-    expect(screen.getByText('탐방 개설 · 신청 관리 · 코스 설계')).toBeInTheDocument();
+    expect(screen.getByText('투어 손님을 가게로 맞이할게요')).toBeInTheDocument();
+    expect(screen.getByText('투어 개설 · 신청 관리 · 코스 설계')).toBeInTheDocument();
     expect(screen.getByText('가게 연결 · 제휴 할인 · 쿠폰 사용')).toBeInTheDocument();
     // A4: AI 매칭이 없으니 `진로 기반 추천` 대신 희망 사항 문구
     expect(screen.queryByText(/진로 기반 추천/)).not.toBeInTheDocument();
     expect(
-      screen.getByText('학교 · 학과와 희망 사항으로 탐방 찾기 · 탐방 신청 · 쿠폰'),
+      screen.getByText('학교 · 학과와 희망 사항으로 투어 찾기 · 투어 신청 · 쿠폰'),
     ).toBeInTheDocument();
     expect(screen.getByRole('button', { name: CONTINUE })).toBeDisabled();
     expect(screen.getByText('역할을 하나 골라 주세요.')).toBeVisible();

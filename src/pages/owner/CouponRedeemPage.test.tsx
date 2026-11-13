@@ -68,7 +68,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
       screen.getByText(`식사 금액 10% 할인 · 코드 ${code.slice(0, 3)} ${code.slice(3)}`),
     ).toBeInTheDocument();
     expect(screen.getByText(/^\d\d\.\d\d \(.\) · \d\d:\d\d 사용$/)).toBeInTheDocument();
-    expect(screen.getByText('이번 탐방으로 온 학생 1명')).toBeInTheDocument();
+    expect(screen.getByText('이번 투어로 온 학생 1명')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '사용 처리하기' })).not.toBeInTheDocument();
     expect(screen.queryByLabelText(CODE_LABEL)).not.toBeInTheDocument();
   });
@@ -84,7 +84,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     expect(screen.getByRole('heading', { name: '코드를 다시 확인해 주세요.' })).toBeInTheDocument();
     expect(screen.getByText('해당 쿠폰을 사용할 수 없는 상태예요.')).toBeInTheDocument();
     expect(
-      screen.getByText('확인 항목: 코드 6자리 · 사용 여부 · 탐방 당일 유효 여부'),
+      screen.getByText('확인 항목: 코드 6자리 · 사용 여부 · 투어 당일 유효 여부'),
     ).toBeInTheDocument();
     expect(screen.getByText('학생에게 새 코드를 확인해 주세요.')).toBeInTheDocument();
     expect(screen.queryByText('사용 가능')).not.toBeInTheDocument();
@@ -146,7 +146,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     await user.click(screen.getByRole('button', { name: '사용 처리하기' }));
     expect(await screen.findByText('이미 사용된 쿠폰')).toBeInTheDocument();
     expect(screen.getByText(/재사용 불가 · 사용 시각 \d\d:\d\d/)).toBeInTheDocument();
-    expect(screen.queryByText(/이번 탐방으로 온 학생/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/이번 투어로 온 학생/)).not.toBeInTheDocument();
   });
 
   it('?code=로 미리 채워 조회한다', async () => {
@@ -217,7 +217,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
       if (request.url.includes('/redeem')) count++;
     });
     await user.dblClick(screen.getByRole('button', { name: '사용 처리하기' }));
-    expect(await screen.findByText('이번 탐방으로 온 학생 1명')).toBeInTheDocument();
+    expect(await screen.findByText('이번 투어로 온 학생 1명')).toBeInTheDocument();
     expect(count).toBe(1);
   });
 
@@ -239,7 +239,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     expect(await screen.findByText('쿠폰 사용이 완료됐어요.')).toBeInTheDocument();
     expect(screen.getByText('쿠폰 처리 성공')).toBeInTheDocument();
     expect(screen.getByText(/^01\.15 \(금\) · 13:40 사용$/)).toBeInTheDocument();
-    expect(screen.queryByText(/이번 탐방으로 온 학생/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/이번 투어로 온 학생/)).not.toBeInTheDocument();
   });
 
   it('하루 한 장 오류는 O08 카드에 안내', async () => {
@@ -257,7 +257,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
       screen.getByText('같은 날 한 가게에서는 쿠폰 한 장만 사용할 수 있어요.'),
     ).toBeInTheDocument();
     expect(screen.getByRole('heading', { name: '코드를 다시 확인해 주세요.' })).toBeInTheDocument();
-    expect(screen.queryByText(/이번 탐방으로 온 학생/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/이번 투어로 온 학생/)).not.toBeInTheDocument();
   });
 
   it.each([
@@ -286,10 +286,10 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
       '코드를 다시 확인해 주세요.',
     ],
     [
-      '탐방 당일 전(목업 확장 코드)',
+      '투어 당일 전(목업 확장 코드)',
       () => wireFail('E409_COUPON_NOT_YET'),
       '아직 사용할 수 없는 쿠폰',
-      '탐방 당일에만 사용할 수 있어요.',
+      '투어 당일에만 사용할 수 있어요.',
     ],
     [
       '없는 코드',
@@ -334,7 +334,7 @@ describe('사장님 쿠폰 사용 처리 (owner-s03 · owner-a03)', () => {
     await user.type(input, demoCouponCode(1));
     await screen.findByText('사용 가능');
     await user.click(screen.getByRole('button', { name: '사용 처리하기' }));
-    await screen.findByText('이번 탐방으로 온 학생 1명');
+    await screen.findByText('이번 투어로 온 학생 1명');
 
     await user.click(screen.getByRole('button', { name: '다른 쿠폰 확인하기' }));
     const fresh = await screen.findByLabelText(CODE_LABEL);

@@ -47,7 +47,7 @@ export function ApplyPage() {
   if (tour === undefined && tourQuery.isError) {
     return (
       <>
-        <TopBar title="탐방 신청서 · 하고 싶은 것" back />
+        <TopBar title="투어 신청서 · 하고 싶은 것" back />
         <Page>
           <ErrorState error={tourQuery.error} onRetry={() => void tourQuery.refetch()} />
         </Page>
@@ -57,7 +57,7 @@ export function ApplyPage() {
   if (tour === undefined || me.data === undefined) {
     return (
       <>
-        <TopBar title="탐방 신청서 · 하고 싶은 것" back />
+        <TopBar title="투어 신청서 · 하고 싶은 것" back />
         <Page>
           <Skeleton className="h-12" />
           <Skeleton className="mt-4 h-24" />
@@ -85,16 +85,16 @@ export function ApplyPage() {
 
   return (
     <>
-      <TopBar title="탐방 신청서 · 하고 싶은 것" back />
+      <TopBar title="투어 신청서 · 하고 싶은 것" back />
       <Page className={BOTTOM_ACTION_PAGE}>
         <PageHeading
           as="h2"
-          title="탐방을 신청할까요?"
+          title="투어를 신청할까요?"
           description="가이드에게 전할 관심사를 적어 주세요."
         />
         <form onSubmit={onSubmit} noValidate className="mt-5 flex flex-1 flex-col">
           <div className="rounded-xl bg-surface p-4">
-            <StatusChip tone="info">신청할 탐방</StatusChip>
+            <StatusChip tone="info">신청할 투어</StatusChip>
             <p className="mt-2 text-[17px] leading-snug font-bold text-ink">{tour.title}</p>
             <p className="mt-1 text-[13px] text-muted">
               {campusLabel(tour.universityName, tour.campusName)} ·{' '}
@@ -105,7 +105,7 @@ export function ApplyPage() {
           <div className="mt-5">
             <Textarea
               showLabel
-              label="탐방에서 하고 싶은 것"
+              label="투어에서 하고 싶은 것"
               placeholder="예: 전공 수업을 듣고, 학생 식당도 가보고 싶어요."
               value={motivation}
               error={error}

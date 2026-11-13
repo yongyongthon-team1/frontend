@@ -149,7 +149,7 @@ function nextAction(me: Me): ActionLink {
       return { label: '보호자 동의 현황 보기', to: '/verify/guardian' };
     case 'AGREED':
       return me.verificationStatus === 'APPROVED'
-        ? { label: '탐방 찾아보기', to: '/' }
+        ? { label: '투어 찾아보기', to: '/' }
         : { label: '인증 상태 보기', to: '/me/status' };
   }
 }
@@ -190,7 +190,7 @@ export function VerifyPage() {
         step === 'IN_REVIEW'
           ? [
               '운영자가 학생증을 확인하고 있어요. 결과는 여기와 내 정보에서 볼 수 있어요.',
-              '승인 전에는 탐방 신청·개설이 제한돼요',
+              '승인 전에는 투어 신청·개설이 제한돼요',
             ]
           : ['학생증 심사 완료']
       }

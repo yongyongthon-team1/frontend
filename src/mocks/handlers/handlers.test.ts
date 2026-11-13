@@ -196,7 +196,7 @@ function unusedCode(): string {
 /** 시드 상점 id 구간(양 끝 포함). 시연 상점 1~6 뒤의 실데이터 상점은 캠퍼스 순으로 이어진다. */
 const idRange = (from: number, to: number) =>
   Array.from({ length: to - from + 1 }, (_, i) => from + i);
-const DEMO_TOUR_TITLE = '경희대 국제캠퍼스 산업디자인학과 탐방';
+const DEMO_TOUR_TITLE = '경희대 국제캠퍼스 산업디자인학과 투어';
 const DEMO_OPEN_CHAT = 'https://open.kakao.com/o/demo-khu-design';
 
 describe('auth', () => {
@@ -480,7 +480,7 @@ describe('campuses', () => {
 });
 
 describe('tours', () => {
-  it('탐방 목록은 모집 중만 시작 시각 순이고 학교 · 학과로 거른다', async () => {
+  it('투어 목록은 모집 중만 시작 시각 순이고 학교 · 학과로 거른다', async () => {
     const campuses = await listCampuses();
     const ids = async (filter: TourFilter) => (await listTours(filter, campuses)).map((t) => t.id);
     expect(await ids({})).toEqual([1, 3, 4, 5, 6]);
@@ -512,7 +512,7 @@ describe('tours', () => {
     expect((res.body.data as { campus_id?: number }).campus_id).toBe(2);
   });
 
-  it('탐방 상세: 승인된 신청자에게 오픈채팅과 내 신청', async () => {
+  it('투어 상세: 승인된 신청자에게 오픈채팅과 내 신청', async () => {
     await login('seojun@demo.kr');
     expect(await getTour(1, await listCampuses())).toMatchObject({
       id: 1,
@@ -530,7 +530,7 @@ describe('tours', () => {
     });
   });
 
-  it('그 탐방의 가이드에게도 오픈채팅이 있고 신청은 없다', async () => {
+  it('그 투어의 가이드에게도 오픈채팅이 있고 신청은 없다', async () => {
     await login('guide@demo.kr');
     expect(await getTour(1, await listCampuses())).toMatchObject({
       openChatUrl: DEMO_OPEN_CHAT,
@@ -548,7 +548,7 @@ describe('tours', () => {
     });
   });
 
-  it('없는 탐방은 404 NOT_FOUND(봉투 E404)', async () => {
+  it('없는 투어는 404 NOT_FOUND(봉투 E404)', async () => {
     await expect(getTour(99, await listCampuses())).rejects.toMatchObject({
       status: 404,
       code: 'NOT_FOUND',
@@ -568,7 +568,7 @@ describe('wishes', () => {
     date: null,
   };
 
-  it('희망 사항 등록 → 탐방 찾기 → 신청 → 내 탐방', async () => {
+  it('희망 사항 등록 → 투어 찾기 → 신청 → 내 투어', async () => {
     await login('student@demo.kr');
     const campuses = listCampuses();
     const wish = await postTourWish(wishInput, campuses);
@@ -957,7 +957,7 @@ describe('applications', () => {
     await expect(apply(1)).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
   });
 
-  it('내 탐방 목록은 최근 신청부터, 탐방 제목 · 쿠폰 수(확장 coupon_count)', async () => {
+  it('내 투어 목록은 최근 신청부터, 투어 제목 · 쿠폰 수(확장 coupon_count)', async () => {
     await login('seojun@demo.kr');
     const list = await getMyApplications(campuses());
     expect(list.map((a) => a.tour.id)).toEqual([1, 2, 7]);
@@ -989,7 +989,7 @@ describe('applications', () => {
     ).rejects.toMatchObject({ status: 404, code: 'NOT_FOUND' });
   });
 
-  it('미래 탐방(6) 신청은 취소되고(CANCELED), 취소 후 다시 신청할 수 있다', async () => {
+  it('미래 투어(6) 신청은 취소되고(CANCELED), 취소 후 다시 신청할 수 있다', async () => {
     await login('student@demo.kr');
     const app = await postApplication(6, '수업이 궁금해요', campuses());
     expect(app.cancellable).toBe(true);
@@ -1018,7 +1018,7 @@ describe('applications', () => {
     expect(board.applicants.map((a) => a.id)).toEqual([again.id]); // 취소한 신청은 빠진다
   });
 
-  it('탐방 당일 취소는 CANCEL_AFTER_TOUR_DATE(백엔드 E409_INVALID_APPLICATION_STATUS를 신청을 다시 읽어 세분)', async () => {
+  it('투어 당일 취소는 CANCEL_AFTER_TOUR_DATE(백엔드 E409_INVALID_APPLICATION_STATUS를 신청을 다시 읽어 세분)', async () => {
     await login('seojun@demo.kr');
     await expect(
       postCancelApplication(applicationOf('seojun@demo.kr', 1).id, campuses()),
@@ -1029,7 +1029,7 @@ describe('applications', () => {
     });
   });
 
-  it('가이드 탐방 목록: 시작 시각 순, 신청 집계(승인 + 대기)와 코스 상태(확정 전이면 코스 조회로 합성)', async () => {
+  it('가이드 투어 목록: 시작 시각 순, 신청 집계(승인 + 대기)와 코스 상태(확정 전이면 코스 조회로 합성)', async () => {
     await login('guide@demo.kr');
     const list = await getGuideTours(campuses());
     expect(list.map((t) => t.id)).toEqual([7, 1, 6]);
@@ -1054,7 +1054,7 @@ describe('applications', () => {
     ).rejects.toMatchObject({ status: 403, code: 'FORBIDDEN' });
   });
 
-  it('신청자 보드: 신청 순서 · 학년 · 인증, 남의 탐방은 403', async () => {
+  it('신청자 보드: 신청 순서 · 학년 · 인증, 남의 투어는 403', async () => {
     await login('guide@demo.kr');
     const board = await getApplicantsBoard(1, campuses());
     expect(board.tour).toMatchObject({ id: 1, title: DEMO_TOUR_TITLE });
@@ -1091,7 +1091,7 @@ describe('applications', () => {
     });
   });
 
-  it('정원이 찬 탐방의 승인은 CAPACITY_EXCEEDED(승인 · 거절의 E409_TOUR_FULL)', async () => {
+  it('정원이 찬 투어의 승인은 CAPACITY_EXCEEDED(승인 · 거절의 E409_TOUR_FULL)', async () => {
     await login('guide@demo.kr');
     mutate((db) => {
       db.tours.find((t) => t.id === 1)!.capacity = 2; // 승인 2명 = 정원
@@ -1138,7 +1138,7 @@ describe('applications', () => {
     expect(applicationOf('yujin@demo.kr', 1).status).toBe('PENDING');
   });
 
-  it('와이어: 내 탐방(고교생 · 대학생) · 신청자 목록 · 승인 · 취소가 명세 T-04 · A-02~04 예시와 같은 모양', async () => {
+  it('와이어: 내 투어(고교생 · 대학생) · 신청자 목록 · 승인 · 취소가 명세 T-04 · A-02~04 예시와 같은 모양', async () => {
     const seojun = await login('seojun@demo.kr');
     const mine = await rawFetch<Envelope>('/users/me/tours', {
       method: 'GET',
@@ -1218,7 +1218,7 @@ describe('applications', () => {
     expect([ownerTours.status, ownerTours.body.code]).toEqual([403, 'E403']);
   });
 
-  it('내 탐방 ?status=는 탐방 상태로 거른다', async () => {
+  it('내 투어 ?status=는 투어 상태로 거른다', async () => {
     const { token } = await login('seojun@demo.kr');
     const res = await rawFetch<Envelope>('/users/me/tours?status=COMPLETED', {
       method: 'GET',
@@ -1228,7 +1228,7 @@ describe('applications', () => {
   });
 });
 
-describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete)', () => {
+describe('투어 개설 · 취소 · 완료 (POST /tours · /cancel · /complete)', () => {
   // 백엔드 T-03 · T-05 · T-06 와이어와 가이드 탐방 합성(`getGuideTour`). 409 하나를 탐방을 다시 읽어 세분한다(2B′-R13).
   const campuses = () => listCampuses();
   type Envelope = { code: string; data: Record<string, unknown> | null; errors?: unknown };
@@ -1241,7 +1241,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     openChatUrl: 'https://open.kakao.com/o/x',
   };
 
-  it('T-03: 본문 여섯 키 그대로 보내고(intro) 새 탐방이 파생 제목 · 서울 시각으로 읽힌다', async () => {
+  it('T-03: 본문 여섯 키 그대로 보내고(intro) 새 투어가 파생 제목 · 서울 시각으로 읽힌다', async () => {
     await login('guide@demo.kr');
     const bodies: unknown[] = [];
     server.events.on('request:start', ({ request }) => {
@@ -1300,7 +1300,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     await expect(postTour({ ...NEW_TOUR, introduction: '' })).rejects.toMatchObject({
       status: 400,
       code: 'VALIDATION',
-      fieldErrors: { introduction: '탐방 소개는 1~300자로 적어 주세요.' },
+      fieldErrors: { introduction: '투어 소개는 1~300자로 적어 주세요.' },
     });
     await expect(postTour({ ...NEW_TOUR, capacity: 11 })).rejects.toMatchObject({
       fieldErrors: { capacity: '모집 정원은 1~10명으로 적어 주세요.' },
@@ -1354,7 +1354,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     expect(res.body.code).toBe(TOUR_PROFILE_REQUIRED.code);
   });
 
-  it('T-06: 탐방 1(오늘) 완료 → COMPLETED, 와이어는 명세 예시와 같은 모양', async () => {
+  it('T-06: 투어 1(오늘) 완료 → COMPLETED, 와이어는 명세 예시와 같은 모양', async () => {
     const { token } = await login('guide@demo.kr');
     const res = await rawFetch<Envelope>('/tours/1/complete', { method: 'POST', token });
     expect([res.status, res.body.code]).toEqual([200, 'S200']);
@@ -1363,7 +1363,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     expect((await getTour(1, campuses())).status).toBe('COMPLETED');
   });
 
-  it('T-06 postCompleteTour: 성공하면 값 없이 끝나고 탐방이 COMPLETED', async () => {
+  it('T-06 postCompleteTour: 성공하면 값 없이 끝나고 투어가 COMPLETED', async () => {
     await login('guide@demo.kr');
     await expect(postCompleteTour(1, campuses())).resolves.toBeUndefined();
     expect((await getTour(1, campuses())).status).toBe('COMPLETED');
@@ -1398,7 +1398,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     }
   });
 
-  it('T-06: 서버가 E409_INVALID_TOUR_STATUS만 주면 탐방을 다시 읽어 세분한다(실서버 대리)', async () => {
+  it('T-06: 서버가 E409_INVALID_TOUR_STATUS만 주면 투어를 다시 읽어 세분한다(실서버 대리)', async () => {
     await login('guide@demo.kr');
     server.use(
       http.post('/api/tours/:tourId/complete', () => wireFail('E409_INVALID_TOUR_STATUS')),
@@ -1468,7 +1468,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     });
   });
 
-  it('권한: 남의 탐방 · 고교생 · 비로그인은 완료 · 취소 모두 FORBIDDEN / UNAUTHORIZED', async () => {
+  it('권한: 남의 투어 · 고교생 · 비로그인은 완료 · 취소 모두 FORBIDDEN / UNAUTHORIZED', async () => {
     await login('guide-dku@demo.kr');
     await expect(postCancelTour(1, campuses())).rejects.toMatchObject({
       status: 403,
@@ -1516,7 +1516,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     expect(apps.every((a) => a.activeUserId === null)).toBe(true);
   });
 
-  it('getGuideTour: 확정 코스 3곳 · 오늘 탐방은 완료 · 취소 모두 가능', async () => {
+  it('getGuideTour: 확정 코스 3곳 · 오늘 투어는 완료 · 취소 모두 가능', async () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
     await login('guide@demo.kr');
     const detail = await getGuideTour(1, campuses());
@@ -1525,14 +1525,14 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     expect(detail.actions).toEqual({ completable: true, cancellable: true });
   });
 
-  it('getGuideTour: 날짜 전 탐방(6)은 완료 불가 · 취소 가능, 코스가 없으면 0곳', async () => {
+  it('getGuideTour: 날짜 전 투어(6)은 완료 불가 · 취소 가능, 코스가 없으면 0곳', async () => {
     await login('guide@demo.kr');
     const detail = await getGuideTour(6, campuses());
     expect(detail.courseStopCount).toBe(0);
     expect(detail.actions).toEqual({ completable: false, cancellable: true });
   });
 
-  it('getGuideTour: 완료 · 취소된 탐방은 둘 다 불가', async () => {
+  it('getGuideTour: 완료 · 취소된 투어는 둘 다 불가', async () => {
     await login('guide@demo.kr');
     expect((await getGuideTour(7, campuses())).actions).toEqual({
       completable: false,
@@ -1545,7 +1545,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     });
   });
 
-  it('getGuideTour: 남의 탐방은 코스 조회가 403이라 FORBIDDEN을 그대로 낸다', async () => {
+  it('getGuideTour: 남의 투어는 코스 조회가 403이라 FORBIDDEN을 그대로 낸다', async () => {
     await login('guide-dku@demo.kr');
     await expect(getGuideTour(1, campuses())).rejects.toMatchObject({
       status: 403,
@@ -1553,7 +1553,7 @@ describe('탐방 개설 · 취소 · 완료 (POST /tours · /cancel · /complete
     });
   });
 
-  it('getGuideTour: 탐방 상세와 코스를 함께 부른다(직렬이 아니다)', async () => {
+  it('getGuideTour: 투어 상세와 코스를 함께 부른다(직렬이 아니다)', async () => {
     await login('guide@demo.kr');
     const seen = await requestsDuring(() => getGuideTour(6, campuses()));
     expect(seen.sort()).toEqual(['GET /campuses', 'GET /tours/6', 'GET /tours/6/course']);
@@ -1792,7 +1792,7 @@ describe('courses', () => {
     });
   });
 
-  it('승인 0명인 탐방의 초안은 NO_APPROVED_APPLICANTS(E409_NO_APPROVED_APPLICANT)', async () => {
+  it('승인 0명인 투어의 초안은 NO_APPROVED_APPLICANTS(E409_NO_APPROVED_APPLICANT)', async () => {
     await login('guide@demo.kr');
     await expect(postCourseDraft(6, await listCampuses())).rejects.toMatchObject({
       status: 409,
@@ -1857,7 +1857,7 @@ describe('courses', () => {
     expect(await getGuideCourse(1, campuses)).toEqual(course);
   });
 
-  it('리뷰 없는 상점 · 탐방 날짜에 제휴가 없는 상점', async () => {
+  it('리뷰 없는 상점 · 투어 날짜에 제휴가 없는 상점', async () => {
     resetDb({ today: new Date(), checkpoint: 'CONFIRMED' });
     mutate((db) => {
       const [, meal, cafe] = db.courseStops
@@ -2069,7 +2069,7 @@ describe('coupons', () => {
     expect((await getMyApplication(app.id, campuses())).couponCount).toBe(2);
   });
 
-  it('지난 탐방 쿠폰은 사용 완료 · 리뷰 작성, 남의 쿠폰은 NOT_FOUND', async () => {
+  it('지난 투어 쿠폰은 사용 완료 · 리뷰 작성, 남의 쿠폰은 NOT_FOUND', async () => {
     await login('seojun@demo.kr');
     const list = await getMyCoupons(undefined, campuses());
     expect(list.map((c) => [c.tourId, c.storeId, c.state, c.reviewWritten])).toEqual([

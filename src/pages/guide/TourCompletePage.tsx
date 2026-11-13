@@ -16,9 +16,9 @@ import { TopBar } from '@/shared/ui/TopBar';
 import { GuideTourGate } from './GuideTourGate';
 
 const STEPS = [
-  '탐방이 실제로 종료됐는지 확인',
+  '투어가 실제로 종료됐는지 확인',
   '완료 시 참가자에게 리뷰 작성 안내',
-  '가이드의 지난 탐방 목록에 저장',
+  '가이드의 지난 투어 목록에 저장',
 ];
 
 /**
@@ -38,7 +38,7 @@ export function TourCompletePage() {
     sending.current = true;
     complete.mutate(undefined, {
       onSuccess: () => {
-        toast('탐방을 완료 처리했어요.');
+        toast('투어를 완료 처리했어요.');
         void navigate('/guide/tours?tab=past', { replace: true });
       },
       onError: (error) => toast.error(errorMessage(error.code)),
@@ -49,17 +49,17 @@ export function TourCompletePage() {
   }
 
   return (
-    <GuideTourGate title="탐방 종료 · 완료 처리" back={applicantsPath} query={query}>
+    <GuideTourGate title="투어 종료 · 완료 처리" back={applicantsPath} query={query}>
       {(detail) => {
         const { tour, courseStopCount } = detail;
         const state = completeActionState(detail);
         return (
           <>
-            <TopBar title="탐방 종료 · 완료 처리" back={applicantsPath} />
+            <TopBar title="투어 종료 · 완료 처리" back={applicantsPath} />
             <Page className={BOTTOM_ACTION_PAGE}>
               <PageHeading
                 as="h2"
-                title="탐방을 마쳤나요?"
+                title="투어를 마쳤나요?"
                 description="실제 진행이 끝난 후 완료 처리해 주세요."
               />
 
@@ -94,7 +94,7 @@ export function TourCompletePage() {
                   hint={state.enabled ? undefined : { reason: state.reason, action: state.action }}
                   onClick={onComplete}
                 >
-                  탐방 완료 처리
+                  투어 완료 처리
                 </Button>
               </BottomAction>
             </Page>

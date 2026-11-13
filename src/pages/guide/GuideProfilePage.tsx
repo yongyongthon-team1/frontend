@@ -145,7 +145,7 @@ export function GuideProfilePage() {
         <PageHeading
           as="h2"
           title="내 이야기를 소개해 주세요."
-          description="탐방 참가자에게 보여줄 가이드 정보예요."
+          description="투어 참가자에게 보여줄 가이드 정보예요."
         />
         {body}
       </Page>

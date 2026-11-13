@@ -32,7 +32,7 @@ describe('쿠폰 목록 · 상세 (hs-s09)', () => {
 
     await user.click(items[0]!);
     expect(await screen.findByTestId('coupon-code')).toHaveTextContent(/^\d{3} \d{3}$/);
-    expect(screen.getByRole('heading', { name: '탐방의 작은 혜택' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '투어의 작은 혜택' })).toBeInTheDocument();
     expect(screen.getByText('함께 둘러볼 동네 가게에서 사용해요.')).toBeInTheDocument();
     expect(screen.getByText('사용 가능')).toBeInTheDocument();
     expect(screen.getByText('쿠폰 코드')).toBeInTheDocument();
@@ -41,7 +41,7 @@ describe('쿠폰 목록 · 상세 (hs-s09)', () => {
     ).toBeInTheDocument();
     const startsAt = getDb().tours.find((t) => t.id === 1)!.startsAt;
     expect(
-      screen.getByText(`${formatDotDate(startsAt)} 탐방 당일에만 사용할 수 있어요.`),
+      screen.getByText(`${formatDotDate(startsAt)} 투어 당일에만 사용할 수 있어요.`),
     ).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '코스 지도로 돌아가기' })).toHaveAttribute(
       'href',
@@ -164,7 +164,7 @@ describe('리뷰 진입점 (R-01)', () => {
     await router.navigate(`/coupons/${couponId}`);
     await user.click(await screen.findByRole('link', { name: '방문 리뷰 작성하기' }));
     expect(
-      await screen.findByRole('heading', { name: '오늘 탐방은 어땠나요?' }),
+      await screen.findByRole('heading', { name: '오늘 투어는 어땠나요?' }),
     ).toBeInTheDocument();
     expect(router.state.location.pathname + router.state.location.search).toBe(
       `/reviews/new?couponId=${couponId}`,

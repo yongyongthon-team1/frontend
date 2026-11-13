@@ -76,7 +76,7 @@ export function CourseDraftPage() {
 
   return (
     <>
-      <TopBar title="탐방 코스 초안" back={`${base}/applicants`} />
+      <TopBar title="투어 코스 초안" back={`${base}/applicants`} />
       <Page>{body}</Page>
     </>
   );

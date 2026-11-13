@@ -37,7 +37,7 @@ describe('가드', () => {
     const { router, queryClient } = await renderApp('/login');
     useSession.setState({ token: sessionTokenOf('student@demo.kr') });
     await act(() => router.navigate('/my-tours'));
-    expect(await screen.findByRole('link', { name: '내 탐방' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '내 투어' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -74,7 +74,7 @@ describe('로그아웃', () => {
 describe('레이아웃', () => {
   it('고교생 하단 탭 3개', async () => {
     await renderApp('/me', { as: 'student' });
-    for (const n of ['탐색', '내 탐방', 'MY']) {
+    for (const n of ['탐색', '내 투어', 'MY']) {
       expect(await screen.findByRole('link', { name: n })).toBeInTheDocument();
     }
   });
@@ -84,7 +84,7 @@ describe('레이아웃', () => {
       'guide',
       '/guide',
       [
-        ['내 탐방', '/guide'],
+        ['내 투어', '/guide'],
         ['코스 편집', '/guide/course'],
         ['MY', '/guide/me'],
       ],
@@ -104,14 +104,14 @@ describe('레이아웃', () => {
     expect(links.map((a) => [a.textContent, a.getAttribute('href')])).toEqual(tabs);
   });
 
-  it('가이드 첫 화면 자리: 내가 개설한 탐방 링크, 코스 편집 탭 아님', async () => {
+  it('가이드 첫 화면 자리: 내가 개설한 투어 링크, 코스 편집 탭 아님', async () => {
     await renderApp('/guide', { as: 'guide' });
-    expect(await screen.findByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '내가 개설한 투어' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
     const nav = screen.getByRole('navigation', { name: '주요 메뉴' });
-    expect(within(nav).getByRole('link', { name: '내 탐방' })).toHaveAttribute(
+    expect(within(nav).getByRole('link', { name: '내 투어' })).toHaveAttribute(
       'aria-current',
       'page',
     );
@@ -121,11 +121,11 @@ describe('레이아웃', () => {
   });
 
   it.each([
-    ['student', '/me/status', 'MY', ['탐색', '내 탐방']],
-    ['guide', '/guide/me/status', 'MY', ['내 탐방', '코스 편집']],
-    ['guide', '/guide/wishes', '내 탐방', ['코스 편집', 'MY']],
-    ['student', '/me/wishes', 'MY', ['탐색', '내 탐방']],
-    ['student', '/me/wishes/1/edit', 'MY', ['탐색', '내 탐방']],
+    ['student', '/me/status', 'MY', ['탐색', '내 투어']],
+    ['guide', '/guide/me/status', 'MY', ['내 투어', '코스 편집']],
+    ['guide', '/guide/wishes', '내 투어', ['코스 편집', 'MY']],
+    ['student', '/me/wishes', 'MY', ['탐색', '내 투어']],
+    ['student', '/me/wishes/1/edit', 'MY', ['탐색', '내 투어']],
     ['owner', '/owner/report', '내 가게', ['쿠폰']],
   ])('%s 인증 화면(%s)에서 %s 탭만 활성', async (as, path, tab, others) => {
     await renderApp(path, { as });
