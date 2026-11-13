@@ -153,6 +153,24 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     expect(screen.queryByText('지역 데이터 점수 · 제휴 여부 · 리뷰 요약')).toBeNull();
   });
 
+  it('확정 전에도 코스 지도가 확정 버튼 아래에 늘 펼쳐져 있고, 순서를 바꾸면 핀 번호가 따라가며 핀은 지점 시트를 연다', async () => {
+    const { user } = await openCourse();
+    const map = screen.getByRole('region', { name: '코스 지도' });
+    const cta = screen.getByRole('button', { name: '이 코스로 확정하기' });
+    expect(cta.compareDocumentPosition(map) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    // 테스트에는 카카오 키가 없어 도식 지도가 그려진다(결정 0004) — 핀 이름은 `{번호} {이름}`.
+    expect(within(map).getByRole('button', { name: '② 렌토' })).toBeInTheDocument();
+
+    const sheet = await openStopSheet(user, '렌토');
+    await user.click(within(sheet).getByRole('button', { name: '아래로 이동' }));
+    await waitFor(() =>
+      expect(within(map).getByRole('button', { name: '③ 렌토' })).toBeInTheDocument(),
+    );
+
+    await user.click(within(map).getByRole('button', { name: '② 타임리스커피' }));
+    expect(await screen.findByRole('dialog', { name: '타임리스커피' })).toBeInTheDocument();
+  });
+
   it('AI 결과 표시: 히어로 배지 하나 + AI 추천 이유를 보이는 지점마다 화면 낭독기용 표시', async () => {
     await openCourse();
     // 1단계의 "✦ 배지 4개"(위쪽 칩 + 지점 3곳)와 같은 뜻 — 지점의 ✦는 장식이라 숨기고 글로 읽힌다.

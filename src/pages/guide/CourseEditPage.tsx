@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Navigate, useNavigate, useParams } from 'react-router';
 import { toast } from 'sonner';
 import { InsightCard } from '@/features/campuses/components/InsightCard';
+import { MapView } from '@/features/courses/components/MapView';
 import { StopActionSheet } from '@/features/courses/components/StopActionSheet';
 import {
   COURSE_NOTE_MAX,
@@ -20,6 +21,7 @@ import {
   useReorderStops,
   useUpdateStop,
 } from '@/features/courses/queries';
+import { useDemoStore } from '@/demo/demoStore';
 import { cn } from '@/shared/lib/cn';
 import { formatDuration } from '@/shared/lib/date';
 import { errorMessage } from '@/shared/lib/errors';
@@ -71,6 +73,8 @@ export function CourseEditPage() {
   const [deleteStopId, setDeleteStopId] = useState<number | null>(null);
   const [regenerateOpen, setRegenerateOpen] = useState(false);
   const listRef = useRef<HTMLOListElement>(null);
+  // 시연 패널의 지도 `도식`: 카카오맵을 부르지 않고 도식 지도로 고정한다(결정 0004의 수동 토글).
+  const mapMode = useDemoStore((s) => s.mapMode);
   const scheduleHeadingRef = useRef<HTMLHeadingElement>(null);
   /** 지점 시트를 연 `≡`의 지점과 그때의 순서 — 창이 다 닫히면 포커스를 이리로 돌려준다. */
   const focusReturn = useRef<{ stopId: number; index: number } | null>(null);
@@ -274,6 +278,23 @@ export function CourseEditPage() {
             이 코스로 확정하기
           </Button>
         </div>
+
+        {/* 확정 전에도 코스 지도를 늘 펼쳐 둔다. 편집(순서 · 교체 · 빼기 · 추가)하면 핀 · 선 · 영역이 바로 따라간다.
+            지점 카드 3장이 무대 화면에 다 보여야 해서(무대 ②) 목록 · 확정 버튼 아래에 둔다. 핀은 그 지점의 시트를 연다. */}
+        {stops.length > 0 ? (
+          <section aria-label="코스 지도" className="mt-4">
+            <MapView
+              stops={stops}
+              forceSchematic={mapMode === 'schematic'}
+              onSelect={(stopId) => {
+                if (busy) return;
+                const index = stops.findIndex((s) => s.id === stopId);
+                focusReturn.current = { stopId, index };
+                setSheetStopId(stopId);
+              }}
+            />
+          </section>
+        ) : null}
 
         <InfoCard className="mt-6" muted title="추천 상점 기준" description={course.criteria} />
         <div className="mt-3">

@@ -1,4 +1,4 @@
-import { useCallback } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { CustomOverlayMap, Map as KakaoMap, Polyline } from 'react-kakao-maps-sdk';
 import { useKakaoMaps } from '@/features/courses/kakaoLoader';
 import { isKoreaCoordinate, type CourseStop } from '@/features/courses/model';
@@ -40,20 +40,29 @@ function KakaoCourseMap({ stops, onSelect }: Pick<MapViewProps, 'stops' | 'onSel
     .getPropertyValue('--color-primary')
     .trim();
 
+  // 모든 지점이 보이게 영역을 맞춘다. 처음 그릴 때뿐 아니라 지점이 바뀔 때(코스 편집의 순서 · 교체 · 빼기 · 추가)마다
+  // 다시 맞춘다 — 같은 지점 목록이 다시 내려온 것(재조회)이면 키가 같아 그대로 둔다.
+  const [map, setMap] = useState<kakao.maps.Map | null>(null);
+  const stopsKey = stops.map((s) => `${s.id}:${s.lat},${s.lng}`).join('|');
   const fitBounds = useCallback(
-    (map: kakao.maps.Map) => {
+    (target: kakao.maps.Map) => {
       if (stops.length < 2) return;
       const bounds = new kakao.maps.LatLngBounds();
       for (const s of stops) bounds.extend(new kakao.maps.LatLng(s.lat, s.lng));
-      map.setBounds(bounds);
+      target.setBounds(bounds);
     },
-    [stops],
+    // stopsKey가 지점 좌표를 다 담는다 — 배열 자체가 새로 와도 좌표가 같으면 다시 맞추지 않는다.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    [stopsKey],
   );
+  useEffect(() => {
+    if (map !== null) fitBounds(map);
+  }, [map, fitBounds]);
 
   return (
     <KakaoMap
       center={center}
-      onCreate={fitBounds}
+      onCreate={setMap}
       className="h-[var(--map-h)] w-full overflow-hidden rounded-lg"
     >
       <Polyline path={path} strokeWeight={4} strokeColor={lineColor || undefined} />
