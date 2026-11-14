@@ -45,6 +45,7 @@ function toFormValues(s: WishSearch): WishFormValues {
  * 고교생 홈 · T-01 희망 사항 등록(hs-s03 · H01을 V2 부품으로, 결정 0011). 학교 · 학과 · 탐방 희망 사항 · 희망 날짜(선택)를
  * `POST /tour-wishes`로 한 번 저장하고 결과 화면 `/tours?{search}`로 간다(2C-R16) — AI는 쓰지 않는다. 주소에 검색이 있으면
  * (결과 화면의 `조건 바꾸기` · 뒤로 가기) 그 값으로 칸을 채우고, 없으면 시연 도구가 켜졌을 때 `DEMO_WISH`로 미리 채운다(2C-R19).
+ * 학과는 미리 채우지 않는다 — placeholder만 두고 발표자가 직접 적는다.
  */
 export function HomePage() {
   const navigate = useNavigate();
@@ -72,12 +73,11 @@ export function HomePage() {
   }, [form]);
 
   // 시연 미리 채움: 시연 도구가 마운트 뒤에 켜져도(원클릭 링크) 손대지 않은 빈 칸만 채운다. 학교는 캠퍼스 목록에 그 id가
-  // 있을 때만(실서버 id가 다르면 빈칸), 날짜는 채우지 않는다.
+  // 있을 때만(실서버 id가 다르면 빈칸), 날짜와 학과는 채우지 않는다.
   const campusList = campuses.data;
   useEffect(() => {
     if (!demoOn || touched || fromAddress !== null) return;
     const { getValues, setValue } = form;
-    if (getValues('major') === '') setValue('major', DEMO_WISH.major);
     if (getValues('wish') === '') setValue('wish', DEMO_WISH.wish);
     if (
       getValues('universityId') === '' &&

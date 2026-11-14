@@ -1,6 +1,6 @@
 import path from 'node:path';
 import type { Locator, Page } from '@playwright/test';
-import { DEMO_WISH } from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
+import { DEMO_MAJOR, DEMO_WISH } from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
 import { expect, test } from './fixtures';
 
 // 무대 노트북 화면 점검(Review Focus 3 · 판정 28 · 30). 골든 패스 핵심 정보 — 탐방 찾기 결과의 희망 원문 카드 · 첫 탐방 행,
@@ -110,6 +110,8 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
       await expect(page.getByLabel('학교', { exact: true })).toHaveValue(
         String(DEMO_WISH.universityId),
       );
+      // 학과만 미리 채우지 않으므로 직접 적어야 제출이 지나간다.
+      await page.getByLabel('학과', { exact: true }).fill(DEMO_MAJOR);
       await page.getByRole('button', { name: '희망 사항 남기고 탐방 찾기' }).click();
 
       const main = page.getByRole('main');

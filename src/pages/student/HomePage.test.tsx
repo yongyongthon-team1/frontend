@@ -93,17 +93,19 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     expect(field('희망 날짜 (선택)')).toHaveValue('');
   });
 
-  it('시연 도구가 켜져 있으면 DEMO_WISH로 미리 채운다(학교는 캠퍼스 목록이 온 뒤, 날짜는 비움)', async () => {
+  it('시연 도구가 켜져 있으면 DEMO_WISH로 미리 채운다(학교는 캠퍼스 목록이 온 뒤, 학과 · 날짜는 비움)', async () => {
     act(() => useDemoStore.setState({ enabled: true }));
     await renderApp('/', { as: 'student' });
     await campusesLoaded();
     await waitFor(() => expect(field('학교')).toHaveValue('2'));
-    expect(field('학과')).toHaveValue('산업디자인');
     expect(field('탐방 희망 사항')).toHaveValue(DEMO_WISH.wish);
+    // 학과는 미리 채우지 않는다 — placeholder만 보이고 발표자가 직접 적는다.
+    expect(field('학과')).toHaveValue('');
+    expect(field('학과')).toHaveAttribute('placeholder', '예: 산업디자인');
     expect(field('희망 날짜 (선택)')).toHaveValue('');
   });
 
-  it('시연 도구가 켜져 있어도 캠퍼스 목록에 id 2가 없으면 학교는 비워 두고 학과 · 희망 사항만 채운다', async () => {
+  it('시연 도구가 켜져 있어도 캠퍼스 목록에 id 2가 없으면 학교는 비워 두고 희망 사항만 채운다', async () => {
     act(() => useDemoStore.setState({ enabled: true }));
     server.use(
       http.get('/api/campuses', () => {
@@ -115,9 +117,9 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     );
     await renderApp('/', { as: 'student' });
     await screen.findByRole('option', { name: '강남대학교' });
-    await waitFor(() => expect(field('학과')).toHaveValue('산업디자인'));
-    expect(field('탐방 희망 사항')).toHaveValue(DEMO_WISH.wish);
+    await waitFor(() => expect(field('탐방 희망 사항')).toHaveValue(DEMO_WISH.wish));
     expect(field('학교')).toHaveValue('');
+    expect(field('학과')).toHaveValue('');
   });
 
   it('칸을 건드린 뒤에는 늦게 온 캠퍼스 목록으로 학교를 채우지 않는다(2C-R19)', async () => {
@@ -134,9 +136,8 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
       }),
     );
     const { user } = await renderApp('/', { as: 'student' });
-    // 학과 · 희망 사항은 캠퍼스 목록 없이도 바로 채워진다.
-    await waitFor(() => expect(field('학과')).toHaveValue('산업디자인'));
-    await user.clear(field('학과'));
+    // 희망 사항은 캠퍼스 목록 없이도 바로 채워진다(학과는 비어 있다).
+    await waitFor(() => expect(field('탐방 희망 사항')).toHaveValue(DEMO_WISH.wish));
     await user.type(field('학과'), '경영');
     release();
     await campusesLoaded();
@@ -200,6 +201,8 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     const { user, router } = await renderApp('/', { as: 'student' });
     await campusesLoaded();
     await waitFor(() => expect(field('학교')).toHaveValue('2'));
+    // 학과는 미리 채우지 않으므로 직접 적는다.
+    await user.type(field('학과'), '산업디자인');
     fireEvent.change(field('희망 날짜 (선택)'), { target: { value: '2027-01-15' } });
     await user.click(submitButton());
     await waitFor(() => expect(router.state.location.pathname).toBe('/tours'));
@@ -216,6 +219,8 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     const { user, router } = await renderApp('/', { as: 'student' });
     await campusesLoaded();
     await waitFor(() => expect(field('학교')).toHaveValue('2'));
+    // 학과는 미리 채우지 않으므로 직접 적는다.
+    await user.type(field('학과'), '산업디자인');
     await user.dblClick(submitButton());
     await waitFor(() => expect(submitButton()).toBeDisabled());
     await waitFor(() => expect(router.state.location.pathname).toBe('/tours'), { timeout: 3000 });
@@ -232,6 +237,8 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     const { user, router } = await renderApp('/', { as: 'student' });
     await campusesLoaded();
     await waitFor(() => expect(field('학교')).toHaveValue('2'));
+    // 학과는 미리 채우지 않으므로 직접 적는다.
+    await user.type(field('학과'), '산업디자인');
     await user.click(submitButton());
     await waitFor(() => expect(field('학교')).toHaveAccessibleDescription('학교를 골라 주세요.'));
     expect(field('학교')).toBeInvalid();
@@ -255,6 +262,8 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
       const { user, router } = await renderApp('/', { as: 'student' });
       await campusesLoaded();
       await waitFor(() => expect(field('학교')).toHaveValue('2'));
+      // 학과는 미리 채우지 않으므로 직접 적는다.
+      await user.type(field('학과'), '산업디자인');
       await user.click(submitButton());
       // 희망 사항 칸은 안내(`한두 문장 · 100자 이내`)도 설명에 같이 든다.
       await waitFor(() =>
@@ -272,6 +281,8 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     const { user, router } = await renderApp('/', { as: 'student' });
     await campusesLoaded();
     await waitFor(() => expect(field('학교')).toHaveValue('2'));
+    // 학과는 미리 채우지 않으므로 직접 적는다.
+    await user.type(field('학과'), '산업디자인');
     await user.click(submitButton());
     expect(
       await screen.findByText('문제가 생겼어요. 잠시 후 다시 시도해 주세요.'),
@@ -285,6 +296,8 @@ describe('홈 · T-01 희망 사항 등록 (hs-s03 · H01)', () => {
     const { user, router } = await renderApp('/', { as: 'student' });
     await campusesLoaded();
     await waitFor(() => expect(field('학교')).toHaveValue('2'));
+    // 학과는 미리 채우지 않으므로 직접 적는다.
+    await user.type(field('학과'), '산업디자인');
     await user.click(submitButton());
     expect(await screen.findByText(errorMessage('FORBIDDEN'))).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/');
