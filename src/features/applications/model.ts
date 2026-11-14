@@ -163,6 +163,12 @@ export const TOUR_CAPACITY_MAX = 10;
 /** 탐방 소개 최대 길이(명세 T-03: 300자 이내). */
 export const TOUR_INTRO_MAX = 300;
 
+/**
+ * 탐방 길이 상한(분). 명세에 없어 프론트만 막는다. 서버가 코스 지점 시각을 탐방 시작부터 60분 간격으로 깔고 종료
+ * 시각을 보지 않아, 창이 길면 마지막 지점 뒤에 몇 시간이 체류 시간으로 남는다(11시간 탐방 → 60 · 60 · 540분).
+ */
+export const TOUR_MAX_MINUTES = 4 * 60;
+
 /** 가이드 탐방 상세(G09)의 버튼 활성(`computeTourActions`). */
 export interface TourActions {
   completable: boolean;

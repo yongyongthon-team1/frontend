@@ -4,6 +4,7 @@ import { toast } from 'sonner';
 import {
   TOUR_CAPACITY_MAX,
   TOUR_INTRO_MAX,
+  TOUR_MAX_MINUTES,
   type CreateTourInput,
 } from '@/features/applications/model';
 import { useCreateTour } from '@/features/applications/queries';
@@ -61,6 +62,12 @@ const FIELDS: readonly Field[] = [
 
 const isField = (name: string): name is Field => (FIELDS as readonly string[]).includes(name);
 
+/** `HH:mm` → 자정부터의 분. 날짜가 하루 안이라 그대로 뺄 수 있다. */
+const minutesOf = (hhmm: string) => {
+  const [h, m] = hhmm.split(':').map(Number);
+  return h * 60 + m;
+};
+
 /**
  * 폼 검사. 학교를 알면(`vacations` 있음) 날짜가 방학 안인지도 본다 — 서버가 최종 판정이고 이것은 안내다.
  * 위에서부터 칸마다 처음 걸린 문구 하나씩이다.
@@ -79,6 +86,11 @@ function validate(
   if (values.endTime === '') errors.endTime = '종료 시간을 골라 주세요.';
   else if (values.startTime !== '' && values.endTime <= values.startTime) {
     errors.endTime = '종료 시간은 시작 시간보다 늦어야 해요.';
+  } else if (
+    values.startTime !== '' &&
+    minutesOf(values.endTime) - minutesOf(values.startTime) > TOUR_MAX_MINUTES
+  ) {
+    errors.endTime = `탐방은 ${TOUR_MAX_MINUTES / 60}시간 이내로 잡아 주세요.`;
   }
   const capacity = Number(values.capacity);
   if (
@@ -291,6 +303,9 @@ export function TourCreatePage() {
                   onChange={(e) => set('endTime', e.target.value)}
                 />
               </div>
+              <p className="mt-2 text-[12px] text-muted">
+                탐방은 최대 {TOUR_MAX_MINUTES / 60}시간까지 잡을 수 있어요.
+              </p>
             </Card>
 
             <TextField

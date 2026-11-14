@@ -167,6 +167,11 @@ describe('G04 탐방 개설 (guide-s02)', () => {
   it.each([
     ['종료가 시작보다 이르면', { '종료 시간': '13:00' }, '종료 시간은 시작 시간보다 늦어야 해요.'],
     ['종료가 시작과 같으면', { '종료 시간': '14:00' }, '종료 시간은 시작 시간보다 늦어야 해요.'],
+    [
+      '탐방이 4시간을 넘으면',
+      { '시작 시간': '09:00', '종료 시간': '20:00' },
+      '탐방은 4시간 이내로 잡아 주세요.',
+    ],
     ['정원이 11이면', { 정원: '11' }, '모집 정원은 1~10명으로 적어 주세요.'],
     ['정원이 0이면', { 정원: '0' }, '모집 정원은 1~10명으로 적어 주세요.'],
     ['소개가 301자면', { '탐방 소개': 'ㄱ'.repeat(301) }, '300자 이내로 적어 주세요.'],
@@ -179,6 +184,15 @@ describe('G04 탐방 개설 (guide-s02)', () => {
     await user.click(screen.getByRole('button', { name: '모집 시작하기' }));
     expect(await screen.findByText(message)).toBeVisible();
     expect(posts()).toBe(0);
+  });
+
+  it('딱 4시간은 통과한다 — 서버가 지점 시각을 60분 간격으로 깔아 코스가 탐방 안에 들어온다', async () => {
+    const posts = countRequests('POST', '/tours');
+    const { user } = await renderApp('/guide/tours/new', { as: 'guide' });
+    await screen.findByRole('heading', { name: '어떤 하루를 보여줄까요?' });
+    await fillTourForm(user, { '시작 시간': '14:00', '종료 시간': '18:00' });
+    await user.click(screen.getByRole('button', { name: '모집 시작하기' }));
+    await waitFor(() => expect(posts()).toBe(1));
   });
 
   it('빈 폼은 칸마다 안내한다(소개 · 연락 링크는 필수, 소개는 10자 하한 없음)', async () => {
