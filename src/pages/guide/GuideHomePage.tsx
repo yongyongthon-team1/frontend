@@ -29,7 +29,7 @@ function GuideWishesLink() {
       <ListRow
         to="/guide/wishes"
         title="고교생 희망 사항"
-        meta="학생들이 남긴 희망 사항을 보고 투어를 준비해요."
+        meta="학생들이 남긴 희망 사항을 보고 탐방을 준비해요."
       />
     </div>
   );
@@ -42,7 +42,7 @@ function AllToursLink() {
       to="/guide/tours"
       className="mt-6 inline-flex min-h-11 items-center gap-1 self-start text-sm font-bold text-brand"
     >
-      내가 개설한 투어
+      내가 개설한 탐방
       <ChevronRight aria-hidden className="size-4 shrink-0" />
     </Link>
   );
@@ -65,7 +65,7 @@ export function GuideHomePage() {
   if (tours === undefined) {
     return (
       <Page className="pt-6">
-        <h1 className="sr-only">내 투어</h1>
+        <h1 className="sr-only">내 탐방</h1>
         <div>
           <BrandMark variant="wordmark" />
         </div>
@@ -92,14 +92,14 @@ export function GuideHomePage() {
           <BrandMark variant="wordmark" />
         </div>
         <PageHeading
-          title="아직 준비 중인 투어가 없어요."
+          title="아직 준비 중인 탐방이 없어요."
           description="학생들에게 특별한 대학 생활을 보여주세요."
           className="mt-5"
         />
         <div className="mt-6">
           <EmptyState
-            title={tours.length > 0 ? '진행 예정인 투어가 없어요.' : '아직 개설한 투어가 없어요.'}
-            action={{ label: '새 투어 개설하기', to: '/guide/tours/new' }}
+            title={tours.length > 0 ? '진행 예정인 탐방이 없어요.' : '아직 개설한 탐방이 없어요.'}
+            action={{ label: '새 탐방 개설하기', to: '/guide/tours/new' }}
           />
         </div>
         <GuideWishesLink />
@@ -118,12 +118,12 @@ export function GuideHomePage() {
         <BrandMark variant="wordmark" />
       </div>
       <PageHeading
-        title={`이번 주, ${upcoming >= 2 ? `${upcoming}개의` : '하나의'} 투어를\n준비하고 있어요.`}
+        title={`이번 주, ${upcoming >= 2 ? `${upcoming}개의` : '하나의'} 탐방을\n준비하고 있어요.`}
         description="학생들에게 특별한 대학 생활을 보여주세요."
         className="mt-5"
       />
 
-      <section aria-label="이번 투어" className="mt-6 rounded-xl bg-brand-soft p-5">
+      <section aria-label="이번 탐방" className="mt-6 rounded-xl bg-brand-soft p-5">
         <p className="truncate text-[13px] font-bold text-brand">
           {formatLongDate(focus.startsAt)}
           {dot}
@@ -186,7 +186,7 @@ function NoApplicants({ tour }: { tour: GuideTourSummary }) {
       </div>
       <PageHeading
         title="아직 신청자가 없어요."
-        description="학생들이 찾기 쉽도록 투어 소개를 점검해 봐요."
+        description="학생들이 찾기 쉽도록 탐방 소개를 점검해 봐요."
         className="mt-5"
       />
 
@@ -199,11 +199,11 @@ function NoApplicants({ tour }: { tour: GuideTourSummary }) {
         </span>
         <h2 className="mt-3 text-lg font-bold text-ink">첫 신청을 기다리는 중</h2>
         <p className="mt-1 text-[13px] text-muted">
-          모집 중인 투어가 학생의 투어 찾기 결과에 노출돼요.
+          모집 중인 탐방이 학생의 탐방 찾기 결과에 노출돼요.
         </p>
       </section>
 
-      <section aria-label="모집 중인 투어" className="mt-4 rounded-xl bg-surface p-5">
+      <section aria-label="모집 중인 탐방" className="mt-4 rounded-xl bg-surface p-5">
         <StatusChip>{chipLabel}</StatusChip>
         <h2 className="mt-3 truncate text-[17px] font-bold text-ink">{tour.title}</h2>
         <p className="mt-1 truncate text-[13px] text-muted">
@@ -221,7 +221,7 @@ function NoApplicants({ tour }: { tour: GuideTourSummary }) {
 
       <BottomAction>
         <Link to={`/tours/${tour.id}`} className={buttonClass('primary')}>
-          투어 상세 보기
+          탐방 상세 보기
         </Link>
       </BottomAction>
     </Page>

@@ -20,15 +20,15 @@ import { StatusChip } from '@/shared/ui/StatusChip';
 function headingOf(result: WishToursResult): { title: string; description: string } {
   const n = result.tours.length;
   if (n === 0) {
-    return { title: '아직 모집 중인\n투어가 없어요.', description: '다른 학교로 다시 찾아보세요.' };
+    return { title: '아직 모집 중인\n탐방이 없어요.', description: '다른 학교로 다시 찾아보세요.' };
   }
   if (result.fallback) {
     return {
-      title: `같은 학교 투어\n${n}개를 보여 드려요.`,
+      title: `같은 학교 탐방\n${n}개를 보여 드려요.`,
       description: '학과 · 날짜 조건을 빼고 찾았어요.',
     };
   }
-  return { title: `조건에 맞는 투어\n${n}개를 찾았어요.`, description: '날짜가 빠른 순이에요.' };
+  return { title: `조건에 맞는 탐방\n${n}개를 찾았어요.`, description: '날짜가 빠른 순이에요.' };
 }
 
 /** 원문 카드(`내가 남긴 희망 사항`). 주소의 희망 사항을 가공하지 않고 줄바꿈까지 그대로 보인다(2C-R16). */
@@ -126,7 +126,7 @@ export function TourResultsPage() {
         <div className="min-w-0 flex-1">
           {result.fallback && !empty ? (
             <StatusChip tone="warning" icon={<TriangleAlert className="size-4" />} className="mb-3">
-              조건에 맞는 투어가 없어요
+              조건에 맞는 탐방이 없어요
             </StatusChip>
           ) : null}
           <PageHeading title={heading.title} description={heading.description} />
@@ -143,7 +143,7 @@ export function TourResultsPage() {
         <section className="mt-4 rounded-xl bg-surface p-5">
           <StatusChip tone="info">0건</StatusChip>
           <h2 className="mt-3 text-lg font-bold text-ink">
-            {campus?.shortName}에 모집 중인 투어가 없어요
+            {campus?.shortName}에 모집 중인 탐방이 없어요
           </h2>
           <p className="mt-1 text-[13px] text-muted">학교를 바꿔 다시 찾아보세요.</p>
           <Link
@@ -154,7 +154,7 @@ export function TourResultsPage() {
           </Link>
         </section>
       ) : (
-        <ul aria-label="모집 중 투어" className="mt-4 rounded-xl bg-surface">
+        <ul aria-label="모집 중 탐방" className="mt-4 rounded-xl bg-surface">
           {result.tours.map((tour) => (
             <li
               key={tour.id}

@@ -261,7 +261,7 @@ function Redeemed({ result, onReset }: { result: RedeemResult; onReset(): void }
         </section>
         {result.tourVisitorCount !== null ? (
           <p className="mt-4 px-1 text-[13px] font-bold text-ink">
-            이번 투어로 온 학생 {result.tourVisitorCount}명
+            이번 탐방으로 온 학생 {result.tourVisitorCount}명
           </p>
         ) : null}
 
@@ -296,7 +296,7 @@ function Rejected({ notice, onReset }: { notice: CouponNotice; onReset(): void }
           <p className="mt-1 text-[13px] text-muted">{notice.description}</p>
         </section>
         <p className="mt-3 rounded-lg bg-danger-soft px-4 py-3 text-xs text-danger">
-          확인 항목: 코드 6자리 · 사용 여부 · 투어 당일 유효 여부
+          확인 항목: 코드 6자리 · 사용 여부 · 탐방 당일 유효 여부
         </p>
         <button
           type="button"

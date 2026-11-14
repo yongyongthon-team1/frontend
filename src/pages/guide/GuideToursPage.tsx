@@ -23,7 +23,7 @@ type Tab = 'upcoming' | 'past';
 
 const TABS: { value: Tab; label: string }[] = [
   { value: 'upcoming', label: '진행 예정' },
-  { value: 'past', label: '지난 투어' },
+  { value: 'past', label: '지난 탐방' },
 ];
 
 const dot = ' · ';
@@ -76,13 +76,13 @@ function TourCard({ tour }: { tour: GuideTourSummary }) {
             to={`/guide/tours/${tour.id}/complete`}
             className="inline-flex min-h-11 items-center px-1 text-xs text-muted underline underline-offset-2"
           >
-            투어 완료
+            탐방 완료
           </Link>
           <Link
             to={`/guide/tours/${tour.id}/cancel`}
             className="inline-flex min-h-11 items-center px-1 text-xs text-muted underline underline-offset-2"
           >
-            투어 취소
+            탐방 취소
           </Link>
         </div>
       )}
@@ -105,7 +105,7 @@ export function GuideToursPage() {
     <Page className="pt-6">
       <BrandMark variant="wordmark" />
       <PageHeading
-        title="내가 개설한 투어"
+        title="내가 개설한 탐방"
         description="모집 상태와 참가자를 한곳에서 관리해요."
         className="mt-5"
       />
@@ -115,7 +115,7 @@ export function GuideToursPage() {
           tabs={TABS}
           value={tab}
           onChange={onTab}
-          label="투어 구분"
+          label="탐방 구분"
         />
       </div>
 
@@ -145,8 +145,8 @@ function UpcomingList({ tours, hasPast }: { tours: GuideTourSummary[]; hasPast: 
   if (tours.length === 0) {
     return (
       <EmptyState
-        title={hasPast ? '진행 예정인 투어가 없어요.' : '아직 개설한 투어가 없어요.'}
-        action={{ label: '새 투어 개설하기', to: '/guide/tours/new' }}
+        title={hasPast ? '진행 예정인 탐방이 없어요.' : '아직 개설한 탐방이 없어요.'}
+        action={{ label: '새 탐방 개설하기', to: '/guide/tours/new' }}
       />
     );
   }
@@ -161,7 +161,7 @@ function UpcomingList({ tours, hasPast }: { tours: GuideTourSummary[]; hasPast: 
       </ul>
       <Link to="/guide/tours/new" className="mt-3 block rounded-xl bg-surface p-5">
         <span className="flex items-center gap-2 text-[17px] font-bold text-ink">
-          새 투어 개설하기
+          새 탐방 개설하기
           <ChevronRight aria-hidden className="size-5 shrink-0 text-muted" />
         </span>
         <span className="mt-1 block text-[13px] text-muted">
@@ -173,7 +173,7 @@ function UpcomingList({ tours, hasPast }: { tours: GuideTourSummary[]; hasPast: 
 }
 
 function PastList({ tours }: { tours: GuideTourSummary[] }) {
-  if (tours.length === 0) return <EmptyState title="아직 지난 투어가 없어요." />;
+  if (tours.length === 0) return <EmptyState title="아직 지난 탐방이 없어요." />;
   return (
     <ul className="flex flex-col gap-3">
       {tours.map((tour) => (

@@ -97,8 +97,8 @@ describe('createTour (T-03)', () => {
     [{ capacity: 11 }, 'capacity', '모집 정원은 1~10명으로 적어 주세요.'],
     [{ capacity: 2.5 }, 'capacity', '모집 정원은 1~10명으로 적어 주세요.'],
     [{ capacity: '5' }, 'capacity', '모집 정원은 1~10명으로 적어 주세요.'],
-    [{ intro: '   ' }, 'intro', '투어 소개는 1~300자로 적어 주세요.'],
-    [{ intro: '가'.repeat(301) }, 'intro', '투어 소개는 1~300자로 적어 주세요.'],
+    [{ intro: '   ' }, 'intro', '탐방 소개는 1~300자로 적어 주세요.'],
+    [{ intro: '가'.repeat(301) }, 'intro', '탐방 소개는 1~300자로 적어 주세요.'],
     [{ openChatUrl: '  ' }, 'openChatUrl', '연락 링크를 넣어 주세요.'],
     [{ openChatUrl: undefined }, 'openChatUrl', '연락 링크를 넣어 주세요.'],
   ] as const)('③ 형식 오류 %j → %s 칸', (patch, field, message) => {
@@ -166,24 +166,24 @@ describe('createTour (T-03)', () => {
 });
 
 describe('completeTour (T-06)', () => {
-  it('투어 날짜 당일이면 COMPLETED(투어 1)', () => {
+  it('탐방 날짜 당일이면 COMPLETED(탐방 1)', () => {
     const row = completeTour(db, guide(), 1, evening);
     expect(row.status).toBe('COMPLETED');
     expect(tourOf(1).status).toBe('COMPLETED');
   });
 
-  it('날짜 전이면 COMPLETE_BEFORE_TOUR_DATE(투어 6) — 백엔드 코드는 E409_INVALID_TOUR_STATUS', () => {
+  it('날짜 전이면 COMPLETE_BEFORE_TOUR_DATE(탐방 6) — 백엔드 코드는 E409_INVALID_TOUR_STATUS', () => {
     const e = errorOf(() => completeTour(db, guide(), 6, evening));
     expect([e.status, e.code]).toEqual([409, 'COMPLETE_BEFORE_TOUR_DATE']);
     expect(tourOf(6).status).toBe('RECRUITING');
   });
 
-  it('이미 완료된 투어(7)이면 TOUR_ALREADY_COMPLETED', () => {
+  it('이미 완료된 탐방(7)이면 TOUR_ALREADY_COMPLETED', () => {
     const e = errorOf(() => completeTour(db, guide(), 7, evening));
     expect([e.status, e.code]).toEqual([409, 'TOUR_ALREADY_COMPLETED']);
   });
 
-  it('취소된 투어면 backendError(409, E409_INVALID_TOUR_STATUS, ALREADY_PROCESSED)', () => {
+  it('취소된 탐방이면 backendError(409, E409_INVALID_TOUR_STATUS, ALREADY_PROCESSED)', () => {
     cancelTour(db, guide(), 6, evening);
     const e = errorOf(() => completeTour(db, guide(), 6, evening));
     expect([e.status, e.code, e.backendCode]).toEqual([
@@ -193,12 +193,12 @@ describe('completeTour (T-06)', () => {
     ]);
   });
 
-  it('마감(CLOSED) 투어도 날짜가 되면 완료한다', () => {
+  it('마감(CLOSED) 탐방도 날짜가 되면 완료한다', () => {
     tourOf(1).status = 'CLOSED';
     expect(completeTour(db, guide(), 1, evening).status).toBe('COMPLETED');
   });
 
-  it('없는 투어 404 · 남의 투어 403(상태 검사보다 앞)', () => {
+  it('없는 탐방 404 · 남의 탐방 403(상태 검사보다 앞)', () => {
     expect(errorOf(() => completeTour(db, guide(), 999, evening)).code).toBe('NOT_FOUND');
     const other = id('guide-dku@demo.kr');
     expect(errorOf(() => completeTour(db, other, 7, evening)).code).toBe('FORBIDDEN');
@@ -249,7 +249,7 @@ describe('cancelTour (T-05)', () => {
     expect(couponsOf(1).filter((c) => c.status === 'EXPIRED').length).toBeGreaterThan(0);
   });
 
-  it('다른 투어의 신청 · 쿠폰은 건드리지 않는다', () => {
+  it('다른 탐방의 신청 · 쿠폰은 건드리지 않는다', () => {
     const before = JSON.stringify(appsOf(2));
     cancelTour(db, guide(), 1, evening);
     expect(JSON.stringify(appsOf(2))).toBe(before);
@@ -265,16 +265,16 @@ describe('cancelTour (T-05)', () => {
     ]);
   });
 
-  it('완료된 투어(7)이면 TOUR_ALREADY_COMPLETED', () => {
+  it('완료된 탐방(7)이면 TOUR_ALREADY_COMPLETED', () => {
     const e = errorOf(() => cancelTour(db, guide(), 7, evening));
     expect([e.status, e.code]).toEqual([409, 'TOUR_ALREADY_COMPLETED']);
   });
 
-  it('날짜 전 투어(6)도 취소된다', () => {
+  it('날짜 전 탐방(6)도 취소된다', () => {
     expect(cancelTour(db, guide(), 6, evening).status).toBe('CANCELED');
   });
 
-  it('남의 투어 403 · 없는 투어 404', () => {
+  it('남의 탐방 403 · 없는 탐방 404', () => {
     expect(errorOf(() => cancelTour(db, id('guide-pending@demo.kr'), 1, evening)).code).toBe(
       'FORBIDDEN',
     );

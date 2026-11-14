@@ -33,14 +33,14 @@ describe('slotTimes', () => {
       '18:30',
     ]));
 
-  describe('투어 종료 시각(endsAt)을 알 때 (최종 리뷰 I2)', () => {
+  describe('탐방 종료 시각(endsAt)을 알 때 (최종 리뷰 I2)', () => {
     const START = '2026-11-15T14:00:00+09:00';
     const END = '2026-11-15T16:30:00+09:00';
 
     it('3곳은 endsAt이 있어도 그대로다(골든 패스 · 스테이지 ②가 기대는 시각)', () =>
       expect(slotTimes(START, 3, END)).toEqual(['14:00', '15:10', '16:00']));
 
-    it('4번째 곳은 투어 안(16:15)에 들어온다', () =>
+    it('4번째 곳은 탐방 안(16:15)에 들어온다', () =>
       expect(slotTimes(START, 4, END)).toEqual(['14:00', '15:10', '16:00', '16:15']));
 
     it('5곳이면 넘친 두 곳을 16:00과 종료 사이에 고르게 5분 단위로 놓는다', () =>
@@ -91,7 +91,7 @@ describe('stopKindLabel', () => {
 
 describe('stopDurations (2A-R6)', () => {
   const at = (visitTime: string) => ({ visitTime });
-  it('다음 지점 방문 시각까지, 마지막은 투어 종료까지 분 단위', () =>
+  it('다음 지점 방문 시각까지, 마지막은 탐방 종료까지 분 단위', () =>
     expect(
       stopDurations([at('14:00'), at('15:10'), at('16:00')], '2026-11-15T16:30:00+09:00'),
     ).toEqual([70, 50, 30]));

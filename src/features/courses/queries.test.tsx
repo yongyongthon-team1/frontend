@@ -56,7 +56,7 @@ function serveTour31(course: () => Response = () => wireOk(COURSE_SPOTS_OK.data)
 }
 
 describe('코스 훅', () => {
-  it('useGuideCourse: 캠퍼스 응답이 오기 전에 코스 · 투어 요청이 나간다 (errata G13)', async () => {
+  it('useGuideCourse: 캠퍼스 응답이 오기 전에 코스 · 탐방 요청이 나간다 (errata G13)', async () => {
     let release: () => void = () => {};
     const gate = new Promise<void>((resolve) => {
       release = resolve;
@@ -164,7 +164,7 @@ describe('코스 훅', () => {
     await waitFor(() => expect(result.current.course.fetchStatus).toBe('idle'));
   });
 
-  it('useCreateDraft: 초안 요청이 실패하면 뮤테이션은 오류여도 가이드 코스 · 신청자 · 투어 목록을 다시 받는다', async () => {
+  it('useCreateDraft: 초안 요청이 실패하면 뮤테이션은 오류여도 가이드 코스 · 신청자 · 탐방 목록을 다시 받는다', async () => {
     let courseGets = 0;
     server.use(
       http.get('/api/campuses', () => wireOk(CAMPUSES_LIST.data)),
@@ -194,7 +194,7 @@ describe('코스 훅', () => {
     expect(invalidated(qk.guideTours)).toBe(true);
   });
 
-  it('useReorderStops: PUT은 됐는데 투어 다시 읽기가 실패해도 가이드 코스를 다시 받는다', async () => {
+  it('useReorderStops: PUT은 됐는데 탐방 다시 읽기가 실패해도 가이드 코스를 다시 받는다', async () => {
     let courseGets = 0;
     let tourGets = 0;
     server.use(

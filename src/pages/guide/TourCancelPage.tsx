@@ -34,7 +34,7 @@ export function TourCancelPage() {
     sending.current = true;
     cancel.mutate(undefined, {
       onSuccess: () => {
-        toast('투어를 취소했어요.');
+        toast('탐방을 취소했어요.');
         void navigate(LIST, { replace: true });
       },
       onError: (error) => toast.error(errorMessage(error.code)),
@@ -45,17 +45,17 @@ export function TourCancelPage() {
   }
 
   return (
-    <GuideTourGate title="투어 취소 확인" back={LIST} query={query}>
+    <GuideTourGate title="탐방 취소 확인" back={LIST} query={query}>
       {(detail) => {
         const { tour } = detail;
         const state = cancelActionState(detail);
         return (
           <>
-            <TopBar title="투어 취소 확인" back={LIST} />
+            <TopBar title="탐방 취소 확인" back={LIST} />
             <Page className={BOTTOM_ACTION_PAGE}>
               <PageHeading
                 as="h2"
-                title="투어를 취소할까요?"
+                title="탐방을 취소할까요?"
                 description="참가자에게 취소 안내가 전달돼요."
               />
 
@@ -66,7 +66,7 @@ export function TourCancelPage() {
                 >
                   !
                 </span>
-                <p className="mt-3 text-[17px] font-bold text-ink">투어 전체가 취소돼요</p>
+                <p className="mt-3 text-[17px] font-bold text-ink">탐방 전체가 취소돼요</p>
                 <p className="mt-1 text-[13px] text-muted">
                   승인된 신청과 발급된 쿠폰도 함께 무효화돼요.
                 </p>
@@ -86,7 +86,7 @@ export function TourCancelPage() {
               </section>
 
               <p className="mt-3 px-1 text-[13px] text-muted">
-                취소 후 같은 일정으로 복구하려면 새 투어를 개설해야 해요.
+                취소 후 같은 일정으로 복구하려면 새 탐방을 개설해야 해요.
               </p>
 
               <BottomAction>
@@ -100,7 +100,7 @@ export function TourCancelPage() {
                     }
                     onClick={onCancel}
                   >
-                    투어 취소 확정
+                    탐방 취소 확정
                   </Button>
                   <Button
                     variant="secondary"

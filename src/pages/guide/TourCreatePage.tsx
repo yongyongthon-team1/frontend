@@ -90,7 +90,7 @@ function validate(
     errors.capacity = `모집 정원은 1~${TOUR_CAPACITY_MAX}명으로 적어 주세요.`;
   }
   const intro = values.introduction.trim();
-  if (intro === '') errors.introduction = '투어 소개를 입력해 주세요.';
+  if (intro === '') errors.introduction = '탐방 소개를 입력해 주세요.';
   else if (intro.length > TOUR_INTRO_MAX)
     errors.introduction = `${TOUR_INTRO_MAX}자 이내로 적어 주세요.`;
   const link = values.openChatUrl.trim();
@@ -157,7 +157,7 @@ export function TourCreatePage() {
     const failed = meQuery.isError ? meQuery : universities.isError ? universities : null;
     return (
       <>
-        <TopBar title="새 투어 만들기" back={BACK} />
+        <TopBar title="새 탐방 만들기" back={BACK} />
         <Page>
           {failed ? (
             <ErrorState
@@ -204,7 +204,7 @@ export function TourCreatePage() {
     sending.current = true;
     create.mutate(toInput(values), {
       onSuccess: () => {
-        toast('투어를 개설했어요.');
+        toast('탐방을 개설했어요.');
         void navigate(BACK, { replace: true });
       },
       onError: (error) => {
@@ -224,12 +224,12 @@ export function TourCreatePage() {
   const hint = block
     ? { reason: block.reason, action: block.action }
     : noVacation
-      ? { reason: NO_VACATION_REASON, action: { label: '내가 개설한 투어', to: BACK } }
+      ? { reason: NO_VACATION_REASON, action: { label: '내가 개설한 탐방', to: BACK } }
       : undefined;
 
   return (
     <>
-      <TopBar title="새 투어 만들기" back={BACK} />
+      <TopBar title="새 탐방 만들기" back={BACK} />
       <Page className={BOTTOM_ACTION_PAGE}>
         <PageHeading
           as="h2"
@@ -304,7 +304,7 @@ export function TourCreatePage() {
             />
             <Textarea
               showLabel
-              label="투어 소개"
+              label="탐방 소개"
               placeholder="전공 선배와 둘러보는 우리 캠퍼스"
               value={values.introduction}
               error={errors.introduction}
@@ -323,7 +323,7 @@ export function TourCreatePage() {
           </fieldset>
 
           <p className="mt-3 rounded-lg bg-brand-soft px-4 py-3 text-[13px] text-muted">
-            ⓘ 학교별 방학 기간에만 투어를 개설할 수 있어요.
+            ⓘ 학교별 방학 기간에만 탐방을 개설할 수 있어요.
           </p>
 
           <BottomAction>

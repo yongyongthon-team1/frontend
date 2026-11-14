@@ -136,7 +136,7 @@ export function CouponDetailPage() {
       <Page>
         <PageHeading
           as="h2"
-          title="투어의 작은 혜택"
+          title="탐방의 작은 혜택"
           description="함께 둘러볼 동네 가게에서 사용해요."
           className="mt-3"
         />
@@ -160,7 +160,7 @@ export function CouponDetailPage() {
               {formatCouponCode(coupon.code)}
             </p>
             <p className="mt-1 text-[11px] text-muted">
-              {`${formatDotDate(coupon.tourStartsAt)} 투어 당일에만 사용할 수 있어요.`}
+              {`${formatDotDate(coupon.tourStartsAt)} 탐방 당일에만 사용할 수 있어요.`}
             </p>
           </div>
         </section>

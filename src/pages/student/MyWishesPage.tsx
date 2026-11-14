@@ -20,7 +20,7 @@ export function MyWishesPage() {
       <TopBar title="내 희망 사항" back="/me" />
       <Page className="flex flex-col gap-4">
         <p className="text-[13px] text-muted">
-          남긴 그대로 보여요. 고쳐도 이미 본 투어 결과는 바뀌지 않아요.
+          남긴 그대로 보여요. 고쳐도 이미 본 탐방 결과는 바뀌지 않아요.
         </p>
         {wishes === undefined ? (
           query.isError ? (

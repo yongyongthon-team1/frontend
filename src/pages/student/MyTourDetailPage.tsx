@@ -153,7 +153,7 @@ export function MyTourDetailPage() {
               <Button
                 variant="secondary"
                 disabled
-                hint={{ reason: '투어 날짜가 되어 취소할 수 없어요.' }}
+                hint={{ reason: '탐방 날짜가 되어 취소할 수 없어요.' }}
               >
                 신청 취소하기
               </Button>

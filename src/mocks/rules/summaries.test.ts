@@ -5,11 +5,11 @@ import { buildTourSummary } from './summaries';
 const today = new Date('2026-11-15T01:00:00Z'); // 시연일 KST 10:00
 
 describe('buildTourSummary', () => {
-  it('시연 투어 요약', () => {
+  it('시연 탐방 요약', () => {
     const db = createSeed(today);
     expect(buildTourSummary(db, db.tours[0])).toEqual({
       id: 1,
-      title: '경희대 국제캠퍼스 산업디자인학과 투어',
+      title: '경희대 국제캠퍼스 산업디자인학과 탐방',
       universityId: 2,
       universityName: '경희대학교',
       universityShortName: '경희대',
@@ -26,12 +26,12 @@ describe('buildTourSummary', () => {
     });
   });
 
-  it('투어 이름(title)이 있으면 그 값을, null이면 파생 제목을 쓴다', () => {
+  it('탐방 이름(title)이 있으면 그 값을, null이면 파생 제목을 쓴다', () => {
     const db = createSeed(today);
     expect(db.tours[0].title).toBeNull();
-    expect(buildTourSummary(db, db.tours[0]).title).toBe('경희대 국제캠퍼스 산업디자인학과 투어');
-    db.tours[0].title = '디자인 작업실 투어';
-    expect(buildTourSummary(db, db.tours[0]).title).toBe('디자인 작업실 투어');
+    expect(buildTourSummary(db, db.tours[0]).title).toBe('경희대 국제캠퍼스 산업디자인학과 탐방');
+    db.tours[0].title = '디자인 작업실 탐방';
+    expect(buildTourSummary(db, db.tours[0]).title).toBe('디자인 작업실 탐방');
   });
 
   it('본교는 캠퍼스를 생략하고 한국외대는 줄여 쓴다', () => {
@@ -41,12 +41,12 @@ describe('buildTourSummary', () => {
         db,
         db.tours.find((t) => t.id === tourId)!,
       ).title;
-    expect(title(5)).toBe('강남대 사회복지학부 투어');
-    expect(title(4)).toBe('한국외대 글로벌캠퍼스 통번역학과 투어');
+    expect(title(5)).toBe('강남대 사회복지학부 탐방');
+    expect(title(4)).toBe('한국외대 글로벌캠퍼스 통번역학과 탐방');
     expect(buildTourSummary(db, db.tours[3]).universityShortName).toBe('한국외대');
   });
 
-  it('마감 투어는 승인 수 = 정원, 남은 자리 0', () => {
+  it('마감 탐방은 승인 수 = 정원, 남은 자리 0', () => {
     const db = createSeed(today);
     expect(buildTourSummary(db, db.tours[1])).toMatchObject({
       status: 'CLOSED',
@@ -64,7 +64,7 @@ describe('buildTourSummary', () => {
     db.verifications.find((v) => v.id === tour.guideId)!.status = 'PENDING';
     db.guideProfiles.find((g) => g.id === tour.guideId)!.major = null;
     expect(buildTourSummary(db, tour)).toMatchObject({
-      title: '경희대 국제캠퍼스 캠퍼스 투어',
+      title: '경희대 국제캠퍼스 캠퍼스 탐방',
       major: null,
       guideVerified: false,
     });

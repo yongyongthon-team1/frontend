@@ -26,7 +26,7 @@ const ROWS: Array<
   ]
 > = [
   [
-    '투어 상세',
+    '탐방 상세',
     'START',
     () => '/tours/1',
     '이런 경험을 해요',
@@ -34,10 +34,10 @@ const ROWS: Array<
     () => qk.tour(1),
   ],
   [
-    '투어 신청서',
+    '탐방 신청서',
     'START',
     () => '/tours/1/apply',
-    '투어에서 하고 싶은 것',
+    '탐방에서 하고 싶은 것',
     '/api/tours/:tourId',
     () => qk.tour(1),
   ],
@@ -45,12 +45,12 @@ const ROWS: Array<
     '신청 완료',
     'APPLIED',
     () => '/tours/1/apply/done',
-    '경희대 국제캠퍼스 산업디자인학과 투어',
+    '경희대 국제캠퍼스 산업디자인학과 탐방',
     '/api/tours/:tourId',
     () => qk.tour(1),
   ],
   [
-    '내 투어 목록',
+    '내 탐방 목록',
     'APPLIED',
     () => '/my-tours',
     '신청 접수 완료 · 가이드 승인 대기 중',
@@ -58,7 +58,7 @@ const ROWS: Array<
     () => qk.myApplications,
   ],
   [
-    '내 투어 상세',
+    '내 탐방 상세',
     'CONFIRMED',
     () => `/my-tours/${appId()}`,
     '가이드 승인 상태',

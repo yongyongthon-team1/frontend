@@ -82,14 +82,14 @@ test.describe('막다른 곳 없음', () => {
     // 신청자 관리 → 탐방 완료(G09) · 탐방 취소(G10). 완료의 뒤로 가기는 신청자 관리, 취소의 뒤로 가기는 내가 개설한 탐방(G06)이다.
     await page.getByRole('link', { name: '신청자 확인하기' }).first().click();
     await expectOpen(page, /\/guide\/tours\/\d+\/applicants$/, '신청자 관리');
-    await page.getByRole('link', { name: '투어 완료', exact: true }).click();
-    await expectOpen(page, /\/guide\/tours\/\d+\/complete$/, '투어 종료 · 완료 처리');
+    await page.getByRole('link', { name: '탐방 완료', exact: true }).click();
+    await expectOpen(page, /\/guide\/tours\/\d+\/complete$/, '탐방 종료 · 완료 처리');
     await back(page);
     await expectOpen(page, /\/guide\/tours\/\d+\/applicants$/, '신청자 관리');
-    await page.getByRole('link', { name: '투어 취소', exact: true }).click();
-    await expectOpen(page, /\/guide\/tours\/\d+\/cancel$/, '투어 취소 확인');
+    await page.getByRole('link', { name: '탐방 취소', exact: true }).click();
+    await expectOpen(page, /\/guide\/tours\/\d+\/cancel$/, '탐방 취소 확인');
     await back(page);
-    await expectOpen(page, /\/guide\/tours$/, '내가 개설한 투어');
+    await expectOpen(page, /\/guide\/tours$/, '내가 개설한 탐방');
     await page.getByRole('link', { name: '신청자 관리하기' }).first().click();
     await expectOpen(page, /\/guide\/tours\/\d+\/applicants$/, '신청자 관리');
 
@@ -107,10 +107,10 @@ test.describe('막다른 곳 없음', () => {
     await back(page);
 
     // 내가 개설한 탐방 → 새 탐방 만들기(G04)
-    await page.getByRole('link', { name: '내가 개설한 투어로' }).click();
+    await page.getByRole('link', { name: '내가 개설한 탐방으로' }).click();
     await expectOpen(page, /\/guide\/tours$/);
-    await page.getByRole('link', { name: /^새 투어 개설하기/ }).click();
-    await expectOpen(page, /\/guide\/tours\/new$/, '새 투어 만들기');
+    await page.getByRole('link', { name: /^새 탐방 개설하기/ }).click();
+    await expectOpen(page, /\/guide\/tours\/new$/, '새 탐방 만들기');
 
     // MY → 가이드 프로필 · 인증 상태
     await page.getByRole('link', { name: 'MY', exact: true }).click();

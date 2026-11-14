@@ -60,13 +60,13 @@ describe('jsdom 업로드 경로(전역 FormData · File이 Node 구현이어도
     const user = userEvent.setup({ applyAccept: false });
     const { container } = render(
       <form>
-        <input name="title" defaultValue="투어" />
+        <input name="title" defaultValue="탐방" />
         <input type="file" name="document" aria-label="사진" />
       </form>,
     );
     await user.upload(screen.getByLabelText('사진'), testImage('card.png', { type: 'image/png' }));
     const data = new FormData(container.querySelector('form')!);
-    expect(data.get('title')).toBe('투어');
+    expect(data.get('title')).toBe('탐방');
     const entry = data.get('document') as File;
     expect(entry).toMatchObject({ name: 'card.png', type: 'image/png', size: 0 });
   });

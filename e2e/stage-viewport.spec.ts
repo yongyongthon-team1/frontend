@@ -99,36 +99,36 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
       );
       const submit = page
         .getByRole('main')
-        .getByRole('button', { name: '희망 사항 남기고 투어 찾기' });
+        .getByRole('button', { name: '희망 사항 남기고 탐방 찾기' });
       await expectVisibleWithoutScroll(page, [submit], '① 희망 사항 등록');
       await screenshot(page, '1-wish');
     });
 
-    test('① 투어 찾기: 희망 원문 카드와 첫 투어 행', async ({ page }) => {
+    test('① 탐방 찾기: 희망 원문 카드와 첫 탐방 행', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&as=student');
       // 시연 도구가 켜져 있어 칸이 미리 채워진다 — 학교는 캠퍼스 목록이 온 뒤라 그것을 기다렸다가 낸다.
       await expect(page.getByLabel('학교', { exact: true })).toHaveValue(
         String(DEMO_WISH.universityId),
       );
-      await page.getByRole('button', { name: '희망 사항 남기고 투어 찾기' }).click();
+      await page.getByRole('button', { name: '희망 사항 남기고 탐방 찾기' }).click();
 
       const main = page.getByRole('main');
       const wishCard = main.getByRole('region', { name: '내가 남긴 희망 사항' });
       await expect(wishCard).toBeVisible();
       const firstTour = main
-        .getByRole('list', { name: '모집 중 투어' })
+        .getByRole('list', { name: '모집 중 탐방' })
         .getByRole('listitem')
         .first();
       // 목록이 와야 제목(Skeleton → 결과 문구) 높이가 정해진다 — 그 뒤에 잰다.
       await expect(firstTour).toBeVisible();
-      await expectVisibleWithoutScroll(page, [wishCard, firstTour], '① 투어 찾기');
+      await expectVisibleWithoutScroll(page, [wishCard, firstTour], '① 탐방 찾기');
       await screenshot(page, 1);
     });
 
     test('② 코스 완성: 지점 카드 3개', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&checkpoint=APPROVED&as=guide');
       // 가이드 첫 화면 /guide(G01) → 맨 아래 `내가 개설한 탐방`(G06) → `신청자 관리하기`(G02) → 코스 만들기.
-      await page.getByRole('link', { name: '내가 개설한 투어' }).click();
+      await page.getByRole('link', { name: '내가 개설한 탐방' }).click();
       await page.getByRole('link', { name: '신청자 관리하기' }).first().click();
       await page.getByRole('button', { name: '승인 완료 후 코스 만들기' }).click();
       // AI 로딩 화면 뒤 코스 완성(G03)으로 바뀐다 — 생성 직후 첫 화면이 무대 장면이다.
@@ -145,7 +145,7 @@ for (const { width, height, deviceScaleFactor } of STAGE_VIEWPORTS) {
 
     test('③ 쿠폰 상세: 쿠폰 코드(3자리씩)', async ({ page }) => {
       await page.goto('/?demo=1&reset=1&checkpoint=CONFIRMED&as=student');
-      await page.getByRole('link', { name: '내 투어', exact: true }).click();
+      await page.getByRole('link', { name: '내 탐방', exact: true }).click();
       await page.getByRole('link', { name: '코스 확인하기', exact: true }).click();
       await page.getByRole('link', { name: '내 쿠폰 확인하기' }).click();
       // 쿠폰이 1장뿐이면 목록이 바로 상세로 넘어간다 — 목록이든 상세든 코드가 보일 때까지 기다린다.

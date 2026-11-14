@@ -70,7 +70,7 @@ describe('가이드 확정 코스 보기 (/guide/tours/:tourId/course)', () => {
       'aria-current',
       'page',
     );
-    expect(within(nav).getByRole('link', { name: '내 투어' })).not.toHaveAttribute('aria-current');
+    expect(within(nav).getByRole('link', { name: '내 탐방' })).not.toHaveAttribute('aria-current');
   });
 
   it('코스가 없으면 신청자 관리로 replace', async () => {

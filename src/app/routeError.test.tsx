@@ -6,7 +6,7 @@ import { renderApp } from '@/test/renderApp';
 // 이 파일에서만 내 탐방 목록 화면이 렌더 중에 깨진다 — 화면 단위 에러 경계(설계 5.10)를 실제 라우트로 확인한다.
 vi.mock('@/pages/student/MyToursPage', () => ({
   MyToursPage: () => {
-    throw new Error('내 투어 목록을 그리다 깨졌다');
+    throw new Error('내 탐방 목록을 그리다 깨졌다');
   },
 }));
 
@@ -27,7 +27,7 @@ describe('화면 단위 에러 경계 (설계 5.10)', () => {
 
     expect(await screen.findByRole('alert')).toHaveTextContent('문제가 생겼어요');
     const tabs = screen.getByRole('navigation', { name: '주요 메뉴' });
-    expect(within(tabs).getByRole('link', { name: '내 투어' })).toHaveAttribute(
+    expect(within(tabs).getByRole('link', { name: '내 탐방' })).toHaveAttribute(
       'aria-current',
       'page',
     );

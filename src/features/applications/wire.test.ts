@@ -23,7 +23,7 @@ const guideRow = () => toCamel<WireGuideTourRow>(MY_TOURS_UNIVERSITY.data.items[
 const applicants = () => toCamel<WireApplicant[]>(APPLICANTS_LIST.data.items);
 
 describe('fromWireMyTourRow (명세 T-04 고교생 예시, 확장 없음)', () => {
-  it('확장이 없으면 동기 · 신청 시각은 빈 문자열, 투어는 상세의 요약, 코스는 확정 여부만', () => {
+  it('확장이 없으면 동기 · 신청 시각은 빈 문자열, 탐방은 상세의 요약, 코스는 확정 여부만', () => {
     expect(fromWireMyTourRow(studentRow(), TOUR_31, 0, NOW)).toEqual({
       id: 77,
       status: 'APPROVED',
@@ -51,7 +51,7 @@ describe('fromWireMyTourRow (명세 T-04 고교생 예시, 확장 없음)', () =
     expect(fromWireMyTourRow(row, TOUR_31, 0, NOW).courseStatus).toBeNull();
   });
 
-  it('오픈채팅은 승인된 신청만 — 같은 투어의 다른(승인) 신청 때문에 상세에 링크가 와도 이 행이 승인이 아니면 null', () => {
+  it('오픈채팅은 승인된 신청만 — 같은 탐방의 다른(승인) 신청 때문에 상세에 링크가 와도 이 행이 승인이 아니면 null', () => {
     const tour = { ...TOUR_31, openChatUrl: 'https://open.kakao.com/o/x' };
     expect(fromWireMyTourRow(studentRow(), tour, 0, NOW).openChatUrl).toBe(
       'https://open.kakao.com/o/x',
@@ -60,7 +60,7 @@ describe('fromWireMyTourRow (명세 T-04 고교생 예시, 확장 없음)', () =
     expect(fromWireMyTourRow(canceled, tour, 0, NOW).openChatUrl).toBeNull();
   });
 
-  it('취소 가능 여부는 computeCancellable(상태 · 투어 날짜 · 지금)', () => {
+  it('취소 가능 여부는 computeCancellable(상태 · 탐방 날짜 · 지금)', () => {
     const tourDay = new Date('2027-01-15T09:00:00+09:00');
     expect(fromWireMyTourRow(studentRow(), TOUR_31, 0, tourDay).cancellable).toBe(false);
     const rejected = { ...studentRow(), applicationStatus: 'REJECTED' as const };
@@ -69,7 +69,7 @@ describe('fromWireMyTourRow (명세 T-04 고교생 예시, 확장 없음)', () =
 });
 
 describe('fromWireGuideTourRow (명세 T-04 대학생 예시)', () => {
-  it('요약은 투어 상세, 집계는 행의 승인 · 대기(total = 승인 + 대기, 거절 제외 — 2C-R27)', () => {
+  it('요약은 탐방 상세, 집계는 행의 승인 · 대기(total = 승인 + 대기, 거절 제외 — 2C-R27)', () => {
     expect(fromWireGuideTourRow(guideRow(), TOUR_31, null)).toEqual({
       ...summaryOf(TOUR_31),
       counts: { total: 5, pending: 3, approved: 2 },
@@ -95,7 +95,7 @@ describe('fromWireApplicants (명세 A-04 예시)', () => {
     createdAt: '2026-11-03T10:00:00+09:00',
   };
 
-  it('취소한 신청은 빼고, 인증은 늘 true(A-01이 인증 APPROVED만 받는다), 남은 자리는 투어 상세', () => {
+  it('취소한 신청은 빼고, 인증은 늘 true(A-01이 인증 APPROVED만 받는다), 남은 자리는 탐방 상세', () => {
     expect(fromWireApplicants([...applicants(), canceled], TOUR_31, null)).toEqual({
       tour: summaryOf(TOUR_31),
       counts: { pending: 1, approved: 0, remaining: 3 },

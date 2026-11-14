@@ -81,7 +81,7 @@ export function fromWireLookup(w: WireCouponLookup, storeName: string, now: Date
     state: computeCouponState({ status: w.status, tourStartsAt, expiresAt: w.validUntil }, now),
     discount: w.discountText,
     storeName,
-    tourTitle: w.tourTitle ?? '투어',
+    tourTitle: w.tourTitle ?? '탐방',
     tourStartsAt,
     studentName: w.studentName ?? '',
     usedAt: w.usedAt ?? null,

@@ -125,8 +125,8 @@ export function ApplicantsPage() {
         {/* 고정 바 밖(본문)에 둔다 — 시연 화면에서 고정 바가 커져 보이는 창이 좁아지지 않게(고정 바는 늘 같은 높이). */}
         {editable ? (
           <div className="mt-2 flex justify-center gap-4">
-            <TextLink to={`/guide/tours/${tour.id}/complete`}>투어 완료</TextLink>
-            <TextLink to={`/guide/tours/${tour.id}/cancel`}>투어 취소</TextLink>
+            <TextLink to={`/guide/tours/${tour.id}/complete`}>탐방 완료</TextLink>
+            <TextLink to={`/guide/tours/${tour.id}/cancel`}>탐방 취소</TextLink>
           </div>
         ) : null}
 

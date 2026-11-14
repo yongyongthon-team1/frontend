@@ -19,7 +19,7 @@ function applyFuture() {
 }
 
 describe('신청 내역 상세 (H10)', () => {
-  it('오늘 투어 신청은 승인 대기 · 취소 버튼 비활성 + 사유', async () => {
+  it('오늘 탐방 신청은 승인 대기 · 취소 버튼 비활성 + 사유', async () => {
     const { router } = await renderApp('/', { as: 'student', checkpoint: 'APPLIED' });
     await router.navigate(`/my-tours/${findApplicationId(STUDENT, 1)}`);
     expect(await screen.findByRole('heading', { name: '신청 내역' })).toBeInTheDocument();
@@ -28,7 +28,7 @@ describe('신청 내역 상세 (H10)', () => {
     expect(screen.getAllByText('승인 대기').length).toBeGreaterThan(0);
     const cancel = screen.getByRole('button', { name: '신청 취소하기' });
     expect(cancel).toBeDisabled();
-    expect(screen.getByText('투어 날짜가 되어 취소할 수 없어요.')).toBeInTheDocument();
+    expect(screen.getByText('탐방 날짜가 되어 취소할 수 없어요.')).toBeInTheDocument();
     expect(
       screen.getByText('신청을 취소하면 참여 권한과 발급 쿠폰이 무효화돼요.'),
     ).toBeInTheDocument();
@@ -74,7 +74,7 @@ describe('신청 내역 상세 (H10)', () => {
     ).not.toBeInTheDocument();
   });
 
-  it('미래 투어 신청은 신청 취소하기로 취소 확인 화면에 간다', async () => {
+  it('미래 탐방 신청은 신청 취소하기로 취소 확인 화면에 간다', async () => {
     const { user, router } = await renderApp('/', { as: 'student' });
     applyFuture();
     const id = findApplicationId(STUDENT, 6);
@@ -107,7 +107,7 @@ describe('신청 내역 상세 (H10)', () => {
   );
 
   it.each(['COMPLETED', 'CANCELED'] as const)(
-    '%s 투어의 승인된 신청은 취소 버튼 · 무효화 안내가 없고, 뒤로 가기는 지난 투어 탭이다',
+    '%s 탐방의 승인된 신청은 취소 버튼 · 무효화 안내가 없고, 뒤로 가기는 지난 탐방 탭이다',
     async (tourStatus) => {
       const { router, user } = await renderApp('/my-tours?tab=past', {
         as: 'student',
@@ -121,7 +121,7 @@ describe('신청 내역 상세 (H10)', () => {
       expect(await screen.findByText('가이드 승인 상태')).toBeInTheDocument();
       expect(screen.getAllByText('참여 확정')).toHaveLength(2);
       expect(screen.queryByRole('button', { name: '신청 취소하기' })).not.toBeInTheDocument();
-      expect(screen.queryByText('투어 날짜가 되어 취소할 수 없어요.')).not.toBeInTheDocument();
+      expect(screen.queryByText('탐방 날짜가 되어 취소할 수 없어요.')).not.toBeInTheDocument();
       expect(screen.queryByText(/신청을 취소하면/)).not.toBeInTheDocument();
 
       await user.click(screen.getByRole('button', { name: '뒤로 가기' }));
@@ -130,7 +130,7 @@ describe('신청 내역 상세 (H10)', () => {
     },
   );
 
-  it('거절된 신청의 뒤로 가기도 지난 투어 탭이다(투어는 아직 모집 중이어도)', async () => {
+  it('거절된 신청의 뒤로 가기도 지난 탐방 탭이다(탐방은 아직 모집 중이어도)', async () => {
     const { router, user } = await renderApp('/', { as: 'student', checkpoint: 'CONFIRMED' });
     const id = findApplicationId(STUDENT, 1);
     mutate((db) => {
@@ -142,7 +142,7 @@ describe('신청 내역 상세 (H10)', () => {
     expect(router.state.location.search).toBe('?tab=past');
   });
 
-  it('진행 예정 투어의 신청은 뒤로 가기가 예정된 투어 탭이다', async () => {
+  it('진행 예정 탐방의 신청은 뒤로 가기가 예정된 탐방 탭이다', async () => {
     const { router, user } = await renderApp('/', { as: 'student', checkpoint: 'APPLIED' });
     await router.navigate(`/my-tours/${findApplicationId(STUDENT, 1)}`);
     await screen.findByText('가이드 승인 상태');
@@ -151,7 +151,7 @@ describe('신청 내역 상세 (H10)', () => {
     expect(router.state.location.search).toBe('');
   });
 
-  it('승인된 신청 + 완료된 투어면 리뷰 남기기 행이 쿠폰 목록으로 간다 (H10 · R-01 진입)', async () => {
+  it('승인된 신청 + 완료된 탐방이면 리뷰 남기기 행이 쿠폰 목록으로 간다 (H10 · R-01 진입)', async () => {
     const { router } = await renderApp('/', { as: 'seojun@demo.kr' });
     const id = findApplicationId('seojun@demo.kr', 7);
     await router.navigate(`/my-tours/${id}`);
@@ -160,14 +160,14 @@ describe('신청 내역 상세 (H10)', () => {
     expect(within(review).getByText('다녀온 상점에 리뷰를 남겨 주세요')).toBeInTheDocument();
   });
 
-  it('진행 예정 투어나 완료되지 않은 신청에는 리뷰 남기기 행이 없다 (양성 대조: 완료 투어에는 있다)', async () => {
+  it('진행 예정 탐방이나 완료되지 않은 신청에는 리뷰 남기기 행이 없다 (양성 대조: 완료 탐방에는 있다)', async () => {
     const { router } = await renderApp('/', { as: 'student', checkpoint: 'CONFIRMED' });
     await router.navigate(`/my-tours/${findApplicationId(STUDENT, 1)}`);
     await screen.findByText('가이드 승인 상태');
     expect(screen.queryByRole('link', { name: /리뷰 남기기/ })).not.toBeInTheDocument();
   });
 
-  it('쿠폰이 하나도 없는 완료 투어에는 리뷰 남기기 행이 없다 (막다른 목록으로 보내지 않는다)', async () => {
+  it('쿠폰이 하나도 없는 완료 탐방에는 리뷰 남기기 행이 없다 (막다른 목록으로 보내지 않는다)', async () => {
     const { router, queryClient } = await renderApp('/', { as: 'seojun@demo.kr' });
     const id = findApplicationId('seojun@demo.kr', 7);
     // 양성 대조: 쿠폰이 있을 때는 행이 있다.

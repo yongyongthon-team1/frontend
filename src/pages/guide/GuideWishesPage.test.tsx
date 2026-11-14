@@ -65,7 +65,7 @@ describe('고교생 희망 사항 (T-08 · 가이드)', () => {
     expect(within(cards[0]).queryByRole('button')).toBeNull();
     // 가이드 `내 탐방` 탭이 켜져 있다.
     const nav = screen.getByRole('navigation', { name: '주요 메뉴' });
-    expect(within(nav).getByRole('link', { name: '내 투어' })).toHaveAttribute(
+    expect(within(nav).getByRole('link', { name: '내 탐방' })).toHaveAttribute(
       'aria-current',
       'page',
     );

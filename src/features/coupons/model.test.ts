@@ -13,7 +13,7 @@ const issued = {
   expiresAt: '2026-11-15T23:59:59+09:00',
 };
 
-describe('computeCouponState 투어 당일 0시 경계', () => {
+describe('computeCouponState 탐방 당일 0시 경계', () => {
   const day = {
     status: 'ISSUED' as const,
     tourStartsAt: '2027-01-15T13:00:00+09:00',
@@ -57,7 +57,7 @@ describe('couponStateTone', () => {
 
 describe('couponStateLabel', () => {
   it.each([
-    ['BEFORE_DAY', '투어 당일 사용 가능'],
+    ['BEFORE_DAY', '탐방 당일 사용 가능'],
     ['USABLE', '사용 가능'],
     ['EXPIRED', '만료'],
   ] as const)('%s → %s', (state, label) => expect(couponStateLabel(state, null)).toBe(label));
@@ -82,7 +82,7 @@ describe('couponNotice (사장님 쿠폰 오류 카드)', () => {
   };
   const notYet = {
     title: '아직 사용할 수 없는 쿠폰',
-    description: '투어 당일에만 사용할 수 있어요.',
+    description: '탐방 당일에만 사용할 수 있어요.',
   };
 
   it.each([

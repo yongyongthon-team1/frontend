@@ -22,14 +22,14 @@ import {
 describe('date', () => {
   it('UTC 16:30은 서울 다음 날', () =>
     expect(seoulDateKey('2026-11-14T16:30:00Z')).toBe('2026-11-15'));
-  it('투어 날짜 표기', () =>
+  it('탐방 날짜 표기', () =>
     expect(formatTourDate('2026-11-15T14:00:00+09:00')).toBe('11월 15일(일)'));
   it('월일 표기', () => expect(formatMonthDay('2026-11-15T14:00:00+09:00')).toBe('11월 15일'));
   it('점 날짜 (V2 목록 행)', () => {
     expect(formatDotDate('2026-11-12T14:00:00+09:00')).toBe('11.12');
     expect(formatDotDateWeekday('2026-11-12T14:00:00+09:00')).toBe('11.12 (목)');
   });
-  it('점 날짜 + 시간 범위 (V2 투어 상세)', () => {
+  it('점 날짜 + 시간 범위 (V2 탐방 상세)', () => {
     expect(formatDotDateTimeRange('2026-11-12T14:00:00+09:00', '2026-11-12T16:30:00+09:00')).toBe(
       '11.12 (목) 14:00~16:30',
     );

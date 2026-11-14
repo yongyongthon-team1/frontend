@@ -160,7 +160,7 @@ describe('쿠폰 발급', () => {
     expect(couponsOf(app.id)).toHaveLength(2);
   });
 
-  it('투어 날짜에 유효한 제휴가 있는 상점만 발급한다', () => {
+  it('탐방 날짜에 유효한 제휴가 있는 상점만 발급한다', () => {
     putCourse([1, 2, 3, 5]);
     Object.assign(partnershipOf(1), { startDate: '2026-11-15', endDate: '2026-11-15' }); // 당일 하루
     partnershipOf(2).endDate = '2026-11-14'; // 전날 끝남
@@ -233,7 +233,7 @@ describe('generateCouponCode', () => {
 });
 
 describe('redeemCoupon', () => {
-  it('사용하면 이번 투어 방문 수 1', () => {
+  it('사용하면 이번 탐방 방문 수 1', () => {
     const { app, store1 } = issueToYujin();
     const result = redeemCoupon(db, owner(1), store1, dayOf);
     expect(result.tourVisitorCount).toBe(1);
@@ -276,12 +276,12 @@ describe('redeemCoupon', () => {
     expectRejected(() => redeemCoupon(db, owner(1), store1, dayOf), 409, 'COUPON_EXPIRED');
   });
 
-  it('투어 전날에는 COUPON_NOT_YET', () => {
+  it('탐방 전날에는 COUPON_NOT_YET', () => {
     const { store1 } = issueToYujin();
     expectRejected(() => redeemCoupon(db, owner(1), store1, now), 409, 'COUPON_NOT_YET');
   });
 
-  it('방문 수는 같은 상점의 사용 쿠폰을 이번 투어 · 전체로 센다', () => {
+  it('방문 수는 같은 상점의 사용 쿠폰을 이번 탐방 · 전체로 센다', () => {
     const { store1, store2 } = issueToYujin();
     // 코스 확정 전에 승인된 박서준도 쿠폰을 받는다
     const seojun = issueCouponsForApplication(db, appOf('seojun@demo.kr').id, now);

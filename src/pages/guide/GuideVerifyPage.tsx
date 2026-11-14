@@ -21,7 +21,7 @@ import { TopBar } from '@/shared/ui/TopBar';
 /** 뒤로 가기가 가는 곳: 가이드의 MY(판정 A8). */
 const BACK_TO = '/guide/me';
 
-const NOT_APPROVED_NOTICE = '승인 전에는 투어를 개설할 수 없습니다.';
+const NOT_APPROVED_NOTICE = '승인 전에는 탐방을 개설할 수 없습니다.';
 const UNIVERSITY_REQUIRED = '용용톤 참여 대학을 선택해 주세요.';
 const FILE_REQUIRED = '학생증 또는 재학증명서 사진을 올려 주세요.';
 
@@ -132,8 +132,8 @@ function EnrollmentForm({ me, submit }: { me: Me; submit: Submit }) {
 function nextAction(me: Me): ActionLink {
   if (!hasGuideProfile(me)) return { label: '가이드 프로필 작성하기', to: '/guide/me/profile' };
   return me.verificationStatus === 'APPROVED'
-    ? { label: '새 투어 개설하기', to: '/guide/tours/new' }
-    : { label: '내가 개설한 투어', to: '/guide/tours' };
+    ? { label: '새 탐방 개설하기', to: '/guide/tours/new' }
+    : { label: '내가 개설한 탐방', to: '/guide/tours' };
 }
 
 /** 심사 중 · 승인 상태 모습. 제출한 대학은 `me.guideProfile.universityId`(서버가 제출 때 맞춘다)로 찾는다. */

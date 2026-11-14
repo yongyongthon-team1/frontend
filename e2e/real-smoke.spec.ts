@@ -9,5 +9,5 @@ test('실서버: 원클릭 링크로 열어도 자동 로그인하지 않고 로
   await page.goto('/?demo=1&mode=real&as=student');
   await expect(page).toHaveURL(/\/login/);
   await expect(page.getByRole('button', { name: '로그인' })).toBeVisible();
-  await expect(page.getByRole('link', { name: '내 투어', exact: true })).toHaveCount(0);
+  await expect(page.getByRole('link', { name: '내 탐방', exact: true })).toHaveCount(0);
 });

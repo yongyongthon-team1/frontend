@@ -66,14 +66,14 @@ export const APPLY_NOT_VERIFIED = {
 /** A-01 정원 마감 · 모집 종료 — 409. */
 export const APPLY_FULL = {
   code: 'E409_TOUR_FULL',
-  message: '신청할 수 없는 투어입니다',
+  message: '신청할 수 없는 탐방입니다',
   data: null,
 };
 
 /** A-01 이미 신청 — 409. */
 export const APPLY_DUPLICATE = {
   code: 'E409_ALREADY_APPLIED',
-  message: '이미 신청한 투어입니다',
+  message: '이미 신청한 탐방입니다',
   data: null,
 };
 

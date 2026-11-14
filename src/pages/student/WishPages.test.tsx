@@ -60,7 +60,7 @@ describe('내 희망 사항 목록 (T-07)', () => {
   it('시드 글이 있으면 설명 · 카드(학교 · 학과, 원문, `{MM.DD} 남김`) · `고치기` 링크', async () => {
     await renderApp('/me/wishes', { as: HAEUN });
     expect(
-      await screen.findByText('남긴 그대로 보여요. 고쳐도 이미 본 투어 결과는 바뀌지 않아요.'),
+      await screen.findByText('남긴 그대로 보여요. 고쳐도 이미 본 탐방 결과는 바뀌지 않아요.'),
     ).toBeInTheDocument();
     const cards = within(await screen.findByRole('list', { name: '내 희망 사항' })).getAllByRole(
       'article',
@@ -84,8 +84,8 @@ describe('내 희망 사항 목록 (T-07)', () => {
     await screen.findByRole('option', { name: '경희대학교 국제캠퍼스' });
     await user.selectOptions(field('학교'), '2');
     await user.type(field('학과'), '산업디자인');
-    fireEvent.change(field('투어 희망 사항'), { target: { value: '  첫 줄\n둘째 줄  ' } });
-    await user.click(screen.getByRole('button', { name: '희망 사항 남기고 투어 찾기' }));
+    fireEvent.change(field('탐방 희망 사항'), { target: { value: '  첫 줄\n둘째 줄  ' } });
+    await user.click(screen.getByRole('button', { name: '희망 사항 남기고 탐방 찾기' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/tours'));
     // 결과 화면 원문 카드의 링크로 목록에 들어간다.
     await user.click(await screen.findByRole('link', { name: '내 희망 사항' }));
@@ -139,13 +139,13 @@ describe('내 희망 사항 고치기 (T-07)', () => {
     await screen.findByRole('option', { name: '경희대학교 국제캠퍼스' });
     await waitFor(() => expect(field('학교')).toHaveValue('2'));
     expect(field('학과')).toHaveValue('시각디자인');
-    expect(field('투어 희망 사항')).toHaveValue(
+    expect(field('탐방 희망 사항')).toHaveValue(
       '디자인 작업실에서 선배들이 과제하는 모습을 보고, 학생 식당도 가 보고 싶어요.',
     );
     expect(field('희망 날짜 (선택)')).toHaveValue('');
     expect(
       screen.getByText(
-        '고쳐도 이미 본 투어 결과는 바뀌지 않아요. 새로 찾으려면 홈에서 다시 남겨 주세요.',
+        '고쳐도 이미 본 탐방 결과는 바뀌지 않아요. 새로 찾으려면 홈에서 다시 남겨 주세요.',
       ),
     ).toBeInTheDocument();
   });
@@ -165,7 +165,7 @@ describe('내 희망 사항 고치기 (T-07)', () => {
     const bodies = watchPatches();
     const { user, router } = await renderApp(`/me/wishes/${HAEUN_WISH}/edit`, { as: HAEUN });
     await editReady();
-    fireEvent.change(field('투어 희망 사항'), {
+    fireEvent.change(field('탐방 희망 사항'), {
       target: { value: '  학식도 먹어 보고 싶어요.\n둘째 줄 ' },
     });
     await user.click(saveButton());
@@ -200,7 +200,7 @@ describe('내 희망 사항 고치기 (T-07)', () => {
     const bodies = watchPatches();
     const { user } = await renderApp(`/me/wishes/${HAEUN_WISH}/edit`, { as: HAEUN });
     await editReady();
-    fireEvent.change(field('투어 희망 사항'), { target: { value: '가'.repeat(101) } });
+    fireEvent.change(field('탐방 희망 사항'), { target: { value: '가'.repeat(101) } });
     await user.click(saveButton());
     expect(await screen.findByText('100자 이내로 적어 주세요.')).toBeInTheDocument();
     expect(bodies).toHaveLength(0);
@@ -214,7 +214,7 @@ describe('내 희망 사항 고치기 (T-07)', () => {
     );
     const { user } = await renderApp(`/me/wishes/${HAEUN_WISH}/edit`, { as: HAEUN });
     await editReady();
-    fireEvent.change(field('투어 희망 사항'), { target: { value: '다른 글' } });
+    fireEvent.change(field('탐방 희망 사항'), { target: { value: '다른 글' } });
     await user.click(saveButton());
     expect(await screen.findByText('서버가 거절한 희망 사항이에요.')).toBeInTheDocument();
     await waitFor(() => expect(saveButton()).toBeEnabled());
@@ -224,7 +224,7 @@ describe('내 희망 사항 고치기 (T-07)', () => {
     server.use(http.patch('/api/users/me/tour-wishes/:wishId', () => wireFail('E403')));
     const { user, router } = await renderApp(`/me/wishes/${HAEUN_WISH}/edit`, { as: HAEUN });
     await editReady();
-    fireEvent.change(field('투어 희망 사항'), { target: { value: '다른 글' } });
+    fireEvent.change(field('탐방 희망 사항'), { target: { value: '다른 글' } });
     await user.click(saveButton());
     expect(await screen.findByText(errorMessage('FORBIDDEN'))).toBeInTheDocument();
     expect(router.state.location.pathname).toBe(`/me/wishes/${HAEUN_WISH}/edit`);
@@ -235,7 +235,7 @@ describe('내 희망 사항 고치기 (T-07)', () => {
     const bodies = watchPatches();
     const { user, router } = await renderApp(`/me/wishes/${HAEUN_WISH}/edit`, { as: HAEUN });
     await editReady();
-    fireEvent.change(field('투어 희망 사항'), { target: { value: '연타 시험' } });
+    fireEvent.change(field('탐방 희망 사항'), { target: { value: '연타 시험' } });
     await user.dblClick(saveButton());
     await waitFor(() => expect(router.state.location.pathname).toBe('/me/wishes'));
     expect(bodies).toHaveLength(1);

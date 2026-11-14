@@ -14,7 +14,7 @@ const detail = () => toCamel<WireTourDetail>(TOUR_DETAIL.data);
 
 const SUMMARY_31: TourSummary = {
   id: 31,
-  title: '단국대 죽전캠퍼스 컴퓨터공학과 투어',
+  title: '단국대 죽전캠퍼스 컴퓨터공학과 탐방',
   universityId: 0,
   universityName: '단국대학교',
   universityShortName: '단국대',
@@ -46,14 +46,14 @@ describe('fromWireTourItem', () => {
       universityName: '단국대학교',
       universityShortName: '단국대',
       campusName: '죽전캠퍼스',
-      title: '단국대 죽전캠퍼스 컴퓨터공학과 투어',
+      title: '단국대 죽전캠퍼스 컴퓨터공학과 탐방',
     });
   });
 
   it('공백 없는 캠퍼스 이름은 본교로 읽고 제목에서 캠퍼스를 뺀다', () => {
     const read = fromWireTourItem({ ...item(), campusName: '강남대학교' }, []);
     expect(read).toMatchObject({ universityName: '강남대학교', campusName: '본교' });
-    expect(read.title).toBe('강남대 컴퓨터공학과 투어');
+    expect(read.title).toBe('강남대 컴퓨터공학과 탐방');
   });
 });
 
@@ -84,7 +84,7 @@ describe('fromWireTourDetail', () => {
     delete wire.major;
     const read = fromWireTourDetail(wire, D01);
     expect(read.major).toBeNull();
-    expect(read.title).toBe('단국대 죽전캠퍼스 캠퍼스 투어');
+    expect(read.title).toBe('단국대 죽전캠퍼스 캠퍼스 탐방');
   });
 
   it('end_time이 null이면 endsAt도 null', () => {

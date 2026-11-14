@@ -11,7 +11,7 @@ import { formatShortDate } from '@/shared/lib/date';
 import { findApplicationId, renderApp, switchAccount } from '@/test/renderApp';
 import { wireFail } from '@/test/wire';
 
-const GUIDE_TOUR_TITLE = '경희대 국제캠퍼스 산업디자인학과 투어';
+const GUIDE_TOUR_TITLE = '경희대 국제캠퍼스 산업디자인학과 탐방';
 
 afterEach(() => {
   server.events.removeAllListeners('request:start'); // setup의 resetHandlers는 리스너를 지우지 않는다
@@ -38,7 +38,7 @@ async function fillTourForm(
     '시작 시간': '14:00',
     '종료 시간': '16:30',
     정원: '5',
-    '투어 소개': '산업디자인 작업실을 함께 둘러봐요.',
+    '탐방 소개': '산업디자인 작업실을 함께 둘러봐요.',
     '연락 링크': 'https://open.kakao.com/o/x',
     ...values,
   };
@@ -48,21 +48,21 @@ async function fillTourForm(
   }
 }
 
-describe('G04 투어 개설 (guide-s02)', () => {
-  it('V2 문구와 카드 순서: 학교 → 일정 → 정원 → 투어 소개 → 연락 링크, 투어 이름 칸은 없다', async () => {
+describe('G04 탐방 개설 (guide-s02)', () => {
+  it('V2 문구와 카드 순서: 학교 → 일정 → 정원 → 탐방 소개 → 연락 링크, 탐방 이름 칸은 없다', async () => {
     await renderApp('/guide/tours/new', { as: 'guide' });
     expect(await screen.findByRole('heading', { name: '어떤 하루를 보여줄까요?' })).toBeVisible();
-    expect(screen.getByRole('heading', { level: 1, name: '새 투어 만들기' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '새 탐방 만들기' })).toBeInTheDocument();
     expect(screen.getByText('방학 중 열 수 있는 작은 캠퍼스 투어를 만들어 봐요.')).toBeVisible();
     expect(screen.getByText('경희대학교 국제캠퍼스')).toBeVisible();
-    expect(screen.queryByLabelText(/투어 이름/)).not.toBeInTheDocument();
+    expect(screen.queryByLabelText(/탐방 이름/)).not.toBeInTheDocument();
     expect(field('정원')).toHaveAttribute('placeholder', '최대 10명');
-    expect(field('투어 소개')).toHaveAttribute('placeholder', '전공 선배와 둘러보는 우리 캠퍼스');
+    expect(field('탐방 소개')).toHaveAttribute('placeholder', '전공 선배와 둘러보는 우리 캠퍼스');
     expect(screen.getByText('승인된 신청자에게만 공개돼요.')).toBeVisible();
-    expect(screen.getByText('ⓘ 학교별 방학 기간에만 투어를 개설할 수 있어요.')).toBeVisible();
+    expect(screen.getByText('ⓘ 학교별 방학 기간에만 탐방을 개설할 수 있어요.')).toBeVisible();
     expect(screen.getByRole('button', { name: '모집 시작하기' })).toBeEnabled();
     // 라벨 순서
-    const nodes = ['학교', '일정', '정원', '투어 소개', '연락 링크'].map((name) =>
+    const nodes = ['학교', '일정', '정원', '탐방 소개', '연락 링크'].map((name) =>
       screen.getByText(name, { selector: 'h3, label' }),
     );
     for (let i = 1; i < nodes.length; i++) {
@@ -89,7 +89,7 @@ describe('G04 투어 개설 (guide-s02)', () => {
     expect(await screen.findByText('재학 인증 승인 필요')).toBeVisible();
     expect(screen.getByRole('button', { name: '모집 시작하기' })).toBeDisabled();
     expect(
-      screen.getByText('학생증 또는 재학증명서 인증 후에만 투어를 개설할 수 있어요.'),
+      screen.getByText('학생증 또는 재학증명서 인증 후에만 탐방을 개설할 수 있어요.'),
     ).toBeVisible();
     expect(screen.getByRole('link', { name: '역할 인증 단계로 이동' })).toHaveAttribute(
       'href',
@@ -108,14 +108,14 @@ describe('G04 투어 개설 (guide-s02)', () => {
     expect(await screen.findByRole('heading', { name: '가이드 프로필 등록' })).toBeInTheDocument();
   });
 
-  it('정상 개설: 요청 1번 → 토스트 → 내가 개설한 투어에 새 카드(01.20)', async () => {
+  it('정상 개설: 요청 1번 → 토스트 → 내가 개설한 탐방에 새 카드(01.20)', async () => {
     const posts = countRequests('POST', '/tours');
     const { user, router } = await renderApp('/guide/tours/new', { as: 'guide' });
     await screen.findByRole('heading', { name: '어떤 하루를 보여줄까요?' });
     await fillTourForm(user);
     expect(await screen.findByText('방학 기간')).toBeVisible();
     await user.click(screen.getByRole('button', { name: '모집 시작하기' }));
-    expect(await screen.findByText('투어를 개설했어요.')).toBeInTheDocument();
+    expect(await screen.findByText('탐방을 개설했어요.')).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours'));
     expect(posts()).toBe(1);
     const card = (await screen.findByText('01.20 (수) · 0/5명 승인')).closest('article')!;
@@ -169,7 +169,7 @@ describe('G04 투어 개설 (guide-s02)', () => {
     ['종료가 시작과 같으면', { '종료 시간': '14:00' }, '종료 시간은 시작 시간보다 늦어야 해요.'],
     ['정원이 11이면', { 정원: '11' }, '모집 정원은 1~10명으로 적어 주세요.'],
     ['정원이 0이면', { 정원: '0' }, '모집 정원은 1~10명으로 적어 주세요.'],
-    ['소개가 301자면', { '투어 소개': 'ㄱ'.repeat(301) }, '300자 이내로 적어 주세요.'],
+    ['소개가 301자면', { '탐방 소개': 'ㄱ'.repeat(301) }, '300자 이내로 적어 주세요.'],
     ['연락 링크가 http면', { '연락 링크': 'http://x' }, 'https://로 시작하는 링크를 넣어 주세요.'],
   ])('%s 요청 없이 칸 아래에 알린다', async (_name, override, message) => {
     const posts = countRequests('POST', '/tours');
@@ -191,14 +191,14 @@ describe('G04 투어 개설 (guide-s02)', () => {
       '시작 시간을 골라 주세요.',
       '종료 시간을 골라 주세요.',
       '모집 정원은 1~10명으로 적어 주세요.',
-      '투어 소개를 입력해 주세요.',
+      '탐방 소개를 입력해 주세요.',
       '연락 링크를 넣어 주세요.',
     ]) {
       expect(await screen.findByText(message)).toBeVisible();
     }
     expect(posts()).toBe(0);
     // 한 글자 소개도 통과한다
-    await fillTourForm(user, { '투어 소개': '안' });
+    await fillTourForm(user, { '탐방 소개': '안' });
     await user.click(screen.getByRole('button', { name: '모집 시작하기' }));
     await waitFor(() => expect(posts()).toBe(1));
   });
@@ -229,7 +229,7 @@ describe('G04 투어 개설 (guide-s02)', () => {
     await waitFor(() => expect(posts()).toBe(1));
   });
 
-  it('남은 방학이 없으면 버튼 비활성 + 사유 + 내가 개설한 투어', async () => {
+  it('남은 방학이 없으면 버튼 비활성 + 사유 + 내가 개설한 탐방', async () => {
     // 데이터를 부르지 않는 화면에서 시작해 가이드 학교의 방학을 모두 지난 날짜로 바꾼 뒤 들어온다.
     const { router } = await renderApp('/explore', { as: 'guide' });
     mutate((db) => {
@@ -243,7 +243,7 @@ describe('G04 투어 개설 (guide-s02)', () => {
     expect(
       screen.getByText('앞으로 열리는 방학 기간이 없어 지금은 개설할 수 없어요.'),
     ).toBeVisible();
-    expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
@@ -312,11 +312,11 @@ describe('G04 투어 개설 (guide-s02)', () => {
   });
 });
 
-describe('G09 투어 완료 (guide-s07)', () => {
+describe('G09 탐방 완료 (guide-s07)', () => {
   it('V2 문구: 카드 · 단계 · 캡션 · 버튼', async () => {
     await renderApp('/guide/tours/1/complete', { as: 'guide', checkpoint: 'CONFIRMED' });
-    expect(await screen.findByRole('heading', { name: '투어를 마쳤나요?' })).toBeVisible();
-    expect(screen.getByRole('heading', { level: 1, name: '투어 종료 · 완료 처리' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: '탐방을 마쳤나요?' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: '탐방 종료 · 완료 처리' })).toBeVisible();
     expect(screen.getByText('실제 진행이 끝난 후 완료 처리해 주세요.')).toBeVisible();
     expect(screen.getByText('진행 중')).toBeVisible();
     expect(screen.getByText(GUIDE_TOUR_TITLE)).toBeVisible();
@@ -324,24 +324,24 @@ describe('G09 투어 완료 (guide-s07)', () => {
     const approved = getDb().applications.filter((a) => a.tourId === 1 && a.status === 'APPROVED');
     const stops = getDb().courseStops.filter((c) => c.tourId === 1).length;
     expect(screen.getByText(`참가자 ${approved.length}명 · 코스 ${stops}개 장소`)).toBeVisible();
-    expect(screen.getByText('투어가 실제로 종료됐는지 확인')).toBeVisible();
+    expect(screen.getByText('탐방이 실제로 종료됐는지 확인')).toBeVisible();
     expect(screen.getByText('완료 시 참가자에게 리뷰 작성 안내')).toBeVisible();
-    expect(screen.getByText('가이드의 지난 투어 목록에 저장')).toBeVisible();
+    expect(screen.getByText('가이드의 지난 탐방 목록에 저장')).toBeVisible();
     expect(screen.getByText('완료 처리 후에는 참가자의 리뷰 작성이 가능해져요.')).toBeVisible();
-    expect(screen.getByRole('button', { name: '투어 완료 처리' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '탐방 완료 처리' })).toBeEnabled();
     expect(screen.getByRole('button', { name: '뒤로 가기' })).toBeInTheDocument();
   });
 
-  it('투어 1(오늘)을 완료하면 토스트 + 지난 투어 탭에 그 투어', async () => {
+  it('탐방 1(오늘)을 완료하면 토스트 + 지난 탐방 탭에 그 탐방', async () => {
     const { user, router } = await renderApp('/guide/tours/1/complete', {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });
-    await user.click(await screen.findByRole('button', { name: '투어 완료 처리' }));
-    expect(await screen.findByText('투어를 완료 처리했어요.')).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: '탐방 완료 처리' }));
+    expect(await screen.findByText('탐방을 완료 처리했어요.')).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours'));
     expect(router.state.location.search).toBe('?tab=past');
-    expect(await screen.findByRole('tab', { name: '지난 투어', selected: true })).toBeVisible();
+    expect(await screen.findByRole('tab', { name: '지난 탐방', selected: true })).toBeVisible();
     const card = (await screen.findAllByRole('article')).find((a) =>
       a.textContent?.includes('완료'),
     )!;
@@ -349,12 +349,12 @@ describe('G09 투어 완료 (guide-s07)', () => {
     expect(getDb().tours.find((t) => t.id === 1)!.status).toBe('COMPLETED');
   });
 
-  it('투어 6(날짜 전)은 비활성 + 날짜 사유 + 신청자 관리로 이동', async () => {
+  it('탐방 6(날짜 전)은 비활성 + 날짜 사유 + 신청자 관리로 이동', async () => {
     await renderApp('/guide/tours/6/complete', { as: 'guide' });
     const tour6 = getDb().tours.find((t) => t.id === 6)!;
-    expect(await screen.findByRole('button', { name: '투어 완료 처리' })).toBeDisabled();
+    expect(await screen.findByRole('button', { name: '탐방 완료 처리' })).toBeDisabled();
     expect(
-      screen.getByText(`투어 날짜(${formatShortDate(tour6.startsAt)}) 이후에 완료할 수 있어요.`),
+      screen.getByText(`탐방 날짜(${formatShortDate(tour6.startsAt)}) 이후에 완료할 수 있어요.`),
     ).toBeVisible();
     expect(screen.getByRole('link', { name: '신청자 관리로 이동' })).toHaveAttribute(
       'href',
@@ -362,63 +362,63 @@ describe('G09 투어 완료 (guide-s07)', () => {
     );
   });
 
-  it('투어 7(이미 완료)은 비활성 + 사유 + 내가 개설한 투어', async () => {
+  it('탐방 7(이미 완료)은 비활성 + 사유 + 내가 개설한 탐방', async () => {
     await renderApp('/guide/tours/7/complete', { as: 'guide' });
-    expect(await screen.findByRole('button', { name: '투어 완료 처리' })).toBeDisabled();
-    expect(screen.getByText('이미 완료된 투어예요.')).toBeVisible();
-    expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: '탐방 완료 처리' })).toBeDisabled();
+    expect(screen.getByText('이미 완료된 탐방이에요.')).toBeVisible();
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
   });
 
-  it('투어 완료 처리 연타는 요청 1번', async () => {
+  it('탐방 완료 처리 연타는 요청 1번', async () => {
     setMockLatency({ base: 150, ai: 0 });
     const posts = countRequests('POST', '/tours/1/complete');
     const { user, router } = await renderApp('/guide/tours/1/complete', {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });
-    await user.dblClick(await screen.findByRole('button', { name: '투어 완료 처리' }));
+    await user.dblClick(await screen.findByRole('button', { name: '탐방 완료 처리' }));
     await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours'));
     expect(posts()).toBe(1);
   });
 
-  it('남의 투어(투어 3은 다른 가이드)은 안내 + 내가 개설한 투어', async () => {
+  it('남의 탐방(탐방 3은 다른 가이드)은 안내 + 내가 개설한 탐방', async () => {
     await renderApp('/guide/tours/3/complete', { as: 'guide' });
     expect(await screen.findByText('이 작업을 할 권한이 없어요.')).toBeVisible();
-    expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
-    expect(screen.queryByRole('button', { name: '투어 완료 처리' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('button', { name: '탐방 완료 처리' })).not.toBeInTheDocument();
   });
 
-  it('막힌 상태에서는 `진행 중` 칩 대신 투어 상태 칩이 보인다', async () => {
+  it('막힌 상태에서는 `진행 중` 칩 대신 탐방 상태 칩이 보인다', async () => {
     await renderApp('/guide/tours/7/complete', { as: 'guide' });
-    await screen.findByRole('button', { name: '투어 완료 처리' });
+    await screen.findByRole('button', { name: '탐방 완료 처리' });
     expect(screen.queryByText('진행 중')).not.toBeInTheDocument();
     expect(screen.getByText('완료')).toBeVisible();
   });
 
-  it('날짜 전 투어(6)의 칩은 `모집 중`이다(`진행 중`이 아니다)', async () => {
+  it('날짜 전 탐방(6)의 칩은 `모집 중`이다(`진행 중`이 아니다)', async () => {
     await renderApp('/guide/tours/6/complete', { as: 'guide' });
-    await screen.findByRole('button', { name: '투어 완료 처리' });
+    await screen.findByRole('button', { name: '탐방 완료 처리' });
     expect(screen.queryByText('진행 중')).not.toBeInTheDocument();
     expect(screen.getByText('모집 중')).toBeVisible();
   });
 
   it.each([
-    ['COMPLETED', '이미 완료된 투어예요.', '이미 완료된 투어예요.'],
-    ['CANCELED', '이미 처리된 요청이에요.', '취소된 투어는 완료할 수 없어요.'],
+    ['COMPLETED', '이미 완료된 탐방이에요.', '이미 완료된 탐방이에요.'],
+    ['CANCELED', '이미 처리된 요청이에요.', '취소된 탐방은 완료할 수 없어요.'],
   ] as const)(
-    '서버가 E409_INVALID_TOUR_STATUS로 거절하고 투어가 %s이면 세분한 토스트 + 다시 읽은 뒤 비활성 + 사유',
+    '서버가 E409_INVALID_TOUR_STATUS로 거절하고 탐방이 %s이면 세분한 토스트 + 다시 읽은 뒤 비활성 + 사유',
     async (status, toast, reason) => {
       const { user, router } = await renderApp('/guide/tours/1/complete', {
         as: 'guide',
         checkpoint: 'CONFIRMED',
       });
-      const done = await screen.findByRole('button', { name: '투어 완료 처리' });
+      const done = await screen.findByRole('button', { name: '탐방 완료 처리' });
       expect(done).toBeEnabled();
       mutate((db) => {
         db.tours.find((t) => t.id === 1)!.status = status;
@@ -430,7 +430,7 @@ describe('G09 투어 완료 (guide-s07)', () => {
       // 토스트와 (같은 문장일 수 있는) 사유 줄이 함께 보인다.
       expect((await screen.findAllByText(toast)).length).toBeGreaterThan(0);
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: '투어 완료 처리' })).toBeDisabled(),
+        expect(screen.getByRole('button', { name: '탐방 완료 처리' })).toBeDisabled(),
       );
       expect(screen.getAllByText(reason).length).toBeGreaterThan(0);
       expect(screen.queryByText('진행 중')).not.toBeInTheDocument();
@@ -438,12 +438,12 @@ describe('G09 투어 완료 (guide-s07)', () => {
     },
   );
 
-  it('투어 날짜 전이면(모집 중) 토스트 `투어 날짜 이후에 완료할 수 있어요.` + 다시 읽은 뒤 비활성 + 날짜 사유', async () => {
+  it('탐방 날짜 전이면(모집 중) 토스트 `탐방 날짜 이후에 완료할 수 있어요.` + 다시 읽은 뒤 비활성 + 날짜 사유', async () => {
     const { user } = await renderApp('/guide/tours/1/complete', {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });
-    const done = await screen.findByRole('button', { name: '투어 완료 처리' });
+    const done = await screen.findByRole('button', { name: '탐방 완료 처리' });
     expect(done).toBeEnabled();
     // 화면이 열린 뒤 탐방 날짜가 뒤로 밀렸다(다른 기기에서 고침).
     const later = getDb().tours.find((t) => t.id === 6)!.startsAt;
@@ -454,12 +454,12 @@ describe('G09 투어 완료 (guide-s07)', () => {
       http.post('/api/tours/:tourId/complete', () => wireFail('E409_INVALID_TOUR_STATUS')),
     );
     await user.click(done);
-    expect(await screen.findByText('투어 날짜 이후에 완료할 수 있어요.')).toBeInTheDocument();
+    expect(await screen.findByText('탐방 날짜 이후에 완료할 수 있어요.')).toBeInTheDocument();
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: '투어 완료 처리' })).toBeDisabled(),
+      expect(screen.getByRole('button', { name: '탐방 완료 처리' })).toBeDisabled(),
     );
     expect(
-      screen.getByText(`투어 날짜(${formatShortDate(later)}) 이후에 완료할 수 있어요.`),
+      screen.getByText(`탐방 날짜(${formatShortDate(later)}) 이후에 완료할 수 있어요.`),
     ).toBeVisible();
     expect(screen.getByRole('link', { name: '신청자 관리로 이동' })).toHaveAttribute(
       'href',
@@ -468,13 +468,13 @@ describe('G09 투어 완료 (guide-s07)', () => {
   });
 });
 
-describe('G10 투어 취소 (guide-a04)', () => {
+describe('G10 탐방 취소 (guide-a04)', () => {
   it('V2 문구: 경고 카드 · 취소 대상 카드 · 캡션 · 두 버튼', async () => {
     await renderApp('/guide/tours/1/cancel', { as: 'guide', checkpoint: 'CONFIRMED' });
-    expect(await screen.findByRole('heading', { name: '투어를 취소할까요?' })).toBeVisible();
-    expect(screen.getByRole('heading', { level: 1, name: '투어 취소 확인' })).toBeVisible();
+    expect(await screen.findByRole('heading', { name: '탐방을 취소할까요?' })).toBeVisible();
+    expect(screen.getByRole('heading', { level: 1, name: '탐방 취소 확인' })).toBeVisible();
     expect(screen.getByText('참가자에게 취소 안내가 전달돼요.')).toBeVisible();
-    expect(screen.getByText('투어 전체가 취소돼요')).toBeVisible();
+    expect(screen.getByText('탐방 전체가 취소돼요')).toBeVisible();
     expect(screen.getByText('승인된 신청과 발급된 쿠폰도 함께 무효화돼요.')).toBeVisible();
     expect(screen.getByText('취소 대상')).toBeVisible();
     expect(screen.getByText(GUIDE_TOUR_TITLE)).toBeVisible();
@@ -485,13 +485,13 @@ describe('G10 투어 취소 (guide-a04)', () => {
       ),
     ).toBeVisible();
     expect(
-      screen.getByText('취소 후 같은 일정으로 복구하려면 새 투어를 개설해야 해요.'),
+      screen.getByText('취소 후 같은 일정으로 복구하려면 새 탐방을 개설해야 해요.'),
     ).toBeVisible();
-    expect(screen.getByRole('button', { name: '투어 취소 확정' })).toBeEnabled();
+    expect(screen.getByRole('button', { name: '탐방 취소 확정' })).toBeEnabled();
     expect(screen.getByRole('button', { name: '돌아가기' })).toBeEnabled();
   });
 
-  it('돌아가기: 주소로 바로 들어왔으면 내가 개설한 투어, 이전 화면이 있으면 거기로', async () => {
+  it('돌아가기: 주소로 바로 들어왔으면 내가 개설한 탐방, 이전 화면이 있으면 거기로', async () => {
     const first = await renderApp('/guide/tours/1/cancel', { as: 'guide' });
     await first.user.click(await screen.findByRole('button', { name: '돌아가기' }));
     expect(first.router.state.location.pathname).toBe('/guide/tours');
@@ -504,20 +504,20 @@ describe('G10 투어 취소 (guide-a04)', () => {
     expect(router.state.location.pathname).toBe('/guide/tours/1/applicants');
   });
 
-  it('CONFIRMED 투어 1을 취소하면 토스트 + 목록, 학생에게는 취소됨 카드와 만료 쿠폰으로 보인다 (Review Focus 5)', async () => {
+  it('CONFIRMED 탐방 1을 취소하면 토스트 + 목록, 학생에게는 취소됨 카드와 만료 쿠폰으로 보인다 (Review Focus 5)', async () => {
     const { user, router, queryClient } = await renderApp('/guide/tours/1/cancel', {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });
     const applicationId = findApplicationId('student@demo.kr', 1);
-    await user.click(await screen.findByRole('button', { name: '투어 취소 확정' }));
-    expect(await screen.findByText('투어를 취소했어요.')).toBeInTheDocument();
+    await user.click(await screen.findByRole('button', { name: '탐방 취소 확정' }));
+    expect(await screen.findByText('탐방을 취소했어요.')).toBeInTheDocument();
     await waitFor(() => expect(router.state.location.pathname).toBe('/guide/tours'));
     expect(router.state.location.search).toBe('');
 
     await switchAccount(queryClient, 'student@demo.kr');
     await act(() => router.navigate('/my-tours?tab=past'));
-    const record = await screen.findByRole('link', { name: '투어 기록 보기' });
+    const record = await screen.findByRole('link', { name: '탐방 기록 보기' });
     expect(record).toHaveAttribute('href', `/my-tours/${applicationId}`);
     const detail = record.closest('article')!;
     expect(within(detail).getByText('취소됨')).toBeInTheDocument();
@@ -530,24 +530,24 @@ describe('G10 투어 취소 (guide-a04)', () => {
     }
   });
 
-  it('완료된 투어 7은 비활성 + 사유 + 내가 개설한 투어', async () => {
+  it('완료된 탐방 7은 비활성 + 사유 + 내가 개설한 탐방', async () => {
     await renderApp('/guide/tours/7/cancel', { as: 'guide' });
-    expect(await screen.findByRole('button', { name: '투어 취소 확정' })).toBeDisabled();
-    expect(screen.getByText('완료된 투어는 취소할 수 없습니다.')).toBeVisible();
-    expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toHaveAttribute(
+    expect(await screen.findByRole('button', { name: '탐방 취소 확정' })).toBeDisabled();
+    expect(screen.getByText('완료된 탐방은 취소할 수 없습니다.')).toBeVisible();
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
   });
 
-  it('투어 취소 확정 연타는 요청 1번이고 처리 중에는 돌아가기도 잠긴다', async () => {
+  it('탐방 취소 확정 연타는 요청 1번이고 처리 중에는 돌아가기도 잠긴다', async () => {
     setMockLatency({ base: 150, ai: 0 });
     const posts = countRequests('POST', '/tours/1/cancel');
     const { user, router } = await renderApp('/guide/tours/1/cancel', {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });
-    const confirm = await screen.findByRole('button', { name: '투어 취소 확정' });
+    const confirm = await screen.findByRole('button', { name: '탐방 취소 확정' });
     await user.click(confirm);
     expect(screen.getByRole('button', { name: '돌아가기' })).toBeDisabled();
     await user.click(confirm);
@@ -555,33 +555,33 @@ describe('G10 투어 취소 (guide-a04)', () => {
     expect(posts()).toBe(1);
   });
 
-  it('남의 투어는 안내 + 내가 개설한 투어', async () => {
+  it('남의 탐방은 안내 + 내가 개설한 탐방', async () => {
     await renderApp('/guide/tours/3/cancel', { as: 'guide' });
     expect(await screen.findByText('이 작업을 할 권한이 없어요.')).toBeVisible();
-    expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
   });
 
-  it('막힌 상태에서는 `취소 대상` 칩 대신 투어 상태 칩이 보인다', async () => {
+  it('막힌 상태에서는 `취소 대상` 칩 대신 탐방 상태 칩이 보인다', async () => {
     await renderApp('/guide/tours/7/cancel', { as: 'guide' });
-    await screen.findByRole('button', { name: '투어 취소 확정' });
+    await screen.findByRole('button', { name: '탐방 취소 확정' });
     expect(screen.queryByText('취소 대상')).not.toBeInTheDocument();
     expect(screen.getByText('완료')).toBeVisible();
   });
 
   it.each([
-    ['COMPLETED', '이미 완료된 투어예요.', '완료된 투어는 취소할 수 없습니다.'],
-    ['CANCELED', '이미 처리된 요청이에요.', '이미 취소된 투어예요.'],
+    ['COMPLETED', '이미 완료된 탐방이에요.', '완료된 탐방은 취소할 수 없습니다.'],
+    ['CANCELED', '이미 처리된 요청이에요.', '이미 취소된 탐방이에요.'],
   ] as const)(
-    '서버가 E409_INVALID_TOUR_STATUS로 거절하고 투어가 %s이면 세분한 토스트 + 다시 읽은 뒤 비활성 + 사유',
+    '서버가 E409_INVALID_TOUR_STATUS로 거절하고 탐방이 %s이면 세분한 토스트 + 다시 읽은 뒤 비활성 + 사유',
     async (status, toast, reason) => {
       const { user, router } = await renderApp('/guide/tours/1/cancel', {
         as: 'guide',
         checkpoint: 'CONFIRMED',
       });
-      const confirm = await screen.findByRole('button', { name: '투어 취소 확정' });
+      const confirm = await screen.findByRole('button', { name: '탐방 취소 확정' });
       expect(confirm).toBeEnabled();
       // 다른 기기에서 먼저 처리했다.
       mutate((db) => {
@@ -593,7 +593,7 @@ describe('G10 투어 취소 (guide-a04)', () => {
       await user.click(confirm);
       expect((await screen.findAllByText(toast)).length).toBeGreaterThan(0);
       await waitFor(() =>
-        expect(screen.getByRole('button', { name: '투어 취소 확정' })).toBeDisabled(),
+        expect(screen.getByRole('button', { name: '탐방 취소 확정' })).toBeDisabled(),
       );
       expect(screen.getByText(reason)).toBeVisible();
       expect(screen.queryByText('취소 대상')).not.toBeInTheDocument();
@@ -606,13 +606,13 @@ describe('G10 투어 취소 (guide-a04)', () => {
       as: 'guide',
       checkpoint: 'CONFIRMED',
     });
-    const confirm = await screen.findByRole('button', { name: '투어 취소 확정' });
+    const confirm = await screen.findByRole('button', { name: '탐방 취소 확정' });
     server.use(http.post('/api/tours/:tourId/cancel', () => wireFail('E409_INVALID_TOUR_STATUS')));
     await user.click(confirm);
     expect(await screen.findByText('이미 처리된 요청이에요.')).toBeInTheDocument();
     // 요청이 끝나면 잠금이 풀린다(버튼이 로딩에 갇히지 않는다).
     await waitFor(() =>
-      expect(screen.getByRole('button', { name: '투어 취소 확정' })).toBeEnabled(),
+      expect(screen.getByRole('button', { name: '탐방 취소 확정' })).toBeEnabled(),
     );
   });
 });

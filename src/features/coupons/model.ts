@@ -63,7 +63,7 @@ export function couponStateTone(state: CouponState): Tone {
 export function couponStateLabel(state: CouponState, usedAt: string | null): string {
   switch (state) {
     case 'BEFORE_DAY':
-      return '투어 당일 사용 가능';
+      return '탐방 당일 사용 가능';
     case 'USABLE':
       return '사용 가능';
     case 'EXPIRED':
@@ -115,7 +115,7 @@ const NOT_FOUND_NOTICE: CouponNotice = {
 };
 const NOT_YET_NOTICE: CouponNotice = {
   title: '아직 사용할 수 없는 쿠폰',
-  description: '투어 당일에만 사용할 수 있어요.',
+  description: '탐방 당일에만 사용할 수 있어요.',
 };
 const DAILY_LIMIT_NOTICE: CouponNotice = {
   title: '오늘 이미 쿠폰을 처리한 가게',

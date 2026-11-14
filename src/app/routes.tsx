@@ -121,7 +121,7 @@ export const routes: RouteObject[] = [
               },
               {
                 path: '/explore',
-                element: <PlaceholderPage title="모집 중 투어 둘러보기" />, // P2 · 가이드 · 사장님 `탐색` 탭
+                element: <PlaceholderPage title="모집 중 탐방 둘러보기" />, // P2 · 가이드 · 사장님 `탐색` 탭
               },
 
               // ── 고교생 ──────────────────────────────────────────────

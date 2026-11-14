@@ -66,19 +66,19 @@ for (const { title, link, present } of VARIANTS) {
     // 고교생: 희망 사항(시연 도구가 켜져 있어 학교 · 학과 · 희망 사항이 미리 채워져 있다) → 탐방 찾기 결과(원문 카드 ·
     // 모집 중 탐방) → 탐방 상세 → 신청서(시연 모드라 미리 채움) → 신청 완료
     await page.goto(link);
-    await expect(page.getByLabel('투어 희망 사항', { exact: true })).toHaveValue(DEMO_WISH.wish);
+    await expect(page.getByLabel('탐방 희망 사항', { exact: true })).toHaveValue(DEMO_WISH.wish);
     await expect(page.getByLabel('학교', { exact: true })).toHaveValue(
       String(DEMO_WISH.universityId),
     );
     await expect(page.getByLabel('학과', { exact: true })).toHaveValue(DEMO_WISH.major);
     await checkRoleBadge('고교생 화면');
-    await page.getByRole('button', { name: '희망 사항 남기고 투어 찾기' }).click();
+    await page.getByRole('button', { name: '희망 사항 남기고 탐방 찾기' }).click();
     await expect(page.getByRole('region', { name: '내가 남긴 희망 사항' })).toContainText(
       DEMO_WISH.wish,
     );
     // 원문 카드 아래 줄에도 `경희대학교 국제캠퍼스`가 있어 글자로 찾지 않고 목록의 첫 행을 누른다.
-    await page.getByRole('list', { name: '모집 중 투어' }).getByRole('link').first().click();
-    await page.getByRole('button', { name: '이 투어 신청하기' }).click();
+    await page.getByRole('list', { name: '모집 중 탐방' }).getByRole('link').first().click();
+    await page.getByRole('button', { name: '이 탐방 신청하기' }).click();
     await page.getByRole('button', { name: '신청 완료하기' }).click();
     await expect(page.getByText('신청이 접수됐어요!')).toBeVisible();
     await checkRoleBadge('고교생 화면');
@@ -86,7 +86,7 @@ for (const { title, link, present } of VARIANTS) {
     // 가이드: 김민지 승인 → AI 코스 초안 → 둘째 지점을 아래로 → 확정(쿠폰 발급)
     await switchRole('가이드');
     // 가이드 첫 화면은 /guide(가이드 홈 G01): 이번 탐방 카드의 `신청자 확인하기`로 신청자 승인 화면에 들어간다.
-    await expect(page.getByRole('heading', { name: /이번 주, .+ 투어를/ })).toBeVisible();
+    await expect(page.getByRole('heading', { name: /이번 주, .+ 탐방을/ })).toBeVisible();
     await checkRoleBadge('가이드 화면');
     await page.getByRole('link', { name: '신청자 확인하기' }).first().click();
     // 승인 토스트에도 이름이 들어가므로 신청자 카드(article) 안에서 찾는다.
@@ -121,8 +121,8 @@ for (const { title, link, present } of VARIANTS) {
       'aria-current',
       'page',
     );
-    await page.getByRole('link', { name: '내 투어', exact: true }).click();
-    await expect(page.getByRole('heading', { name: '내 투어', exact: true })).toBeVisible();
+    await page.getByRole('link', { name: '내 탐방', exact: true }).click();
+    await expect(page.getByRole('heading', { name: '내 탐방', exact: true })).toBeVisible();
     await checkRoleBadge('고교생 화면');
     await page.getByRole('link', { name: '코스 확인하기', exact: true }).click();
     await expect(page.getByRole('heading', { name: '코스 보기' })).toBeVisible();
@@ -148,6 +148,6 @@ for (const { title, link, present } of VARIANTS) {
     await checkRoleBadge('사장님 화면');
     await page.getByRole('button', { name: '사용 처리하기' }).click();
     await expect(page.getByText('쿠폰 사용이 완료됐어요.')).toBeVisible();
-    await expect(page.getByText('이번 투어로 온 학생 1명')).toBeVisible();
+    await expect(page.getByText('이번 탐방으로 온 학생 1명')).toBeVisible();
   });
 }

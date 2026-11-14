@@ -43,7 +43,7 @@ function Stats() {
   }
   return (
     <div className="grid grid-cols-2 gap-3">
-      <Stat value={`${tours.length}회`} label="개설한 투어" />
+      <Stat value={`${tours.length}회`} label="개설한 탐방" />
       <Stat value={`${tours.filter(isUpcomingTour).length}회`} label="진행 예정" />
     </div>
   );
@@ -135,9 +135,9 @@ export function GuideMyPage() {
         <ListRow
           to="/guide/wishes"
           title="고교생 희망 사항"
-          meta="학생들이 남긴 희망 사항을 보고 투어를 준비해요."
+          meta="학생들이 남긴 희망 사항을 보고 탐방을 준비해요."
         />
-        <ListRow to="/guide/tours" title="내가 개설한 투어" meta="모집 상태와 참가자를 확인해요." />
+        <ListRow to="/guide/tours" title="내가 개설한 탐방" meta="모집 상태와 참가자를 확인해요." />
         <ListRow
           to="/guide/me/status"
           title="내 정보·인증 상태"

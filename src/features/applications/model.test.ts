@@ -20,7 +20,7 @@ import {
 
 const tour: TourSummary = {
   id: 7,
-  title: '경희대 컴퓨터공학과 투어',
+  title: '경희대 컴퓨터공학과 탐방',
   universityId: 1,
   universityName: '경희대학교',
   universityShortName: '경희대',
@@ -56,7 +56,7 @@ const mk = (
 ): MyApplication => ({ ...app, id, status, tour: { ...tour, id, status: tourStatus, startsAt } });
 
 describe('completedTourCount', () => {
-  it('신청이 승인이고 투어가 끝난 것만 센다', () => {
+  it('신청이 승인이고 탐방이 끝난 것만 센다', () => {
     expect(completedTourCount([])).toBe(0);
     expect(
       completedTourCount([
@@ -78,7 +78,7 @@ describe('groupMyApplications', () => {
   it('신청이 없으면 빈 묶음 셋', () =>
     expect(groupMyApplications([])).toEqual({ upcoming: [], pending: [], past: [] }));
 
-  it('승인 + 모집 중 · 마감은 예정, 대기 + 끝나지 않은 투어는 승인 대기', () => {
+  it('승인 + 모집 중 · 마감은 예정, 대기 + 끝나지 않은 탐방은 승인 대기', () => {
     const g = groupMyApplications([
       mk(1, 'APPROVED', 'RECRUITING', '2026-11-20T14:00:00+09:00'),
       mk(2, 'APPROVED', 'CLOSED', '2026-11-12T14:00:00+09:00'),
@@ -90,7 +90,7 @@ describe('groupMyApplications', () => {
     expect(g.past).toEqual([]);
   });
 
-  it('투어가 끝났거나 취소됐거나 신청이 거절 · 취소면 지난 투어(최근 먼저)', () => {
+  it('탐방이 끝났거나 취소됐거나 신청이 거절 · 취소면 지난 탐방(최근 먼저)', () => {
     const g = groupMyApplications([
       mk(1, 'APPROVED', 'COMPLETED', '2026-10-17T14:00:00+09:00'),
       mk(2, 'APPROVED', 'CANCELED', '2026-10-29T14:00:00+09:00'),
@@ -123,14 +123,14 @@ const guideTour = (patch: Partial<GuideTourSummary> & { id: number }): GuideTour
 describe('pickFocusTour', () => {
   it('목록이 비면 null', () => expect(pickFocusTour([])).toBeNull());
 
-  it('모집 중 · 마감 중 startsAt이 가장 이른 투어', () => {
+  it('모집 중 · 마감 중 startsAt이 가장 이른 탐방', () => {
     const late = guideTour({ id: 1, startsAt: '2026-11-20T14:00:00+09:00' });
     const early = guideTour({ id: 2, startsAt: '2026-11-12T14:00:00+09:00', status: 'CLOSED' });
     const mid = guideTour({ id: 3, startsAt: '2026-11-15T14:00:00+09:00' });
     expect(pickFocusTour([late, early, mid])?.id).toBe(2);
   });
 
-  it('취소 · 완료된 투어는 건너뛴다', () => {
+  it('취소 · 완료된 탐방은 건너뛴다', () => {
     const done = guideTour({ id: 1, startsAt: '2026-11-01T14:00:00+09:00', status: 'COMPLETED' });
     const canceled = guideTour({
       id: 2,
@@ -204,7 +204,7 @@ describe('guideTourChip', () => {
     expect(guideTourChip(guideTour({ id: 1, courseStatus: 'DRAFT' })).label).toBe('신청 접수 중');
   });
 
-  it('지난 투어는 코스가 확정이어도 투어 상태 이름', () => {
+  it('지난 탐방은 코스가 확정이어도 탐방 상태 이름', () => {
     expect(
       guideTourChip(guideTour({ id: 1, status: 'COMPLETED', courseStatus: 'CONFIRMED' })),
     ).toEqual({
@@ -235,13 +235,13 @@ describe('STUDENT_APPLICATION_STATUS', () => {
 describe('computeCancellable (어댑터 전용 — 목업 isCancellable도 이 규칙을 부른다)', () => {
   const tourStartsAt = '2026-11-15T14:00:00+09:00';
 
-  it('대기 · 승인 신청은 투어 전날(서울 날짜)까지 취소할 수 있다', () => {
+  it('대기 · 승인 신청은 탐방 전날(서울 날짜)까지 취소할 수 있다', () => {
     const dayBefore = new Date('2026-11-14T23:59:59+09:00');
     expect(computeCancellable('PENDING', tourStartsAt, dayBefore)).toBe(true);
     expect(computeCancellable('APPROVED', tourStartsAt, dayBefore)).toBe(true);
   });
 
-  it('투어 당일부터는 취소할 수 없다(시작 전이어도)', () => {
+  it('탐방 당일부터는 취소할 수 없다(시작 전이어도)', () => {
     const tourDay = new Date('2026-11-15T00:00:00+09:00');
     expect(computeCancellable('PENDING', tourStartsAt, tourDay)).toBe(false);
     expect(
@@ -261,28 +261,28 @@ describe('computeTourActions (2B′-R13)', () => {
   const at = (status: TourSummary['status'], startsAt: string) =>
     computeTourActions({ status, startsAt }, today);
 
-  it('모집 중 · 투어가 오늘이면 완료도 취소도 할 수 있다(당일 허용)', () => {
+  it('모집 중 · 탐방이 오늘이면 완료도 취소도 할 수 있다(당일 허용)', () => {
     expect(at('RECRUITING', '2026-11-15T14:00:00+09:00')).toEqual({
       completable: true,
       cancellable: true,
     });
   });
 
-  it('모집 중 · 투어가 내일이면 취소만 된다', () => {
+  it('모집 중 · 탐방이 내일이면 취소만 된다', () => {
     expect(at('RECRUITING', '2026-11-16T14:00:00+09:00')).toEqual({
       completable: false,
       cancellable: true,
     });
   });
 
-  it('마감 · 투어가 어제였으면 둘 다 된다', () => {
+  it('마감 · 탐방이 어제였으면 둘 다 된다', () => {
     expect(at('CLOSED', '2026-11-14T14:00:00+09:00')).toEqual({
       completable: true,
       cancellable: true,
     });
   });
 
-  it('완료 · 취소된 투어는 둘 다 안 된다', () => {
+  it('완료 · 취소된 탐방은 둘 다 안 된다', () => {
     expect(at('COMPLETED', '2026-11-14T14:00:00+09:00')).toEqual({
       completable: false,
       cancellable: false,
@@ -313,7 +313,7 @@ describe('completeActionState · cancelActionState (G09 · G10)', () => {
     courseStopCount: 0,
     actions,
   });
-  const MY_TOURS = { label: '내가 개설한 투어', to: '/guide/tours' };
+  const MY_TOURS = { label: '내가 개설한 탐방', to: '/guide/tours' };
 
   it('서버가 가능이라 하면 켜지고 사유 · 행동이 없다', () => {
     const open = detail('RECRUITING', { completable: true, cancellable: true });
@@ -321,30 +321,30 @@ describe('completeActionState · cancelActionState (G09 · G10)', () => {
     expect(cancelActionState(open)).toEqual({ enabled: true, reason: null, action: null });
   });
 
-  it('완료된 투어: 완료는 이미 완료됐다고, 취소는 완료된 투어는 취소할 수 없다고 한다', () => {
+  it('완료된 탐방: 완료는 이미 완료됐다고, 취소는 완료된 탐방은 취소할 수 없다고 한다', () => {
     const done = detail('COMPLETED', { completable: false, cancellable: false });
     expect(completeActionState(done)).toEqual({
       enabled: false,
-      reason: '이미 완료된 투어예요.',
+      reason: '이미 완료된 탐방이에요.',
       action: MY_TOURS,
     });
     expect(cancelActionState(done)).toEqual({
       enabled: false,
-      reason: '완료된 투어는 취소할 수 없습니다.',
+      reason: '완료된 탐방은 취소할 수 없습니다.',
       action: MY_TOURS,
     });
   });
 
-  it('취소된 투어', () => {
+  it('취소된 탐방', () => {
     const canceled = detail('CANCELED', { completable: false, cancellable: false });
     expect(completeActionState(canceled)).toEqual({
       enabled: false,
-      reason: '취소된 투어는 완료할 수 없어요.',
+      reason: '취소된 탐방은 완료할 수 없어요.',
       action: MY_TOURS,
     });
     expect(cancelActionState(canceled)).toEqual({
       enabled: false,
-      reason: '이미 취소된 투어예요.',
+      reason: '이미 취소된 탐방이에요.',
       action: MY_TOURS,
     });
   });
@@ -353,7 +353,7 @@ describe('completeActionState · cancelActionState (G09 · G10)', () => {
     const before = detail('RECRUITING', { completable: false, cancellable: true });
     expect(completeActionState(before)).toEqual({
       enabled: false,
-      reason: '투어 날짜(12/02(수)) 이후에 완료할 수 있어요.',
+      reason: '탐방 날짜(12/02(수)) 이후에 완료할 수 있어요.',
       action: { label: '신청자 관리로 이동', to: '/guide/tours/6/applicants' },
     });
     expect(cancelActionState(before)).toEqual({ enabled: true, reason: null, action: null });

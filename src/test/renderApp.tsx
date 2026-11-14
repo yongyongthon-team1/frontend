@@ -95,7 +95,7 @@ export function findApplicationId(email: string, tourId: number): number {
   const db = getDb();
   const userId = userIdOf(db, email);
   const app = db.applications.findLast((a) => a.userId === userId && a.tourId === tourId);
-  if (!app) throw new Error(`findApplicationId: ${email}의 투어 ${tourId} 신청이 없어요.`);
+  if (!app) throw new Error(`findApplicationId: ${email}의 탐방 ${tourId} 신청이 없어요.`);
   return app.id;
 }
 

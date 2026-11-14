@@ -23,13 +23,13 @@ import { StatusChip } from '@/shared/ui/StatusChip';
 type Tab = 'upcoming' | 'past';
 
 const TABS: { value: Tab; label: string }[] = [
-  { value: 'upcoming', label: '예정된 투어' },
-  { value: 'past', label: '지난 투어' },
+  { value: 'upcoming', label: '예정된 탐방' },
+  { value: 'past', label: '지난 탐방' },
 ];
 
 const HEADINGS: Record<Tab, { title: string; description: string }> = {
-  upcoming: { title: '내 투어', description: '신청한 투어와 참여 현황을 확인해요.' },
-  past: { title: '지난 투어', description: '지금까지 다녀온 캠퍼스를 모아봤어요.' },
+  upcoming: { title: '내 탐방', description: '신청한 탐방과 참여 현황을 확인해요.' },
+  past: { title: '지난 탐방', description: '지금까지 다녀온 캠퍼스를 모아봤어요.' },
 };
 
 const dot = ' · ';
@@ -145,7 +145,7 @@ function PastCard({ app }: { app: MyApplication }) {
         to={review ? `/my-tours/${app.id}/coupons` : `/my-tours/${app.id}`}
         className={`${buttonClass('soft')} mt-4`}
       >
-        <span className="min-w-0 truncate">{review ? '리뷰 남기기' : '투어 기록 보기'}</span>
+        <span className="min-w-0 truncate">{review ? '리뷰 남기기' : '탐방 기록 보기'}</span>
         <ChevronRight aria-hidden className="size-4 shrink-0" />
       </Link>
     </article>
@@ -175,7 +175,7 @@ export function MyToursPage() {
           tabs={TABS}
           value={tab}
           onChange={onTab}
-          label="내 투어 구분"
+          label="내 탐방 구분"
         />
       </div>
 
@@ -197,15 +197,15 @@ export function MyToursPage() {
           groups.upcoming.length === 0 && groups.pending.length === 0 ? (
             <div className="mt-6">
               <EmptyState
-                title="아직 신청한 투어가 없어요."
-                action={{ label: '투어 찾으러 가기', to: '/' }}
+                title="아직 신청한 탐방이 없어요."
+                action={{ label: '탐방 찾으러 가기', to: '/' }}
               />
             </div>
           ) : (
             <>
               {groups.upcoming.length > 0 ? (
                 <section>
-                  <SectionTitle count={groups.upcoming.length}>다가오는 투어</SectionTitle>
+                  <SectionTitle count={groups.upcoming.length}>다가오는 탐방</SectionTitle>
                   <ul className="flex flex-col gap-3">
                     {groups.upcoming.map((app) => (
                       <li key={app.id}>
@@ -232,8 +232,8 @@ export function MyToursPage() {
         ) : groups.past.length === 0 ? (
           <div className="mt-6">
             <EmptyState
-              title="아직 지난 투어가 없어요."
-              action={{ label: '투어 찾으러 가기', to: '/' }}
+              title="아직 지난 탐방이 없어요."
+              action={{ label: '탐방 찾으러 가기', to: '/' }}
             />
           </div>
         ) : (

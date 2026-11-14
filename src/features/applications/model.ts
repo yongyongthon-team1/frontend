@@ -198,7 +198,7 @@ export interface TourActionState {
   action: ActionLink | null;
 }
 
-const MY_TOURS_LINK: ActionLink = { label: '내가 개설한 투어', to: '/guide/tours' };
+const MY_TOURS_LINK: ActionLink = { label: '내가 개설한 탐방', to: '/guide/tours' };
 const ENABLED: TourActionState = { enabled: true, reason: null, action: null };
 
 const blocked = (reason: string, action: ActionLink = MY_TOURS_LINK): TourActionState => ({
@@ -215,11 +215,11 @@ export function completeActionState(d: GuideTourDetail): TourActionState {
   if (d.actions.completable) return ENABLED;
   switch (d.tour.status) {
     case 'COMPLETED':
-      return blocked('이미 완료된 투어예요.');
+      return blocked('이미 완료된 탐방이에요.');
     case 'CANCELED':
-      return blocked('취소된 투어는 완료할 수 없어요.');
+      return blocked('취소된 탐방은 완료할 수 없어요.');
     default:
-      return blocked(`투어 날짜(${formatShortDate(d.tour.startsAt)}) 이후에 완료할 수 있어요.`, {
+      return blocked(`탐방 날짜(${formatShortDate(d.tour.startsAt)}) 이후에 완료할 수 있어요.`, {
         label: '신청자 관리로 이동',
         to: `/guide/tours/${d.tour.id}/applicants`,
       });
@@ -231,9 +231,9 @@ export function cancelActionState(d: GuideTourDetail): TourActionState {
   if (d.actions.cancellable) return ENABLED;
   switch (d.tour.status) {
     case 'COMPLETED':
-      return blocked('완료된 투어는 취소할 수 없습니다.');
+      return blocked('완료된 탐방은 취소할 수 없습니다.');
     case 'CANCELED':
-      return blocked('이미 취소된 투어예요.');
+      return blocked('이미 취소된 탐방이에요.');
     default:
       return blocked('지금은 취소할 수 없어요.');
   }

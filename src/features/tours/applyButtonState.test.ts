@@ -18,7 +18,7 @@ const base: Me = {
 
 const tour: TourDetail = {
   id: 7,
-  title: '경희대 컴퓨터공학과 투어',
+  title: '경희대 컴퓨터공학과 탐방',
   universityId: 1,
   universityName: '경희대학교',
   universityShortName: '경희대',
@@ -39,7 +39,7 @@ const tour: TourDetail = {
 };
 
 const rec = '/tours?school=2&major=a&wish=b';
-const recAction = { label: '다른 투어 보기', to: rec };
+const recAction = { label: '다른 탐방 보기', to: rec };
 
 describe('applyButtonState', () => {
   it('비로그인이면 로그인 유도(활성)', () =>
@@ -65,8 +65,8 @@ describe('applyButtonState', () => {
       kind: 'APPLIED',
       enabled: false,
       label: '신청됨',
-      reason: '이미 신청한 투어예요.',
-      action: { label: '내 투어에서 상태 확인', to: '/my-tours' },
+      reason: '이미 신청한 탐방이에요.',
+      action: { label: '내 탐방에서 상태 확인', to: '/my-tours' },
     }),
   );
 
@@ -77,16 +77,16 @@ describe('applyButtonState', () => {
       kind: 'REJECTED',
       enabled: false,
       label: '신청 불가',
-      reason: '거절된 투어에는 다시 신청할 수 없어요.',
+      reason: '거절된 탐방에는 다시 신청할 수 없어요.',
       action: recAction,
     }));
 
-  it.each(['CANCELED', 'COMPLETED'] as const)('투어가 %s면 모집 종료', (status) =>
+  it.each(['CANCELED', 'COMPLETED'] as const)('탐방이 %s면 모집 종료', (status) =>
     expect(applyButtonState(base, { ...tour, status }, rec)).toEqual({
       kind: 'NOT_RECRUITING',
       enabled: false,
       label: '모집 종료',
-      reason: '모집이 끝난 투어예요.',
+      reason: '모집이 끝난 탐방이에요.',
       action: recAction,
     }),
   );
@@ -103,7 +103,7 @@ describe('applyButtonState', () => {
   it('남은 자리가 0이면 모집 중이어도 정원 마감', () =>
     expect(applyButtonState(base, { ...tour, remainingSeats: 0 }, rec).kind).toBe('CLOSED'));
 
-  it('마감 투어는 인증보다 마감 사유가 먼저', () => {
+  it('마감 탐방은 인증보다 마감 사유가 먼저', () => {
     const s = applyButtonState(
       { ...base, verificationStatus: 'PENDING' },
       { ...tour, status: 'CLOSED', remainingSeats: 0 },
@@ -113,7 +113,7 @@ describe('applyButtonState', () => {
       kind: 'CLOSED',
       enabled: false,
       reason: '남은 자리가 없어요.',
-      action: { label: '다른 투어 보기', to: '/tours?school=2&major=a&wish=b' },
+      action: { label: '다른 탐방 보기', to: '/tours?school=2&major=a&wish=b' },
     });
   });
 
@@ -135,7 +135,7 @@ describe('applyButtonState', () => {
     expect(applyButtonState({ ...base, verificationStatus: 'PENDING' }, tour, '/')).toEqual({
       kind: 'NEED_VERIFICATION',
       enabled: false,
-      label: '투어 신청하기',
+      label: '탐방 신청하기',
       reason: '학생증 승인·보호자 동의 완료 후 신청할 수 있어요.',
       action: { label: '역할 인증 단계로 이동', to: '/verify' },
     }));
@@ -150,8 +150,8 @@ describe('applyButtonState', () => {
     expect(applyButtonState(base, tour, rec)).toEqual({
       kind: 'APPLY',
       enabled: true,
-      label: '투어 신청하기',
+      label: '탐방 신청하기',
       reason: null,
-      action: { label: '투어 신청하기', to: '/tours/7/apply' },
+      action: { label: '탐방 신청하기', to: '/tours/7/apply' },
     }));
 });

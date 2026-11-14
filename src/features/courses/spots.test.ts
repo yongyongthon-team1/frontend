@@ -25,7 +25,7 @@ const COURSE: Course = {
   status: 'DRAFT',
   tour: {
     id: 31,
-    title: '단국대 죽전캠퍼스 컴퓨터공학과 투어',
+    title: '단국대 죽전캠퍼스 컴퓨터공학과 탐방',
     universityId: 0,
     universityShortName: '단국대',
     campusName: '죽전캠퍼스',
@@ -101,7 +101,7 @@ describe('buildSpots (2C-R13)', () => {
       ]);
     });
 
-    it('투어 시간(14:00–16:30)을 넘기는 곳은 3번째 뒤로 종료까지 고르게 나눈다(slotTimes와 같다)', () => {
+    it('탐방 시간(14:00–16:30)을 넘기는 곳은 3번째 뒤로 종료까지 고르게 나눈다(slotTimes와 같다)', () => {
       const seven: Course = {
         ...COURSE,
         stops: Array.from({ length: 7 }, (_, i) =>

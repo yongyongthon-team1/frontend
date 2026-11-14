@@ -12,7 +12,7 @@ test('리뷰 쓰기 → 상점 시트의 새 AI 요약 → 사장님 리포트',
   // 학생: 내 탐방 → 코스 확인하기 → 내 쿠폰 확인하기 → (목록이면 첫 쿠폰) 코드
   /** 쿠폰 상세까지 간다. 쿠폰이 둘이면 목록의 첫 행이고, 이 첫 쿠폰이 시연 패널의 `쿠폰 가게 사장님`이 된다. */
   async function openFirstCoupon() {
-    await page.getByRole('link', { name: '내 투어', exact: true }).click();
+    await page.getByRole('link', { name: '내 탐방', exact: true }).click();
     await page.getByRole('link', { name: '코스 확인하기', exact: true }).click();
     await expect(page.getByRole('heading', { name: '코스 보기' })).toBeVisible();
     await page.getByRole('link', { name: '내 쿠폰 확인하기' }).click();
@@ -41,7 +41,7 @@ test('리뷰 쓰기 → 상점 시트의 새 AI 요약 → 사장님 리포트',
   await expect(page.getByRole('heading', { name: '쿠폰을 사용했어요!' })).toBeVisible();
   await page.getByRole('link', { name: '방문 리뷰 작성하기' }).click();
 
-  await expect(page.getByRole('heading', { name: '오늘 투어는 어땠나요?' })).toBeVisible();
+  await expect(page.getByRole('heading', { name: '오늘 탐방은 어땠나요?' })).toBeVisible();
   await page.getByRole('radio', { name: '별점 4점' }).check({ force: true });
   await page.getByLabel('좋았던 점과 아쉬웠던 점').fill(REVIEW);
   await page.getByRole('button', { name: '리뷰 등록하기' }).click();

@@ -107,10 +107,10 @@ describe('createDraft', () => {
     expect(db.courseStops).toHaveLength(3);
   });
 
-  it('투어가 없으면 NOT_FOUND', () =>
+  it('탐방이 없으면 NOT_FOUND', () =>
     expectRejected(() => createDraft(db, guideId(), 999, now), 404, 'NOT_FOUND'));
 
-  it('남의 투어면 FORBIDDEN', () =>
+  it('남의 탐방이면 FORBIDDEN', () =>
     expectRejected(
       () => createDraft(db, id('guide-dku@demo.kr'), DEMO_TOUR_ID, now),
       403,
@@ -282,7 +282,7 @@ describe('replaceSpots (C-02 전체 교체)', () => {
     );
   });
 
-  it('코스가 없으면 NOT_FOUND, 남의 투어면 FORBIDDEN', () => {
+  it('코스가 없으면 NOT_FOUND, 남의 탐방이면 FORBIDDEN', () => {
     const spots: SpotInput[] = [{ stopType: 'STORE', storeId: 1, startTime: '14:00' }];
     expectRejected(() => replaceSpots(db, guideId(), DEMO_TOUR_ID, spots, now), 404, 'NOT_FOUND');
     draft();
@@ -347,7 +347,7 @@ describe('confirmCourse', () => {
     );
   });
 
-  it('제휴가 투어 날짜에 유효하지 않으면 제휴 지점이 아니다(422)', () => {
+  it('제휴가 탐방 날짜에 유효하지 않으면 제휴 지점이 아니다(422)', () => {
     draft();
     for (const p of db.partnerships) p.endDate = '2000-01-01';
     expectRejected(
@@ -374,7 +374,7 @@ describe('confirmCourse', () => {
     );
   });
 
-  it('코스가 없으면 NOT_FOUND, 남의 투어면 FORBIDDEN', () => {
+  it('코스가 없으면 NOT_FOUND, 남의 탐방이면 FORBIDDEN', () => {
     expectRejected(() => confirmCourse(db, guideId(), DEMO_TOUR_ID, now), 404, 'NOT_FOUND');
     expectRejected(() => confirmCourse(db, guideId(), 999, now), 404, 'NOT_FOUND');
     draft();
@@ -387,7 +387,7 @@ describe('confirmCourse', () => {
 });
 
 describe('코스 조회 권한', () => {
-  it('isCourseAudience: 그 투어의 승인 신청자이거나 가이드', () => {
+  it('isCourseAudience: 그 탐방의 승인 신청자이거나 가이드', () => {
     const audience = (email: string, tourId = DEMO_TOUR_ID) =>
       isCourseAudience(db, id(email), tourId);
     expect(audience('student@demo.kr')).toBe(true); // 승인(체크포인트)

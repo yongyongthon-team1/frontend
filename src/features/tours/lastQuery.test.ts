@@ -1,7 +1,7 @@
 import { beforeEach, describe, expect, it } from 'vitest';
 import { tourResultsPath, useLastQuery } from './lastQuery';
 
-describe('마지막 투어 찾기 검색', () => {
+describe('마지막 탐방 찾기 검색', () => {
   beforeEach(() => useLastQuery.setState({ search: null }));
 
   it('저장된 검색이 없으면 홈', () => {

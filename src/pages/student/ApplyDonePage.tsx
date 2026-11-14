@@ -39,7 +39,7 @@ export function ApplyDonePage() {
             <Check className="size-6" strokeWidth={2.5} />
           </span>
           <p className="mt-3 text-[17px] font-bold text-ink">승인 대기 중</p>
-          <p className="mt-1 text-[13px] text-muted">확정되면 내 투어에서 바로 확인할 수 있어요.</p>
+          <p className="mt-1 text-[13px] text-muted">확정되면 내 탐방에서 바로 확인할 수 있어요.</p>
         </section>
 
         {/* 다시 불러오다 실패해도 이미 받은 탐방은 그대로 보인다(판정 24). */}
@@ -66,7 +66,7 @@ export function ApplyDonePage() {
 
         <BottomAction>
           <Link to="/my-tours" className={buttonClass('primary')}>
-            내 투어로 가기
+            내 탐방으로 가기
           </Link>
         </BottomAction>
       </Page>

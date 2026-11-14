@@ -19,13 +19,13 @@ async function renderPatched(
 }
 
 describe('가이드 홈 (G01 · G11)', () => {
-  it('APPLIED: 진행 예정 투어 카드 · 승인 수 · 남은 자리 · 오늘 해야 할 일', async () => {
+  it('APPLIED: 진행 예정 탐방 카드 · 승인 수 · 남은 자리 · 오늘 해야 할 일', async () => {
     await renderApp('/guide', { as: 'guide', checkpoint: 'APPLIED' });
     // 진행 예정 탐방이 둘(탐방 1 · 6)이라 `하나의`가 `2개의`가 된다.
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: /이번 주, 2개의 투어를\s*준비하고 있어요\./,
+        name: /이번 주, 2개의 탐방을\s*준비하고 있어요\./,
       }),
     ).toBeInTheDocument();
     expect(screen.getByText('학생들에게 특별한 대학 생활을 보여주세요.')).toBeInTheDocument();
@@ -45,14 +45,14 @@ describe('가이드 홈 (G01 · G11)', () => {
     );
   });
 
-  it('진행 예정 투어가 하나면 `하나의`', async () => {
+  it('진행 예정 탐방이 하나면 `하나의`', async () => {
     await renderPatched('/guide', { as: 'guide' }, (db) => {
       db.tours.find((t) => t.id === 6)!.status = 'CANCELED';
     });
     expect(
       await screen.findByRole('heading', {
         level: 1,
-        name: /이번 주, 하나의 투어를\s*준비하고 있어요\./,
+        name: /이번 주, 하나의 탐방을\s*준비하고 있어요\./,
       }),
     ).toBeInTheDocument();
   });
@@ -63,13 +63,13 @@ describe('가이드 홈 (G01 · G11)', () => {
     expect(link).toHaveAttribute('href', '/guide/tours/1/course/confirm');
   });
 
-  it('맨 아래 `내가 개설한 투어` 링크는 개설한 투어 목록으로 간다 (›는 이름에 들지 않는다)', async () => {
+  it('맨 아래 `내가 개설한 탐방` 링크는 개설한 탐방 목록으로 간다 (›는 이름에 들지 않는다)', async () => {
     await renderApp('/guide', { as: 'guide' });
-    const link = await screen.findByRole('link', { name: '내가 개설한 투어' });
+    const link = await screen.findByRole('link', { name: '내가 개설한 탐방' });
     expect(link).toHaveAttribute('href', '/guide/tours');
   });
 
-  it('신청이 없으면 G11: 신청자 없음 안내 · 투어 카드 · 투어 상세 보기', async () => {
+  it('신청이 없으면 G11: 신청자 없음 안내 · 탐방 카드 · 탐방 상세 보기', async () => {
     // 탐방 1을 끝난 탐방으로 돌리면 가장 이른 진행 예정 탐방은 신청이 없는 탐방 6이다.
     await renderPatched('/guide', { as: 'guide' }, (db) => {
       db.tours.find((t) => t.id === 1)!.status = 'COMPLETED';
@@ -77,25 +77,25 @@ describe('가이드 홈 (G01 · G11)', () => {
     expect(
       await screen.findByRole('heading', { level: 1, name: '아직 신청자가 없어요.' }),
     ).toBeInTheDocument();
-    expect(screen.getByText('학생들이 찾기 쉽도록 투어 소개를 점검해 봐요.')).toBeInTheDocument();
+    expect(screen.getByText('학생들이 찾기 쉽도록 탐방 소개를 점검해 봐요.')).toBeInTheDocument();
     expect(screen.getByText('첫 신청을 기다리는 중')).toBeInTheDocument();
     expect(
-      screen.getByText('모집 중인 투어가 학생의 투어 찾기 결과에 노출돼요.'),
+      screen.getByText('모집 중인 탐방이 학생의 탐방 찾기 결과에 노출돼요.'),
     ).toBeInTheDocument();
     expect(screen.getByText('모집 중')).toBeInTheDocument();
     expect(screen.getByText(/^\d{2}\.\d{2} \([월화수목금토일]\) · 정원 5명$/)).toBeInTheDocument();
     expect(
       screen.getByText('승인된 신청자가 1명 이상이면 코스 초안 생성을 진행할 수 있어요.'),
     ).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '투어 상세 보기' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '탐방 상세 보기' })).toHaveAttribute(
       'href',
       '/tours/6',
     );
     expect(screen.queryByRole('link', { name: '신청자 확인하기' })).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toBeInTheDocument();
   });
 
-  it('G11: 포커스 투어가 마감이면 칩이 `모집 마감`', async () => {
+  it('G11: 포커스 탐방이 마감이면 칩이 `모집 마감`', async () => {
     await renderPatched('/guide', { as: 'guide' }, (db) => {
       db.tours.find((t) => t.id === 1)!.status = 'COMPLETED';
       db.tours.find((t) => t.id === 6)!.status = 'CLOSED';
@@ -105,28 +105,28 @@ describe('가이드 홈 (G01 · G11)', () => {
     expect(screen.queryByText('모집 중')).not.toBeInTheDocument();
   });
 
-  it('지난 투어만 있으면 `진행 예정인 투어가 없어요.` 빈 상태 + 새 투어 개설하기', async () => {
+  it('지난 탐방만 있으면 `진행 예정인 탐방이 없어요.` 빈 상태 + 새 탐방 개설하기', async () => {
     await renderPatched('/guide', { as: 'guide' }, (db) => {
       for (const t of db.tours) {
         if (t.status === 'RECRUITING' || t.status === 'CLOSED') t.status = 'COMPLETED';
       }
     });
-    const empty = (await screen.findByText('진행 예정인 투어가 없어요.')).parentElement!;
-    expect(within(empty).getByRole('link', { name: '새 투어 개설하기' })).toHaveAttribute(
+    const empty = (await screen.findByText('진행 예정인 탐방이 없어요.')).parentElement!;
+    expect(within(empty).getByRole('link', { name: '새 탐방 개설하기' })).toHaveAttribute(
       'href',
       '/guide/tours/new',
     );
-    expect(screen.queryByText('아직 개설한 투어가 없어요.')).not.toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toBeInTheDocument();
+    expect(screen.queryByText('아직 개설한 탐방이 없어요.')).not.toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toBeInTheDocument();
   });
 
-  it('개설한 투어가 하나도 없으면 `아직 개설한 투어가 없어요.`', async () => {
+  it('개설한 탐방이 하나도 없으면 `아직 개설한 탐방이 없어요.`', async () => {
     await renderPatched('/guide', { as: 'guide' }, (db) => {
       db.tours.length = 0;
     });
-    const empty = (await screen.findByText('아직 개설한 투어가 없어요.')).parentElement!;
-    expect(within(empty).getByRole('link', { name: '새 투어 개설하기' })).toBeInTheDocument();
-    expect(screen.queryByText('진행 예정인 투어가 없어요.')).not.toBeInTheDocument();
+    const empty = (await screen.findByText('아직 개설한 탐방이 없어요.')).parentElement!;
+    expect(within(empty).getByRole('link', { name: '새 탐방 개설하기' })).toBeInTheDocument();
+    expect(screen.queryByText('진행 예정인 탐방이 없어요.')).not.toBeInTheDocument();
   });
 
   describe('고교생 희망 사항 진입 (T-08)', () => {
@@ -134,13 +134,13 @@ describe('가이드 홈 (G01 · G11)', () => {
     async function expectWishesRow() {
       const row = await screen.findByRole('link', { name: /^고교생 희망 사항/ });
       expect(row).toHaveAttribute('href', '/guide/wishes');
-      expect(row).toHaveTextContent('학생들이 남긴 희망 사항을 보고 투어를 준비해요.');
-      const all = screen.getByRole('link', { name: '내가 개설한 투어' });
+      expect(row).toHaveTextContent('학생들이 남긴 희망 사항을 보고 탐방을 준비해요.');
+      const all = screen.getByRole('link', { name: '내가 개설한 탐방' });
       expect(row.compareDocumentPosition(all) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
       expect(screen.getAllByRole('link', { name: /^고교생 희망 사항/ })).toHaveLength(1);
     }
 
-    it('START(신청자 있음): `내가 개설한 투어` 위에 행이 있고 `신청자 확인하기`는 그대로', async () => {
+    it('START(신청자 있음): `내가 개설한 탐방` 위에 행이 있고 `신청자 확인하기`는 그대로', async () => {
       await renderApp('/guide', { as: 'guide' });
       await expectWishesRow();
       expect(
@@ -161,22 +161,22 @@ describe('가이드 홈 (G01 · G11)', () => {
       await expectWishesRow();
     });
 
-    it('진행 예정 투어가 없는 빈 상태', async () => {
+    it('진행 예정 탐방이 없는 빈 상태', async () => {
       await renderPatched('/guide', { as: 'guide' }, (db) => {
         for (const t of db.tours) {
           if (t.status === 'RECRUITING' || t.status === 'CLOSED') t.status = 'COMPLETED';
         }
       });
-      await screen.findByText('진행 예정인 투어가 없어요.');
+      await screen.findByText('진행 예정인 탐방이 없어요.');
       await expectWishesRow();
     });
 
-    it('누르면 /guide/wishes, `내 투어` 탭이 켜진 채', async () => {
+    it('누르면 /guide/wishes, `내 탐방` 탭이 켜진 채', async () => {
       const { user, router } = await renderApp('/guide', { as: 'guide' });
       await user.click(await screen.findByRole('link', { name: /^고교생 희망 사항/ }));
       expect(router.state.location.pathname).toBe('/guide/wishes');
       const nav = await screen.findByRole('navigation', { name: '주요 메뉴' });
-      expect(within(nav).getByRole('link', { name: '내 투어' })).toHaveAttribute(
+      expect(within(nav).getByRole('link', { name: '내 탐방' })).toHaveAttribute(
         'aria-current',
         'page',
       );
@@ -189,7 +189,7 @@ describe('가이드 홈 (G01 · G11)', () => {
   it('불러오는 동안에도 h1이 있다(화면 낭독기용)', async () => {
     server.use(http.get('/api/users/me/tours', () => new Promise<never>(() => {})));
     await renderApp('/guide', { as: 'guide' });
-    expect(await screen.findByRole('heading', { level: 1, name: '내 투어' })).toHaveClass(
+    expect(await screen.findByRole('heading', { level: 1, name: '내 탐방' })).toHaveClass(
       'sr-only',
     );
     expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
@@ -199,6 +199,6 @@ describe('가이드 홈 (G01 · G11)', () => {
     server.use(http.get('/api/users/me/tours', () => wireFail('E400')));
     await renderApp('/guide', { as: 'guide' });
     expect(await screen.findByRole('alert')).toBeInTheDocument();
-    expect(screen.getByRole('heading', { level: 1, name: '내 투어' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { level: 1, name: '내 탐방' })).toBeInTheDocument();
   });
 });

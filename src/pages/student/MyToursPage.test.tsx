@@ -19,27 +19,27 @@ function applyFuture() {
   );
 }
 
-describe('내 투어 · 예정 (H06)', () => {
+describe('내 탐방 · 예정 (H06)', () => {
   it('제목 · 탭 · 빈 상태', async () => {
     await renderApp('/my-tours', { as: 'student' });
-    expect(await screen.findByRole('heading', { name: '내 투어' })).toBeInTheDocument();
-    expect(screen.getByText('신청한 투어와 참여 현황을 확인해요.')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '예정된 투어' })).toHaveAttribute(
+    expect(await screen.findByRole('heading', { name: '내 탐방' })).toBeInTheDocument();
+    expect(screen.getByText('신청한 탐방과 참여 현황을 확인해요.')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    expect(screen.getByRole('tab', { name: '지난 투어' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute(
       'aria-selected',
       'false',
     );
-    expect(await screen.findByText('아직 신청한 투어가 없어요.')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '투어 찾으러 가기' })).toHaveAttribute('href', '/');
+    expect(await screen.findByText('아직 신청한 탐방이 없어요.')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '탐방 찾으러 가기' })).toHaveAttribute('href', '/');
   });
 
   it('승인 대기 신청은 `승인 대기` 소제목 아래 카드이고 카드 전체가 상세 링크', async () => {
     await renderApp('/my-tours', { as: 'student', checkpoint: 'APPLIED' });
     expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument();
-    expect(screen.queryByRole('heading', { name: '다가오는 투어' })).not.toBeInTheDocument();
+    expect(screen.queryByRole('heading', { name: '다가오는 탐방' })).not.toBeInTheDocument();
     const card = screen.getByRole('link', { name: /신청 접수 완료/ });
     expect(card).toHaveAttribute('href', `/my-tours/${findApplicationId(STUDENT, 1)}`);
     expect(within(card).getByText('승인 대기')).toBeInTheDocument();
@@ -49,7 +49,7 @@ describe('내 투어 · 예정 (H06)', () => {
 
   it('코스가 확정된 승인 신청은 `참여 확정` 카드 + 코스 확인하기', async () => {
     await renderApp('/my-tours', { as: 'student', checkpoint: 'CONFIRMED' });
-    expect(await screen.findByRole('heading', { name: '다가오는 투어' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '다가오는 탐방' })).toBeInTheDocument();
     expect(screen.getByText('1건')).toBeInTheDocument();
     const id = findApplicationId(STUDENT, 1);
     const course = screen.getByRole('link', { name: '코스 확인하기' });
@@ -65,7 +65,7 @@ describe('내 투어 · 예정 (H06)', () => {
 
   it('승인됐지만 코스 확정 전이면 코스 확인하기 대신 안내', async () => {
     await renderApp('/my-tours', { as: 'student', checkpoint: 'APPROVED' });
-    expect(await screen.findByRole('heading', { name: '다가오는 투어' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '다가오는 탐방' })).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '코스 확인하기' })).not.toBeInTheDocument();
     expect(screen.getByText('가이드가 코스를 확정하면 열려요.')).toBeInTheDocument();
   });
@@ -76,22 +76,22 @@ describe('내 투어 · 예정 (H06)', () => {
     applyFuture();
     await router.navigate('/my-tours');
     expect(await screen.findByRole('heading', { name: '승인 대기' })).toBeInTheDocument();
-    expect(screen.getByRole('heading', { name: '다가오는 투어' })).toBeInTheDocument();
+    expect(screen.getByRole('heading', { name: '다가오는 탐방' })).toBeInTheDocument();
     expect(screen.getByText('1건')).toBeInTheDocument();
   });
 });
 
-describe('내 투어 · 지난 투어 (H09)', () => {
-  it('?tab=past로 들어오면 지난 투어 탭 · 제목이 바뀐다', async () => {
+describe('내 탐방 · 지난 탐방 (H09)', () => {
+  it('?tab=past로 들어오면 지난 탐방 탭 · 제목이 바뀐다', async () => {
     await renderApp('/my-tours?tab=past', { as: 'student', checkpoint: 'CONFIRMED' });
-    expect(await screen.findByRole('heading', { name: '지난 투어' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '지난 탐방' })).toBeInTheDocument();
     expect(screen.getByText('지금까지 다녀온 캠퍼스를 모아봤어요.')).toBeInTheDocument();
-    expect(screen.getByRole('tab', { name: '지난 투어' })).toHaveAttribute('aria-selected', 'true');
-    expect(await screen.findByText('아직 지난 투어가 없어요.')).toBeInTheDocument();
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute('aria-selected', 'true');
+    expect(await screen.findByText('아직 지난 탐방이 없어요.')).toBeInTheDocument();
     // 탭 ↔ 패널 연결: 선택된 탭이 패널을 가리키고 패널의 이름은 그 탭이다.
-    expect(screen.getByRole('tab', { name: '지난 투어' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute(
       'aria-controls',
-      screen.getByRole('tabpanel', { name: '지난 투어' }).id,
+      screen.getByRole('tabpanel', { name: '지난 탐방' }).id,
     );
   });
 
@@ -100,15 +100,15 @@ describe('내 투어 · 지난 투어 (H09)', () => {
       as: 'student',
       checkpoint: 'CONFIRMED',
     });
-    await user.click(await screen.findByRole('tab', { name: '지난 투어' }));
+    await user.click(await screen.findByRole('tab', { name: '지난 탐방' }));
     expect(router.state.location.search).toBe('?tab=past');
-    expect(await screen.findByRole('heading', { name: '지난 투어' })).toBeInTheDocument();
-    await user.click(screen.getByRole('tab', { name: '예정된 투어' }));
+    expect(await screen.findByRole('heading', { name: '지난 탐방' })).toBeInTheDocument();
+    await user.click(screen.getByRole('tab', { name: '예정된 탐방' }));
     expect(router.state.location.search).toBe('');
-    expect(await screen.findByRole('heading', { name: '내 투어' })).toBeInTheDocument();
+    expect(await screen.findByRole('heading', { name: '내 탐방' })).toBeInTheDocument();
   });
 
-  it('끝난 투어는 참여 완료 · 리뷰 작성 가능 + 리뷰 남기기', async () => {
+  it('끝난 탐방은 참여 완료 · 리뷰 작성 가능 + 리뷰 남기기', async () => {
     const { router } = await renderApp('/', { as: 'student', checkpoint: 'CONFIRMED' });
     mutate((db) => {
       db.tours.find((t) => t.id === 1)!.status = 'COMPLETED';
@@ -121,13 +121,13 @@ describe('내 투어 · 지난 투어 (H09)', () => {
     expect(within(card).getByText('리뷰 작성 가능')).toBeInTheDocument();
   });
 
-  it('끝난 투어에 쿠폰이 없으면 투어 기록 보기', async () => {
+  it('끝난 탐방에 쿠폰이 없으면 탐방 기록 보기', async () => {
     const { router } = await renderApp('/', { as: 'student', checkpoint: 'APPROVED' });
     mutate((db) => {
       db.tours.find((t) => t.id === 1)!.status = 'COMPLETED';
     });
     await router.navigate('/my-tours?tab=past');
-    expect(await screen.findByRole('link', { name: '투어 기록 보기' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '탐방 기록 보기' })).toHaveAttribute(
       'href',
       `/my-tours/${findApplicationId(STUDENT, 1)}`,
     );
@@ -138,7 +138,7 @@ describe('내 투어 · 지난 투어 (H09)', () => {
   it.each([
     ['REJECTED', '신청 거절'],
     ['CANCELED', '취소됨'],
-  ] as const)('%s 신청은 `%s` 칩 + 투어 기록 보기', async (status, chip) => {
+  ] as const)('%s 신청은 `%s` 칩 + 탐방 기록 보기', async (status, chip) => {
     const { router } = await renderApp('/', { as: 'student' });
     applyFuture();
     const id = findApplicationId(STUDENT, 6);
@@ -146,7 +146,7 @@ describe('내 투어 · 지난 투어 (H09)', () => {
       db.applications.find((a) => a.id === id)!.status = status;
     });
     await router.navigate('/my-tours?tab=past');
-    const link = await screen.findByRole('link', { name: '투어 기록 보기' });
+    const link = await screen.findByRole('link', { name: '탐방 기록 보기' });
     expect(link).toHaveAttribute('href', `/my-tours/${id}`);
     expect(within(link.closest('article')!).getByText(chip)).toBeInTheDocument();
     expect(screen.queryByRole('link', { name: '리뷰 남기기' })).not.toBeInTheDocument();

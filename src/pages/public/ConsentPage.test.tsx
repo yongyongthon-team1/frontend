@@ -55,24 +55,24 @@ describe('보호자 동의 페이지 (/consent/:token)', () => {
   it('유효한 링크: 브랜드 머리 · 학생 카드(이름 가림) · 단계 목록(guide_text) · 동의 줄 · 기한 · 두 버튼 (뒤로 가기도 돌아가기 링크도 없다)', async () => {
     await open(DEMO_CONSENT_TOKENS.valid);
     expect(
-      await screen.findByRole('heading', { level: 1, name: '투어 참여 동의' }),
+      await screen.findByRole('heading', { level: 1, name: '탐방 참여 동의' }),
     ).toBeInTheDocument();
     expect(screen.getByRole('img', { name: 'UNIRO' })).toBeInTheDocument();
     expect(screen.getByText('보호자께서 확인하는 페이지예요.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: '뒤로 가기' })).not.toBeInTheDocument();
     // 예전 머리(상단 바 제목 · 칩)와 안내 카드 둘 · 동의 대상 소제목은 없다.
     expect(screen.queryByText('고교생 보호자 전용 링크')).not.toBeInTheDocument();
-    expect(screen.queryByText('캠퍼스 투어 참여 동의')).not.toBeInTheDocument();
-    expect(screen.queryByText('투어 방식 및 안전 안내')).not.toBeInTheDocument();
+    expect(screen.queryByText('캠퍼스 탐방 참여 동의')).not.toBeInTheDocument();
+    expect(screen.queryByText('탐방 방식 및 안전 안내')).not.toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 2, name: '동의 대상' })).not.toBeInTheDocument();
 
     // 학생 카드: 이름은 성만 남기고 가리고(강하린 → 강○○) 학교는 보이지 않는다.
     const student = await screen.findByRole('region', { name: '학생 정보' });
     expect(within(student).getByText('학생 정보')).toBeInTheDocument();
     expect(within(student).getByText('강○○ · 고교생')).toBeInTheDocument();
-    expect(within(student).getByText('UNIRO 캠퍼스 투어 서비스')).toBeInTheDocument();
+    expect(within(student).getByText('UNIRO 캠퍼스 탐방 서비스')).toBeInTheDocument();
     expect(
-      within(student).getByText('대학생 가이드가 개설한 비공식 투어에 참여합니다.'),
+      within(student).getByText('대학생 가이드가 개설한 비공식 탐방에 참여합니다.'),
     ).toBeInTheDocument();
     expect(screen.queryByText(/강하린/)).not.toBeInTheDocument();
     expect(screen.queryByText(/수원영통고등학교/)).not.toBeInTheDocument();
@@ -80,7 +80,7 @@ describe('보호자 동의 페이지 (/consent/:token)', () => {
     // 단계 목록: 01 · 03은 시안, 02 자리(참여 일시 · 연락처)는 API에 없어 서버 안내문(guide_text)이 대신한다.
     const steps = screen.getAllByRole('listitem');
     expect(steps).toHaveLength(3);
-    expect(steps[0]).toHaveTextContent('01 투어는 학교 공식 프로그램이 아니에요.');
+    expect(steps[0]).toHaveTextContent('01 탐방은 학교 공식 프로그램이 아니에요.');
     expect(steps[0]).toHaveAttribute('aria-current', 'step');
     expect(steps[1]).toHaveTextContent(`02 ${CONSENT_GUIDE_TEXT}`);
     expect(screen.getByText(CONSENT_GUIDE_TEXT)).toHaveClass('whitespace-pre-wrap');
@@ -137,7 +137,7 @@ describe('보호자 동의 페이지 (/consent/:token)', () => {
     await agreeWithCheck(user);
 
     expect(await screen.findByText('동의를 마쳤어요')).toBeInTheDocument();
-    expect(screen.getByText('학생이 투어를 신청할 수 있어요.')).toBeInTheDocument();
+    expect(screen.getByText('학생이 탐방을 신청할 수 있어요.')).toBeInTheDocument();
     expect(screen.queryByRole('button', { name: AGREE })).not.toBeInTheDocument();
     expect(screen.queryByRole('button', { name: REJECT })).not.toBeInTheDocument();
     expect(consentOf(DEMO_CONSENT_TOKENS.valid).status).toBe('AGREED');

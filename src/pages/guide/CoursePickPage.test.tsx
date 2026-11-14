@@ -510,7 +510,7 @@ describe('코스 장소 고르기 G07 — 상태 · 이동', () => {
     );
   });
 
-  it('투어 학교를 모르면(universityId 0) 목록 대신 안내 상태, 주변 상점 요청은 0번', async () => {
+  it('탐방 학교를 모르면(universityId 0) 목록 대신 안내 상태, 주변 상점 요청은 0번', async () => {
     let nearbyGets = 0;
     server.events.on('request:start', ({ request }) => {
       if (new URL(request.url).pathname === '/api/stores/nearby') nearbyGets++;
@@ -543,7 +543,7 @@ describe('코스 장소 고르기 G07 — 상태 · 이동', () => {
     expect(nearbyGets).toBe(0);
   });
 
-  describe('투어 학교를 모르면(universityId 0) 캠퍼스 경로도 목록 대신 안내 상태, 캠퍼스 장소 요청은 0번', () => {
+  describe('탐방 학교를 모르면(universityId 0) 캠퍼스 경로도 목록 대신 안내 상태, 캠퍼스 장소 요청은 0번', () => {
     /** 시드에 없는 캠퍼스 이름으로 바꿔 학교 조인을 실패시키고(D14), 코스를 다시 읽게 한다. */
     function forgetCampus(queryClient: Awaited<ReturnType<typeof openCourse>>['queryClient']) {
       server.use(

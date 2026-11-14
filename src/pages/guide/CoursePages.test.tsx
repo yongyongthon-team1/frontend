@@ -360,7 +360,7 @@ describe('코스 완성 G03 (guide-s04 · s05)', () => {
     expect(within(sheet).getByRole('button', { name: '한줄평' })).toBeEnabled();
   });
 
-  it('초안을 만든 뒤 신청자 관리로 돌아가면 코스 버튼은 코스 이어서 편집, 투어 목록도 다시 불러온다', async () => {
+  it('초안을 만든 뒤 신청자 관리로 돌아가면 코스 버튼은 코스 이어서 편집, 탐방 목록도 다시 불러온다', async () => {
     let guideTourGets = 0;
     server.events.on('request:start', ({ request }) => {
       if (request.method === 'GET' && new URL(request.url).pathname === '/api/users/me/tours') {
@@ -604,7 +604,7 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
     expect(screen.getByText('참가 승인 3명 · 쿠폰 6장 발급')).toBeInTheDocument();
     expect(router.state.location.pathname).toBe('/guide/tours/1/course/confirm');
     expect(screen.queryByRole('heading', { name: G08_TITLE })).toBeNull();
-    expect(screen.getByRole('link', { name: '내가 개설한 투어로' })).toHaveAttribute(
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방으로' })).toHaveAttribute(
       'href',
       '/guide/tours',
     );
@@ -661,7 +661,7 @@ describe('확정 전 점검 G08 (guide-s06)', () => {
     expect(screen.getByText('캠퍼스 · 식사 · 카페 / 총 3개 장소')).toBeInTheDocument();
     expect(screen.queryByText(/참가 승인/)).not.toBeInTheDocument();
     expect(screen.queryByRole('alert')).not.toBeInTheDocument(); // 카드를 ErrorState로 바꾸지 않는다
-    expect(screen.getByRole('link', { name: '내가 개설한 투어로' })).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '내가 개설한 탐방으로' })).toBeInTheDocument();
 
     server.resetHandlers();
     await user.click(retry);

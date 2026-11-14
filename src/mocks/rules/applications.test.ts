@@ -63,10 +63,10 @@ describe('remainingSeats · activeApplication', () => {
     expect(remainingSeats(db, 6)).toBe(5);
   });
 
-  it('없는 투어는 NOT_FOUND', () =>
+  it('없는 탐방은 NOT_FOUND', () =>
     expectRejected(() => remainingSeats(db, 999), 404, 'NOT_FOUND'));
 
-  it('유효 신청은 같은 투어의 대기 · 승인 신청', () => {
+  it('유효 신청은 같은 탐방의 대기 · 승인 신청', () => {
     expect(activeApplication(db, id('seojun@demo.kr'), 1)?.status).toBe('APPROVED');
     expect(activeApplication(db, id('yujin@demo.kr'), 1)?.status).toBe('PENDING');
     expect(activeApplication(db, id('student@demo.kr'), 1)).toBeUndefined();
@@ -98,7 +98,7 @@ describe('applyToTour', () => {
       '수업이 궁금해요',
     ));
 
-  it('투어가 없으면 NOT_FOUND', () =>
+  it('탐방이 없으면 NOT_FOUND', () =>
     expectRejected(
       () => applyToTour(db, id('student@demo.kr'), 999, '궁금해요', now),
       404,
@@ -167,7 +167,7 @@ describe('applyToTour', () => {
       'DUPLICATE_APPLICATION',
     ));
 
-  it('완료 · 취소된 투어는 TOUR_NOT_RECRUITING', () => {
+  it('완료 · 취소된 탐방은 TOUR_NOT_RECRUITING', () => {
     const studentId = id('student@demo.kr');
     expectRejected(
       () => applyToTour(db, studentId, 7, '궁금해요', now),
@@ -233,7 +233,7 @@ describe('approveApplication', () => {
   it('신청이 없으면 NOT_FOUND', () =>
     expectRejected(() => approveApplication(db, guideId(), 999, now), 404, 'NOT_FOUND'));
 
-  it('남의 투어 신청은 FORBIDDEN', () =>
+  it('남의 탐방 신청은 FORBIDDEN', () =>
     expectRejected(
       () => approveApplication(db, id('guide-dku@demo.kr'), seedApp('yujin@demo.kr').id, now),
       403,
@@ -281,7 +281,7 @@ describe('approveApplication', () => {
     expect(tour(1).status).toBe('CLOSED');
   });
 
-  it('모집 중이 아닌 투어의 상태는 승인으로 덮어쓰지 않는다', () => {
+  it('모집 중이 아닌 탐방의 상태는 승인으로 덮어쓰지 않는다', () => {
     tour(1).capacity = 3;
     tour(1).status = 'COMPLETED';
     approveApplication(db, guideId(), seedApp('yujin@demo.kr').id, now); // 승인 3 = 정원
@@ -301,7 +301,7 @@ describe('rejectApplication', () => {
   it('신청이 없으면 NOT_FOUND', () =>
     expectRejected(() => rejectApplication(db, guideId(), 999), 404, 'NOT_FOUND'));
 
-  it('남의 투어 신청은 FORBIDDEN', () =>
+  it('남의 탐방 신청은 FORBIDDEN', () =>
     expectRejected(
       () => rejectApplication(db, id('guide-dku@demo.kr'), seedApp('yujin@demo.kr').id),
       403,
@@ -364,7 +364,7 @@ describe('cancelApplication', () => {
     );
   });
 
-  it('투어 당일 취소는 CANCEL_AFTER_TOUR_DATE', () => {
+  it('탐방 당일 취소는 CANCEL_AFTER_TOUR_DATE', () => {
     expectRejected(
       () =>
         cancelApplication(
@@ -405,7 +405,7 @@ describe('cancelApplication', () => {
 });
 
 describe('isCancellable', () => {
-  it('대기 · 승인 신청은 투어 전날까지 취소할 수 있다', () => {
+  it('대기 · 승인 신청은 탐방 전날까지 취소할 수 있다', () => {
     expect(isCancellable(db, seedApp('yujin@demo.kr'), now)).toBe(true);
     const seojun = seedApp('seojun@demo.kr');
     expect(isCancellable(db, seojun, new Date('2026-11-14T23:59:59+09:00'))).toBe(true);
@@ -421,6 +421,6 @@ describe('isCancellable', () => {
     expect(isCancellable(db, seojun, now)).toBe(false);
   });
 
-  it('지난 투어의 승인 신청은 취소할 수 없다', () =>
+  it('지난 탐방의 승인 신청은 취소할 수 없다', () =>
     expect(isCancellable(db, seedApp('seojun@demo.kr', 7), now)).toBe(false));
 });

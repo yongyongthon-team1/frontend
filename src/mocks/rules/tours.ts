@@ -70,7 +70,7 @@ export function createTour(
   }
   const introduction = typeof intro === 'string' ? intro.trim() : '';
   if (introduction === '' || introduction.length > TOUR_INTRO_MAX) {
-    throw fieldError('intro', `투어 소개는 1~${TOUR_INTRO_MAX}자로 적어 주세요.`);
+    throw fieldError('intro', `탐방 소개는 1~${TOUR_INTRO_MAX}자로 적어 주세요.`);
   }
   const chatUrl = typeof openChatUrl === 'string' ? openChatUrl.trim() : '';
   if (chatUrl === '') throw fieldError('openChatUrl', '연락 링크를 넣어 주세요.');

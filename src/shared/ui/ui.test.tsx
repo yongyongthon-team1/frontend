@@ -53,11 +53,11 @@ describe('Button', () => {
           disabled
           hint={{ reason: '사유', action: { label: '인증하러 가기', to: '/verify' } }}
         >
-          투어 신청하기
+          탐방 신청하기
         </Button>
       </MemoryRouter>,
     );
-    const button = screen.getByRole('button', { name: '투어 신청하기' });
+    const button = screen.getByRole('button', { name: '탐방 신청하기' });
     expect(button).toBeDisabled();
     expect(button).toHaveAccessibleDescription('사유');
     expect(screen.getByRole('link', { name: '인증하러 가기' })).toHaveAttribute('href', '/verify');
@@ -222,7 +222,7 @@ describe('TopBar', () => {
 describe('BottomTabBar', () => {
   const tabs = [
     { to: '/', label: '탐색', icon: Compass, end: true },
-    { to: '/my-tours', label: '내 투어', icon: ListChecks },
+    { to: '/my-tours', label: '내 탐방', icon: ListChecks },
   ];
 
   it('현재 경로 탭에 aria-current', () => {
@@ -231,7 +231,7 @@ describe('BottomTabBar', () => {
         <BottomTabBar tabs={tabs} />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: '내 투어' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: '내 탐방' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: '탐색' })).not.toHaveAttribute('aria-current');
   });
 
@@ -241,7 +241,7 @@ describe('BottomTabBar', () => {
         <BottomTabBar tabs={tabs} />
       </MemoryRouter>,
     );
-    expect(screen.getByRole('link', { name: '내 투어' })).toHaveAttribute('aria-current', 'page');
+    expect(screen.getByRole('link', { name: '내 탐방' })).toHaveAttribute('aria-current', 'page');
     expect(screen.getByRole('link', { name: '탐색' })).not.toHaveAttribute('aria-current');
   });
 
@@ -254,7 +254,7 @@ describe('BottomTabBar', () => {
         end: true,
         match: ['/', '/tours'],
       },
-      { to: '/my-tours', label: '내 투어', icon: ListChecks, match: ['/my-tours', '/coupons'] },
+      { to: '/my-tours', label: '내 탐방', icon: ListChecks, match: ['/my-tours', '/coupons'] },
     ];
     render(
       <MemoryRouter initialEntries={['/tours/3/apply']}>
@@ -262,7 +262,7 @@ describe('BottomTabBar', () => {
       </MemoryRouter>,
     );
     expect(screen.getByRole('link', { name: '탐색' })).toHaveAttribute('aria-current', 'page');
-    expect(screen.getByRole('link', { name: '내 투어' })).not.toHaveAttribute('aria-current');
+    expect(screen.getByRole('link', { name: '내 탐방' })).not.toHaveAttribute('aria-current');
   });
 });
 
@@ -317,9 +317,9 @@ describe('isTabActive: RegExp · exclude · 가이드/사장님 탭', () => {
     TABS[role].filter((t) => isTabActive(pathname, t)).map((t) => t.label);
 
   it.each([
-    ['/guide', ['내 투어']],
-    ['/guide/tours', ['내 투어']],
-    ['/guide/tours/1/applicants', ['내 투어']],
+    ['/guide', ['내 탐방']],
+    ['/guide/tours', ['내 탐방']],
+    ['/guide/tours/1/applicants', ['내 탐방']],
     ['/guide/tours/1/course', ['코스 편집']],
     ['/guide/tours/1/course/edit', ['코스 편집']],
     ['/guide/tours/1/course/confirm', ['코스 편집']],
@@ -338,7 +338,7 @@ describe('isTabActive: RegExp · exclude · 가이드/사장님 탭', () => {
   });
 
   it('고교생 탭 라벨은 그대로', () => {
-    expect(TABS.HIGH_SCHOOL.map((t) => t.label)).toEqual(['탐색', '내 투어', 'MY']);
+    expect(TABS.HIGH_SCHOOL.map((t) => t.label)).toEqual(['탐색', '내 탐방', 'MY']);
   });
 });
 
@@ -382,18 +382,18 @@ describe('StatusChip · InfoCard · Badge · AiBadge', () => {
 describe('AiLoading', () => {
   it('시간이 지나면 다음 문구, 마지막에서 멈춘다', () => {
     vi.useFakeTimers();
-    render(<AiLoading steps={['관심사를 읽는 중', '투어를 고르는 중']} />);
+    render(<AiLoading steps={['관심사를 읽는 중', '탐방을 고르는 중']} />);
     const status = screen.getByRole('status');
     expect(status).toHaveAttribute('aria-live', 'polite');
     expect(status).toHaveTextContent('관심사를 읽는 중');
     act(() => {
       vi.advanceTimersByTime(1200);
     });
-    expect(status).toHaveTextContent('투어를 고르는 중');
+    expect(status).toHaveTextContent('탐방을 고르는 중');
     act(() => {
       vi.advanceTimersByTime(5000);
     });
-    expect(status).toHaveTextContent('투어를 고르는 중');
+    expect(status).toHaveTextContent('탐방을 고르는 중');
   });
 
   it('intervalMs로 간격을 바꾼다', () => {
@@ -479,15 +479,15 @@ describe('EmptyState · ErrorState · Skeleton · Page', () => {
     render(
       <MemoryRouter>
         <EmptyState
-          title="아직 신청한 투어가 없어요"
-          description="투어를 찾아보세요"
-          action={{ label: '투어 찾기', to: '/' }}
+          title="아직 신청한 탐방이 없어요"
+          description="탐방을 찾아보세요"
+          action={{ label: '탐방 찾기', to: '/' }}
         />
       </MemoryRouter>,
     );
-    expect(screen.getByText('아직 신청한 투어가 없어요')).toBeInTheDocument();
-    expect(screen.getByText('투어를 찾아보세요')).toBeInTheDocument();
-    expect(screen.getByRole('link', { name: '투어 찾기' })).toHaveAttribute('href', '/');
+    expect(screen.getByText('아직 신청한 탐방이 없어요')).toBeInTheDocument();
+    expect(screen.getByText('탐방을 찾아보세요')).toBeInTheDocument();
+    expect(screen.getByRole('link', { name: '탐방 찾기' })).toHaveAttribute('href', '/');
   });
 
   it('EmptyState: 행동이 onClick이면 링크 대신 버튼', async () => {
@@ -768,7 +768,7 @@ describe('V2 StatusChip · InfoCard tone · TextField label', () => {
   });
 
   it('InfoCard tone: brand는 brand-soft, local은 local-soft, muted는 neutral-100', () => {
-    const { container, rerender } = render(<InfoCard title="투어 안내" tone="brand" />);
+    const { container, rerender } = render(<InfoCard title="탐방 안내" tone="brand" />);
     expect(container.firstChild).toHaveClass('bg-brand-soft');
     rerender(<InfoCard title="동네" tone="local" />);
     expect(container.firstChild).toHaveClass('bg-local-soft');
@@ -809,11 +809,11 @@ describe('ListRow', () => {
   it('to가 없으면 링크 없이 내용만, right가 오른쪽에 온다', () => {
     render(
       <MemoryRouter>
-        <ListRow title="소프트웨어 전공 투어" right={<span>승인 대기</span>} />
+        <ListRow title="소프트웨어 전공 탐방" right={<span>승인 대기</span>} />
       </MemoryRouter>,
     );
     expect(screen.queryByRole('link')).not.toBeInTheDocument();
-    expect(screen.getByText('소프트웨어 전공 투어')).toBeInTheDocument();
+    expect(screen.getByText('소프트웨어 전공 탐방')).toBeInTheDocument();
     expect(screen.getByText('승인 대기')).toBeInTheDocument();
   });
 });
@@ -871,10 +871,10 @@ function StatefulTabs({ onChange }: { onChange(value: string): void }) {
   return (
     <SegmentedTabs
       id="t"
-      label="투어 구분"
+      label="탐방 구분"
       tabs={[
-        { value: 'upcoming', label: '예정된 투어' },
-        { value: 'past', label: '지난 투어' },
+        { value: 'upcoming', label: '예정된 탐방' },
+        { value: 'past', label: '지난 탐방' },
       ]}
       value={value}
       onChange={(v) => {
@@ -887,21 +887,21 @@ function StatefulTabs({ onChange }: { onChange(value: string): void }) {
 
 describe('SegmentedTabs', () => {
   const tabs = [
-    { value: 'upcoming', label: '예정된 투어' },
-    { value: 'past', label: '지난 투어' },
+    { value: 'upcoming', label: '예정된 탐방' },
+    { value: 'past', label: '지난 탐방' },
   ];
 
   it('tablist · tab · aria-selected', () => {
     render(
-      <SegmentedTabs id="t" label="투어 구분" tabs={tabs} value="upcoming" onChange={() => {}} />,
+      <SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="upcoming" onChange={() => {}} />,
     );
-    expect(screen.getByRole('tablist', { name: '투어 구분' })).toBeInTheDocument();
+    expect(screen.getByRole('tablist', { name: '탐방 구분' })).toBeInTheDocument();
     expect(screen.getAllByRole('tab')).toHaveLength(2);
-    expect(screen.getByRole('tab', { name: '예정된 투어' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveAttribute(
       'aria-selected',
       'true',
     );
-    expect(screen.getByRole('tab', { name: '지난 투어' })).toHaveAttribute(
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute(
       'aria-selected',
       'false',
     );
@@ -910,57 +910,57 @@ describe('SegmentedTabs', () => {
   it('탭을 누르면 onChange(value)', async () => {
     const onChange = vi.fn();
     render(
-      <SegmentedTabs id="t" label="투어 구분" tabs={tabs} value="upcoming" onChange={onChange} />,
+      <SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="upcoming" onChange={onChange} />,
     );
-    await userEvent.click(screen.getByRole('tab', { name: '지난 투어' }));
+    await userEvent.click(screen.getByRole('tab', { name: '지난 탐방' }));
     expect(onChange).toHaveBeenLastCalledWith('past');
   });
 
   it('방향키로 이웃 탭을 고르고 초점을 옮긴다(양 끝에서 감긴다)', async () => {
     const onChange = vi.fn();
     render(<StatefulTabs onChange={onChange} />);
-    screen.getByRole('tab', { name: '예정된 투어' }).focus();
+    screen.getByRole('tab', { name: '예정된 탐방' }).focus();
     await userEvent.keyboard('{ArrowRight}');
     expect(onChange).toHaveBeenCalledTimes(1);
     expect(onChange).toHaveBeenLastCalledWith('past');
-    expect(screen.getByRole('tab', { name: '지난 투어' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveFocus();
     onChange.mockClear();
     await userEvent.keyboard('{ArrowRight}');
     expect(onChange).toHaveBeenLastCalledWith('upcoming');
-    expect(screen.getByRole('tab', { name: '예정된 투어' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveFocus();
     onChange.mockClear();
     await userEvent.keyboard('{ArrowLeft}');
     expect(onChange).toHaveBeenLastCalledWith('past');
-    expect(screen.getByRole('tab', { name: '지난 투어' })).toHaveFocus();
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveFocus();
   });
 
   it('value가 어느 탭에도 없으면 첫 탭이 Tab 정지점이다', () => {
-    render(<SegmentedTabs id="t" label="투어 구분" tabs={tabs} value="none" onChange={() => {}} />);
-    expect(screen.getByRole('tab', { name: '예정된 투어' })).toHaveAttribute('tabindex', '0');
-    expect(screen.getByRole('tab', { name: '지난 투어' })).toHaveAttribute('tabindex', '-1');
+    render(<SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="none" onChange={() => {}} />);
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).toHaveAttribute('tabindex', '0');
+    expect(screen.getByRole('tab', { name: '지난 탐방' })).toHaveAttribute('tabindex', '-1');
   });
 
   it('선택된 탭만 패널을 가리키고, 패널은 그 탭이 이름이 된다', () => {
     render(
       <>
-        <SegmentedTabs id="t" label="투어 구분" tabs={tabs} value="past" onChange={() => {}} />
+        <SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="past" onChange={() => {}} />
         <div {...segmentedPanelProps('t', 'past')}>지난 목록</div>
       </>,
     );
-    const past = screen.getByRole('tab', { name: '지난 투어' });
+    const past = screen.getByRole('tab', { name: '지난 탐방' });
     expect(past).toHaveAttribute('id', 't-tab-past');
     expect(past).toHaveAttribute('aria-controls', 't-panel-past');
-    expect(screen.getByRole('tab', { name: '예정된 투어' })).not.toHaveAttribute('aria-controls');
-    const panel = screen.getByRole('tabpanel', { name: '지난 투어' });
+    expect(screen.getByRole('tab', { name: '예정된 탐방' })).not.toHaveAttribute('aria-controls');
+    const panel = screen.getByRole('tabpanel', { name: '지난 탐방' });
     expect(panel).toHaveAttribute('id', 't-panel-past');
     expect(panel).toHaveTextContent('지난 목록');
   });
 
   it('긴 라벨의 말줄임은 안쪽 span에서 일어난다', () => {
     render(
-      <SegmentedTabs id="t" label="투어 구분" tabs={tabs} value="upcoming" onChange={() => {}} />,
+      <SegmentedTabs id="t" label="탐방 구분" tabs={tabs} value="upcoming" onChange={() => {}} />,
     );
-    const tab = screen.getByRole('tab', { name: '예정된 투어' });
+    const tab = screen.getByRole('tab', { name: '예정된 탐방' });
     expect(tab.querySelector('span > span')).toHaveClass('truncate');
     expect(tab.querySelector('span')).not.toHaveClass('truncate');
   });
@@ -1058,20 +1058,20 @@ describe('HeroCard · PageHeading', () => {
   });
 
   it('PageHeading: h1과 설명', () => {
-    render(<PageHeading title={'내 투어'} description="신청한 투어를 확인해요." />);
-    expect(screen.getByRole('heading', { level: 1, name: '내 투어' })).toBeInTheDocument();
-    expect(screen.getByText('신청한 투어를 확인해요.')).toBeInTheDocument();
+    render(<PageHeading title={'내 탐방'} description="신청한 탐방을 확인해요." />);
+    expect(screen.getByRole('heading', { level: 1, name: '내 탐방' })).toBeInTheDocument();
+    expect(screen.getByText('신청한 탐방을 확인해요.')).toBeInTheDocument();
   });
 
   it('PageHeading: 줄바꿈 문자를 보존하고 설명은 선택', () => {
-    render(<PageHeading title={'조건에 맞는 투어\n2개를 찾았어요.'} />);
+    render(<PageHeading title={'조건에 맞는 탐방\n2개를 찾았어요.'} />);
     expect(screen.getByRole('heading', { level: 1 })).toHaveClass('whitespace-pre-line');
   });
 
   it('PageHeading: as="h2"면 h2로 그린다(TopBar가 h1인 화면)', () => {
-    render(<PageHeading as="h2" title="투어를 신청할까요?" />);
+    render(<PageHeading as="h2" title="탐방을 신청할까요?" />);
     expect(
-      screen.getByRole('heading', { level: 2, name: '투어를 신청할까요?' }),
+      screen.getByRole('heading', { level: 2, name: '탐방을 신청할까요?' }),
     ).toBeInTheDocument();
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
   });
@@ -1188,13 +1188,13 @@ describe('ToggleSwitch', () => {
     const onChange = vi.fn();
     render(
       <ToggleSwitch
-        label="투어 알림"
+        label="탐방 알림"
         description="새 소식을 알려 드려요"
         checked
         onChange={onChange}
       />,
     );
-    const toggle = screen.getByRole('switch', { name: /투어 알림/ });
+    const toggle = screen.getByRole('switch', { name: /탐방 알림/ });
     expect(toggle).toHaveAttribute('aria-checked', 'true');
     expect(screen.getByText('새 소식을 알려 드려요')).toBeInTheDocument();
     await userEvent.click(toggle);
@@ -1204,16 +1204,16 @@ describe('ToggleSwitch', () => {
   it('꺼짐 → 켜짐, 최소 터치 44, disabled는 호출하지 않는다', async () => {
     const onChange = vi.fn();
     const { rerender } = render(
-      <ToggleSwitch label="투어 알림" checked={false} onChange={onChange} />,
+      <ToggleSwitch label="탐방 알림" checked={false} onChange={onChange} />,
     );
-    const toggle = screen.getByRole('switch', { name: '투어 알림' });
+    const toggle = screen.getByRole('switch', { name: '탐방 알림' });
     expect(toggle).toHaveAttribute('aria-checked', 'false');
     expect(toggle).toHaveClass('min-h-11');
     await userEvent.click(toggle);
     expect(onChange).toHaveBeenCalledWith(true);
-    rerender(<ToggleSwitch label="투어 알림" checked={false} onChange={onChange} disabled />);
+    rerender(<ToggleSwitch label="탐방 알림" checked={false} onChange={onChange} disabled />);
     onChange.mockClear();
-    await userEvent.click(screen.getByRole('switch', { name: '투어 알림' }));
+    await userEvent.click(screen.getByRole('switch', { name: '탐방 알림' }));
     expect(onChange).not.toHaveBeenCalled();
   });
 });

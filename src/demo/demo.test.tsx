@@ -112,8 +112,8 @@ describe('시연 패널', () => {
 
       await user.click(screen.getByRole('button', { name: '가이드' }));
       // 가이드 홈(G01)이 그려졌다: 제목과 맨 아래 링크.
-      await screen.findByRole('heading', { level: 1, name: /이번 주, .+ 투어를/ });
-      expect(screen.getByRole('link', { name: '내가 개설한 투어' })).toBeInTheDocument();
+      await screen.findByRole('heading', { level: 1, name: /이번 주, .+ 탐방을/ });
+      expect(screen.getByRole('link', { name: '내가 개설한 탐방' })).toBeInTheDocument();
       stopRouter();
       stopTokens();
       stopEmails();
@@ -153,7 +153,7 @@ describe('시연 패널', () => {
     it('전환 중에 다른 역할을 눌러도 무시한다(로그인 요청 1번)', async () => {
       const { user, router } = await renderApp('/my-tours', { as: 'student' });
       act(() => useDemoStore.setState({ enabled: true }));
-      await screen.findByRole('heading', { name: '내 투어' });
+      await screen.findByRole('heading', { name: '내 탐방' });
       setMockLatency({ base: 150, ai: 0 }); // 첫 전환의 로그인이 진행 중일 때 두 번째 클릭이 들어오게
       const logins = countLogins();
 
@@ -163,7 +163,7 @@ describe('시연 패널', () => {
       expect(logins.count).toBe(1);
       // 늦춘 요청이 다음 테스트까지 남지 않게 새 화면(G01)의 데이터를 받을 때까지 기다린다(다음 테스트는 목업 DB · 세션을 새로 만든다).
       expect(
-        await screen.findByRole('heading', { name: /이번 주, .+ 투어를/ }),
+        await screen.findByRole('heading', { name: /이번 주, .+ 탐방을/ }),
       ).toBeInTheDocument();
     });
   });
@@ -544,7 +544,7 @@ describe('시연 계정 자동 재로그인', () => {
   it('시연 계정의 요청이 401이면 한 번 다시 로그인하고, 같은 페이지 세션의 두 번째 401은 로그아웃', async () => {
     const { router, queryClient } = await renderApp('/my-tours', { as: 'student' });
     act(() => useDemoStore.setState({ activeDemoEmail: STUDENT }));
-    await screen.findByRole('heading', { name: '내 투어' });
+    await screen.findByRole('heading', { name: '내 탐방' });
     const logins = countLogins();
 
     dropServerSessions();
@@ -570,7 +570,7 @@ describe('시연 계정 자동 재로그인', () => {
   it('실서버면 시연 계정 기록이 남아 있어도 다시 로그인하지 않고 로그아웃 (11/10)', async () => {
     const { router, queryClient } = await renderApp('/my-tours', { as: 'student' });
     act(() => useDemoStore.setState({ activeDemoEmail: STUDENT }));
-    await screen.findByRole('heading', { name: '내 투어' });
+    await screen.findByRole('heading', { name: '내 탐방' });
     act(() => useBootStatus.setState({ apiMode: 'real' }));
     const logins = countLogins();
     dropServerSessions();
@@ -582,7 +582,7 @@ describe('시연 계정 자동 재로그인', () => {
 
   it('시연 계정이 아니면 다시 로그인하지 않고 바로 로그아웃', async () => {
     const { router, queryClient } = await renderApp('/my-tours', { as: 'student' });
-    await screen.findByRole('heading', { name: '내 투어' });
+    await screen.findByRole('heading', { name: '내 탐방' });
     const logins = countLogins();
     dropServerSessions();
     await act(() => queryClient.invalidateQueries({ queryKey: qk.me }));

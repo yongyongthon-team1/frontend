@@ -37,7 +37,7 @@ describe('tourCreateBlock', () => {
     expect(tourCreateBlock(guide(status, '산업디자인학과'))).toEqual({
       code: 'NOT_VERIFIED',
       chip: NOT_VERIFIED_CHIP,
-      reason: '학생증 또는 재학증명서 인증 후에만 투어를 개설할 수 있어요.',
+      reason: '학생증 또는 재학증명서 인증 후에만 탐방을 개설할 수 있어요.',
       action: { label: '역할 인증 단계로 이동', to: '/guide/verify' },
     });
   });
@@ -50,7 +50,7 @@ describe('tourCreateBlock', () => {
     expect(tourCreateBlock(guide('PENDING', '  '))).toEqual({
       code: 'NOT_VERIFIED',
       chip: NOT_VERIFIED_CHIP,
-      reason: '승인 전에는 투어를 개설할 수 없습니다.',
+      reason: '승인 전에는 탐방을 개설할 수 없습니다.',
       action: { label: '가이드 프로필 작성하기', to: '/guide/me/profile' },
     });
   });
@@ -59,7 +59,7 @@ describe('tourCreateBlock', () => {
     expect(tourCreateBlock(guide('PENDING', '산업디자인학과'))).toEqual({
       code: 'NOT_VERIFIED',
       chip: NOT_VERIFIED_CHIP,
-      reason: '승인 전에는 투어를 개설할 수 없습니다.',
+      reason: '승인 전에는 탐방을 개설할 수 없습니다.',
       action: { label: '인증 상태 보기', to: '/guide/verify' },
     });
   });

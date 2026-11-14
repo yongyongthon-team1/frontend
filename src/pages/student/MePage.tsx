@@ -44,7 +44,7 @@ function Stats({ me }: { me: Me }) {
   }
   return (
     <div className="grid grid-cols-2 gap-3">
-      <Stat value={`${completedTourCount(applications)}회`} label="참여한 투어" />
+      <Stat value={`${completedTourCount(applications)}회`} label="참여한 탐방" />
       <Stat value={interests} label="관심 전공" />
     </div>
   );
@@ -62,7 +62,7 @@ function ProfileCard({ me }: { me: Me }) {
       </div>
       <div className="flex min-w-0 flex-col items-start gap-1">
         <p className="max-w-full truncate text-[17px] font-bold text-ink">{me.name}</p>
-        <p className="text-[13px] text-muted">고교생 · 투어를 준비하는 중</p>
+        <p className="text-[13px] text-muted">고교생 · 탐방을 준비하는 중</p>
         <StatusChip tone={badge.tone}>{badge.label}</StatusChip>
       </div>
     </div>
@@ -80,7 +80,7 @@ export function MePage() {
       <BrandMark variant="wordmark" />
       <PageHeading
         title="MY"
-        description="내 정보와 투어 기록을 한곳에서 관리해요."
+        description="내 정보와 탐방 기록을 한곳에서 관리해요."
         className="mt-5"
       />
       {me === undefined ? (
@@ -97,7 +97,7 @@ export function MePage() {
             <InfoCard
               tone="brand"
               className="mt-5"
-              title="인증을 마치면 투어를 신청할 수 있어요."
+              title="인증을 마치면 탐방을 신청할 수 있어요."
               footer={
                 <Link
                   to={studentVerificationPath(me)}
@@ -115,8 +115,8 @@ export function MePage() {
       <div className="mt-3 flex flex-col gap-3">
         <ListRow
           to="/my-tours?tab=past"
-          title="지난 투어"
-          meta="완료한 캠퍼스 투어와 후기를 확인해요."
+          title="지난 탐방"
+          meta="완료한 캠퍼스 탐방과 후기를 확인해요."
         />
         <ListRow to="/me/wishes" title="내 희망 사항" meta="남긴 희망 사항을 보고 고쳐요." />
         <ListRow to="/me/edit" title="내 정보 수정" meta="이름·학교·관심 분야를 관리해요." />

@@ -40,7 +40,7 @@ function NotFound() {
       <Page>
         <EmptyState
           title="리뷰를 쓸 쿠폰을 찾을 수 없어요."
-          action={{ label: '내 투어 확인하기', to: '/my-tours' }}
+          action={{ label: '내 탐방 확인하기', to: '/my-tours' }}
         />
       </Page>
     </>
@@ -186,7 +186,7 @@ function ReviewForm({
         >
           <PageHeading
             as="h2"
-            title="오늘 투어는 어땠나요?"
+            title="오늘 탐방은 어땠나요?"
             description="경험을 남기면 다른 학생에게도 도움이 돼요."
             className="mt-3"
           />

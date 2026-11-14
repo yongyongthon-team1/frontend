@@ -253,26 +253,26 @@ describe('신청자 관리 (guide-s03)', () => {
     expect(within(card).getByRole('button', { name: '거절하기' })).toBeEnabled();
   });
 
-  describe('투어 완료 · 투어 취소 진입 링크 (T-05 · T-06)', () => {
-    it('모집 중 투어의 본문 링크 줄에 `투어 완료` · `투어 취소`가 있다(승인 버튼 로케이터는 그대로)', async () => {
+  describe('탐방 완료 · 탐방 취소 진입 링크 (T-05 · T-06)', () => {
+    it('모집 중 탐방의 본문 링크 줄에 `탐방 완료` · `탐방 취소`가 있다(승인 버튼 로케이터는 그대로)', async () => {
       await renderApp('/guide/tours/1/applicants', { as: 'guide', checkpoint: 'APPLIED' });
       await screen.findByRole('heading', waiting(2));
-      expect(screen.getByRole('link', { name: '투어 완료' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: '탐방 완료' })).toHaveAttribute(
         'href',
         '/guide/tours/1/complete',
       );
-      expect(screen.getByRole('link', { name: '투어 취소' })).toHaveAttribute(
+      expect(screen.getByRole('link', { name: '탐방 취소' })).toHaveAttribute(
         'href',
         '/guide/tours/1/cancel',
       );
       // 링크 줄은 하단 고정 바(`BottomAction`) 밖, 신청자 목록 바로 뒤 본문에 있다 — 고정 바 높이를 늘리지 않는다.
-      for (const name of ['투어 완료', '투어 취소']) {
+      for (const name of ['탐방 완료', '탐방 취소']) {
         const link = screen.getByRole('link', { name });
         expect(link.closest('.sticky')).toBeNull();
       }
       const lastCard = screen.getAllByRole('article').at(-1)!;
       expect(
-        lastCard.compareDocumentPosition(screen.getByRole('link', { name: '투어 완료' })) &
+        lastCard.compareDocumentPosition(screen.getByRole('link', { name: '탐방 완료' })) &
           Node.DOCUMENT_POSITION_FOLLOWING,
       ).toBeTruthy();
       const bar = screen
@@ -284,26 +284,26 @@ describe('신청자 관리 (guide-s03)', () => {
       expect(screen.getByRole('button', { name: '승인 완료 후 코스 만들기' })).toBeInTheDocument();
     });
 
-    it('마감된 투어에도 링크가 있다', async () => {
+    it('마감된 탐방에도 링크가 있다', async () => {
       const { router } = await renderApp('/explore', { as: 'guide', checkpoint: 'APPLIED' });
       mutate((db) => {
         db.tours.find((t) => t.id === 1)!.status = 'CLOSED';
       });
       await router.navigate('/guide/tours/1/applicants');
       await screen.findByRole('heading', waiting(2));
-      expect(screen.getByRole('link', { name: '투어 완료' })).toBeInTheDocument();
-      expect(screen.getByRole('link', { name: '투어 취소' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: '탐방 완료' })).toBeInTheDocument();
+      expect(screen.getByRole('link', { name: '탐방 취소' })).toBeInTheDocument();
     });
 
-    it('완료된 투어(7)은 링크 줄이 없다', async () => {
+    it('완료된 탐방(7)은 링크 줄이 없다', async () => {
       await renderApp('/guide/tours/7/applicants', { as: 'guide' });
       await screen.findByRole('heading', { level: 2, name: '신청자를 모두 확인했어요.' });
-      expect(screen.queryByRole('link', { name: '투어 완료' })).not.toBeInTheDocument();
-      expect(screen.queryByRole('link', { name: '투어 취소' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: '탐방 완료' })).not.toBeInTheDocument();
+      expect(screen.queryByRole('link', { name: '탐방 취소' })).not.toBeInTheDocument();
     });
 
     it.each(['COMPLETED', 'CANCELED'] as const)(
-      '%s 투어는 대기 신청에도 승인하기 · 거절하기가 없고 상태만 보인다',
+      '%s 탐방은 대기 신청에도 승인하기 · 거절하기가 없고 상태만 보인다',
       async (status) => {
         const { router } = await renderApp('/explore', { as: 'guide', checkpoint: 'APPLIED' });
         mutate((db) => {
@@ -314,8 +314,8 @@ describe('신청자 관리 (guide-s03)', () => {
         expect(within(yujin).getByText('승인 대기')).toBeInTheDocument();
         expect(screen.queryByRole('button', { name: '승인하기' })).not.toBeInTheDocument();
         expect(screen.queryByRole('button', { name: '거절하기' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('link', { name: '투어 완료' })).not.toBeInTheDocument();
-        expect(screen.queryByRole('link', { name: '투어 취소' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: '탐방 완료' })).not.toBeInTheDocument();
+        expect(screen.queryByRole('link', { name: '탐방 취소' })).not.toBeInTheDocument();
       },
     );
   });

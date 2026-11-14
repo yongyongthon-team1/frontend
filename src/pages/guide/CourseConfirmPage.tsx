@@ -233,7 +233,7 @@ function ConfirmedCourse({
 
         <BottomAction>
           <Link to="/guide/tours" className={buttonClass('primary')}>
-            내가 개설한 투어로
+            내가 개설한 탐방으로
           </Link>
         </BottomAction>
       </Page>

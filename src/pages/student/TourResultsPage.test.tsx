@@ -19,19 +19,19 @@ const search = (s: Partial<WishSearch> = {}): string =>
 const META = /^\d\d\.\d\d \([일월화수목금토]\) \d\d:\d\d · \d+자리 남음$/;
 
 const wishCard = () => screen.getByRole('region', { name: '내가 남긴 희망 사항' });
-const tourList = () => screen.getByRole('list', { name: '모집 중 투어' });
+const tourList = () => screen.getByRole('list', { name: '모집 중 탐방' });
 
-describe('투어 찾기 결과 (T-01 · hs-s04)', () => {
+describe('탐방 찾기 결과 (T-01 · hs-s04)', () => {
   beforeEach(() => useLastQuery.setState({ search: null }));
 
-  it('조건에 맞는 투어: 제목 · 설명, 원문 카드(줄바꿈 · 끝 공백 그대로) · 학교 · 학과, 날짜 빠른 순 행', async () => {
+  it('조건에 맞는 탐방: 제목 · 설명, 원문 카드(줄바꿈 · 끝 공백 그대로) · 학교 · 학과, 날짜 빠른 순 행', async () => {
     expect(RAW_WISH).toHaveLength(100);
     await renderApp(`/tours?${search()}`, { as: 'student' });
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      '조건에 맞는 투어 2개를 찾았어요.',
+      '조건에 맞는 탐방 2개를 찾았어요.',
     );
     expect(screen.getByText('날짜가 빠른 순이에요.')).toBeInTheDocument();
-    expect(screen.queryByText('조건에 맞는 투어가 없어요')).toBeNull();
+    expect(screen.queryByText('조건에 맞는 탐방이 없어요')).toBeNull();
 
     const card = wishCard();
     expect(within(card).getByText('내가 남긴 희망 사항')).toBeInTheDocument();
@@ -48,7 +48,7 @@ describe('투어 찾기 결과 (T-01 · hs-s04)', () => {
       expect(within(row).getByText('경희대학교 국제캠퍼스')).toBeInTheDocument();
       expect(within(row).getByText(META)).toBeInTheDocument();
     }
-    expect(within(rows[0]).getByText('경희대 국제캠퍼스 산업디자인학과 투어')).toBeInTheDocument();
+    expect(within(rows[0]).getByText('경희대 국제캠퍼스 산업디자인학과 탐방')).toBeInTheDocument();
   });
 
   it('원문 카드 머리 줄 오른쪽에 `내 희망 사항` 링크(›는 이름에 들지 않음) → /me/wishes', async () => {
@@ -72,12 +72,12 @@ describe('투어 찾기 결과 (T-01 · hs-s04)', () => {
     ).toBeInTheDocument();
   });
 
-  it('학과에 맞는 투어가 없으면 경고 칩과 같은 학교 투어(대체)', async () => {
+  it('학과에 맞는 탐방이 없으면 경고 칩과 같은 학교 탐방(대체)', async () => {
     await renderApp(`/tours?${search({ major: '기계공학' })}`, { as: 'student' });
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      '같은 학교 투어 2개를 보여 드려요.',
+      '같은 학교 탐방 2개를 보여 드려요.',
     );
-    expect(screen.getByText('조건에 맞는 투어가 없어요')).toBeInTheDocument();
+    expect(screen.getByText('조건에 맞는 탐방이 없어요')).toBeInTheDocument();
     expect(screen.getByText('학과 · 날짜 조건을 빼고 찾았어요.')).toBeInTheDocument();
     expect(within(wishCard()).getByText('경희대학교 국제캠퍼스 · 기계공학')).toBeInTheDocument();
     expect(
@@ -87,21 +87,21 @@ describe('투어 찾기 결과 (T-01 · hs-s04)', () => {
     ).toEqual(['/tours/1', '/tours/6']);
   });
 
-  it('같은 학교에도 모집 중 투어가 없으면 0건 카드와 `조건 바꾸기`', async () => {
+  it('같은 학교에도 모집 중 탐방이 없으면 0건 카드와 `조건 바꾸기`', async () => {
     const s = search({ universityId: 3, major: '디자인' });
     await renderApp(`/tours?${s}`, { as: 'student' });
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      '아직 모집 중인 투어가 없어요.',
+      '아직 모집 중인 탐방이 없어요.',
     );
     expect(screen.getByText('다른 학교로 다시 찾아보세요.')).toBeInTheDocument();
     expect(screen.getByText('0건')).toBeInTheDocument();
     expect(
-      screen.getByRole('heading', { name: '단국대에 모집 중인 투어가 없어요' }),
+      screen.getByRole('heading', { name: '단국대에 모집 중인 탐방이 없어요' }),
     ).toBeInTheDocument();
     expect(screen.getByText('학교를 바꿔 다시 찾아보세요.')).toBeInTheDocument();
     expect(screen.getByRole('link', { name: '조건 바꾸기 ›' })).toHaveAttribute('href', `/?${s}`);
-    expect(screen.queryByRole('list', { name: '모집 중 투어' })).toBeNull();
-    expect(screen.queryByText('조건에 맞는 투어가 없어요')).toBeNull();
+    expect(screen.queryByRole('list', { name: '모집 중 탐방' })).toBeNull();
+    expect(screen.queryByText('조건에 맞는 탐방이 없어요')).toBeNull();
     expect(within(wishCard()).getByTestId('wish-text').textContent).toBe(RAW_WISH);
   });
 
@@ -148,10 +148,10 @@ describe('투어 찾기 결과 (T-01 · hs-s04)', () => {
     expect(within(wishCard()).getByTestId('wish-text').textContent).toBe(RAW_WISH);
     expect(screen.getAllByTestId('skeleton').length).toBeGreaterThan(0);
     expect(screen.queryByRole('heading', { level: 1 })).toBeNull();
-    expect(screen.queryByRole('list', { name: '모집 중 투어' })).toBeNull();
+    expect(screen.queryByRole('list', { name: '모집 중 탐방' })).toBeNull();
     release();
     expect(await screen.findByRole('heading', { level: 1 })).toHaveTextContent(
-      '아직 모집 중인 투어가 없어요.',
+      '아직 모집 중인 탐방이 없어요.',
     );
     expect(screen.queryAllByTestId('skeleton')).toHaveLength(0);
   });
@@ -165,7 +165,7 @@ describe('투어 찾기 결과 (T-01 · hs-s04)', () => {
     expect(within(wishCard()).getByTestId('wish-text').textContent).toBe(RAW_WISH);
     server.resetHandlers();
     await user.click(within(alert).getByRole('button', { name: '다시 시도' }));
-    expect(await screen.findByRole('list', { name: '모집 중 투어' })).toBeInTheDocument();
+    expect(await screen.findByRole('list', { name: '모집 중 탐방' })).toBeInTheDocument();
     expect(screen.queryByRole('alert')).toBeNull();
   });
 
@@ -176,12 +176,12 @@ describe('투어 찾기 결과 (T-01 · hs-s04)', () => {
     );
   });
 
-  it('투어 상세(마감 투어)의 `다른 투어 보기`는 이 결과 화면으로 돌아온다', async () => {
+  it('탐방 상세(마감 탐방)의 `다른 탐방 보기`는 이 결과 화면으로 돌아온다', async () => {
     const s = search();
     const { router } = await renderApp(`/tours?${s}`, { as: 'student' });
-    await screen.findByRole('list', { name: '모집 중 투어' });
+    await screen.findByRole('list', { name: '모집 중 탐방' });
     await act(() => router.navigate('/tours/2'));
-    expect(await screen.findByRole('link', { name: '다른 투어 보기 ›' })).toHaveAttribute(
+    expect(await screen.findByRole('link', { name: '다른 탐방 보기 ›' })).toHaveAttribute(
       'href',
       `/tours?${s}`,
     );

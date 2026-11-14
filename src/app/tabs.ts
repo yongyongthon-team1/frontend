@@ -14,13 +14,13 @@ export const TABS: Record<Role, TabItem[]> = {
       end: true,
       match: ['/', '/tours'],
     },
-    { to: '/my-tours', label: '내 투어', icon: List, match: ['/my-tours', '/coupons', '/reviews'] },
+    { to: '/my-tours', label: '내 탐방', icon: List, match: ['/my-tours', '/coupons', '/reviews'] },
     { to: '/me', label: 'MY', icon: CircleUser },
   ],
   UNIVERSITY: [
     {
       to: '/guide',
-      label: '내 투어',
+      label: '내 탐방',
       icon: List,
       end: true,
       match: ['/guide/tours', '/guide/wishes'],

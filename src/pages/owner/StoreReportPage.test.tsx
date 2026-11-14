@@ -42,7 +42,7 @@ describe('사장님 방문 · 리뷰 리포트 (S-07, owner-s04)', () => {
     expect(screen.getByText(`${from} ~ ${to} 기준이에요.`)).toBeInTheDocument();
 
     expect(await screen.findByText('5명')).toBeInTheDocument();
-    expect(screen.getByText('투어로 온 학생')).toBeInTheDocument();
+    expect(screen.getByText('탐방으로 온 학생')).toBeInTheDocument();
     expect(screen.getByText('4.6')).toBeInTheDocument();
     expect(screen.getByText('평균 별점')).toBeInTheDocument();
     expect(screen.getByText('5개')).toBeInTheDocument();
@@ -72,7 +72,7 @@ describe('사장님 방문 · 리뷰 리포트 (S-07, owner-s04)', () => {
     expect(
       within(screen.getByRole('list', { name: '최근 리뷰' })).getAllByRole('listitem'),
     ).toHaveLength(3);
-    expect(screen.queryByText('아직 투어로 온 학생이 없어요')).not.toBeInTheDocument();
+    expect(screen.queryByText('아직 탐방으로 온 학생이 없어요')).not.toBeInTheDocument();
   });
 
   it('쿠폰을 사용 처리한 뒤 30초 안에 돌아와도 방문 수가 바로 늘어 있다', async () => {
@@ -115,7 +115,7 @@ describe('사장님 방문 · 리뷰 리포트 (S-07, owner-s04)', () => {
 
   it('owner3(방문도 리뷰도 없음): 숫자 카드 아래 대신 빈 상태와 쿠폰 사용 처리 행동', async () => {
     await renderReport('owner3@demo.kr');
-    expect(await screen.findByText('아직 투어로 온 학생이 없어요')).toBeInTheDocument();
+    expect(await screen.findByText('아직 탐방으로 온 학생이 없어요')).toBeInTheDocument();
     expect(
       screen.getByText('학생들이 쿠폰을 쓰고 리뷰를 남기면 여기에 모여요.'),
     ).toBeInTheDocument();
@@ -158,7 +158,7 @@ describe('사장님 방문 · 리뷰 리포트 (S-07, owner-s04)', () => {
       await screen.findByRole('heading', { level: 1, name: '방문 · 리뷰 리포트' }),
     ).toBeInTheDocument();
     expect(screen.getByLabelText('리포트를 불러오는 중')).toHaveAttribute('aria-busy', 'true');
-    expect(screen.queryByText('투어로 온 학생')).not.toBeInTheDocument();
+    expect(screen.queryByText('탐방으로 온 학생')).not.toBeInTheDocument();
     release();
     expect(await screen.findByText('7명')).toBeInTheDocument();
     expect(screen.getByText('10월 1일 ~ 10월 31일 기준이에요.')).toBeInTheDocument();
@@ -170,7 +170,7 @@ describe('사장님 방문 · 리뷰 리포트 (S-07, owner-s04)', () => {
     );
     // 5xx는 한 번 다시 시도한 뒤 오류를 보인다.
     expect(await screen.findByRole('alert', {}, { timeout: 5000 })).toBeInTheDocument();
-    expect(screen.queryByText('투어로 온 학생')).not.toBeInTheDocument();
+    expect(screen.queryByText('탐방으로 온 학생')).not.toBeInTheDocument();
     server.resetHandlers();
     await user.click(screen.getByRole('button', { name: '다시 시도' }));
     expect(await screen.findByText('5명')).toBeInTheDocument();

@@ -124,7 +124,7 @@ function StoreHome({ store }: { store: MyStore }) {
       <Header />
       <PageHeading
         title={'학생들이 가게를\n더 쉽게 찾고 있어요.'}
-        description="동네 투어와 함께 새로운 손님을 맞이해요."
+        description="동네 탐방과 함께 새로운 손님을 맞이해요."
         className="mt-5"
       />
 

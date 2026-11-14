@@ -72,7 +72,7 @@ function CoursePreparing({ app }: { app: MyApplication }) {
       <Page>
         <PageHeading
           as="h2"
-          title="투어 코스를 준비하고 있어요."
+          title="탐방 코스를 준비하고 있어요."
           description="가이드가 신청자들의 관심사를 모으고 있어요."
           className="mt-3"
         />
@@ -205,7 +205,7 @@ export function CourseMapPage() {
           <div className="flex items-center justify-between gap-3">
             <h3 className="min-w-0 text-[17px] font-bold text-ink">
               {tour.endsAt === null
-                ? '우리의 투어 코스'
+                ? '우리의 탐방 코스'
                 : `우리의 ${formatDuration(tour.startsAt, tour.endsAt)} 코스`}
             </h3>
             <StatusChip dot={false} className="shrink-0 bg-surface text-brand">
@@ -218,7 +218,7 @@ export function CourseMapPage() {
           <div className="mt-4 flex items-center justify-between gap-3">
             <div className="min-w-0">
               <p className="text-[15px] font-bold text-ink">학교에서 동네까지</p>
-              <p className="mt-0.5 text-xs text-muted">도보로 이어지는 투어</p>
+              <p className="mt-0.5 text-xs text-muted">도보로 이어지는 탐방</p>
             </div>
             <Illustration kind="cafe" className="h-auto max-h-14 w-auto shrink-0 object-contain" />
           </div>
