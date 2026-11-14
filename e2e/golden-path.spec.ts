@@ -1,5 +1,9 @@
 import type { Page } from '@playwright/test';
-import { DEMO_MAJOR, DEMO_WISH } from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
+import {
+  DEMO_GUIDE_UNIVERSITY_ID,
+  DEMO_MAJOR,
+  DEMO_WISH,
+} from '../src/features/tours/examples'; // examples.ts는 import가 없는 파일이어야 한다
 import { expect, test } from './fixtures';
 
 // 시연 골든 패스(설계 6.1)를 배포 빌드 · 목업(AI 속도 보통)으로 끝까지 돈다. 무대에서처럼 원클릭 시연 링크로 시작하고
@@ -63,7 +67,7 @@ for (const { title, link, present } of VARIANTS) {
       if (present) await expectRoleBadgeBesideTitle(page, label);
     };
 
-    // 고교생: 희망 사항(시연 도구가 켜져 있어 학교 · 희망 사항이 미리 채워져 있다 — 학과는 직접 적는다) → 탐방 찾기 결과(원문 카드 ·
+    // 고교생: 희망 사항(시연 도구가 켜져 있어 학교 · 희망 사항이 미리 채워져 있다 — 학과와 학교는 직접 고른다) → 탐방 찾기 결과(원문 카드 ·
     // 모집 중 탐방) → 탐방 상세 → 신청서(시연 모드라 미리 채움) → 신청 완료
     await page.goto(link);
     await expect(page.getByLabel('탐방 희망 사항', { exact: true })).toHaveValue(DEMO_WISH.wish);
@@ -73,6 +77,10 @@ for (const { title, link, present } of VARIANTS) {
     // 학과는 미리 채우지 않는다 — placeholder만 두고 무대에서 직접 적는 칸이다.
     await expect(page.getByLabel('학과', { exact: true })).toHaveValue('');
     await page.getByLabel('학과', { exact: true }).fill(DEMO_MAJOR);
+    // 기본 학교는 강남대지만 시연 가이드는 경희대라, 무대에서처럼 학교를 바꿔 고른다.
+    await page
+      .getByLabel('학교', { exact: true })
+      .selectOption(String(DEMO_GUIDE_UNIVERSITY_ID));
     await checkRoleBadge('고교생 화면');
     await page.getByRole('button', { name: '희망 사항 남기고 탐방 찾기' }).click();
     await expect(page.getByRole('region', { name: '내가 남긴 희망 사항' })).toContainText(

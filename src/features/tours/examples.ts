@@ -3,9 +3,15 @@
 // 학과도 채우지 않는다 — placeholder만 두고 발표자가 직접 적는다. 그래서 희망 사항은 어느 과에나 맞는 문장만 둔다.
 // E2E가 이 파일을 import하므로 이 파일은 아무것도 import하지 않는다.
 export const DEMO_WISH = {
-  universityId: 2,
+  universityId: 1,
   wish: '수업 듣는 강의실과 실습실을 구경하고, 학생들이 자주 가는 밥집과 카페에도 가 보고 싶어요.',
 };
 
 /** 학과는 미리 채우지 않으므로 E2E가 칸에 직접 적는 값이다. */
 export const DEMO_MAJOR = '산업디자인';
+
+/**
+ * 시연 가이드(정다은)의 학교 id. 홈 기본값(강남대)과 다르므로, 승인 · 코스 · 쿠폰까지 이어 보는 E2E는
+ * 제출 전에 학교를 이 값으로 바꿔 고른다 — 무대에서 고교생이 학교를 직접 고르는 것과 같다.
+ */
+export const DEMO_GUIDE_UNIVERSITY_ID = 2;
