@@ -285,27 +285,18 @@ describe('시연 패널', () => {
     }
   });
 
-  // 11/10: 라이브 배포에 목업 모드가 보이면 안 된다 — 목업을 뺀 빌드는 모드 전환 · 목업 AI 속도 · 실서버 표시가 없다.
-  it('목업을 뺀 빌드(라이브 배포)면 API 모드 · AI 속도 · 실서버 표시가 없다', async () => {
+  // 11/14: 라이브 배포(목업을 뺀 빌드)에는 시연 패널 자체가 없다 — 역할 전환은 안내뿐이고 초기화도 없어 무대에서 군더더기다.
+  it('목업을 뺀 빌드(라이브 배포)면 시연 도구가 켜져 있어도 시연 패널을 그리지 않는다', async () => {
     const before = env.mockApi;
     env.mockApi = false;
     try {
       useBootStatus.setState({ apiMode: 'real' });
-      useDemoStore.setState({ enabled: true });
+      useDemoStore.setState({ enabled: true, presentMode: true });
       await renderApp('/', { as: 'student' });
-      const p = within(panel());
-      expect(p.queryByRole('button', { name: '목업' })).toBeNull();
-      expect(p.queryByText('API 모드')).toBeNull();
-      expect(p.queryByText('AI 속도')).toBeNull();
-      expect(p.queryByText('실서버에 연결돼 있어요')).toBeNull();
-      expect(p.getByRole('button', { name: '시연 패널' })).not.toHaveTextContent('실서버');
-      expect(p.getByText('지도')).toBeInTheDocument();
-
-      // 실서버뿐이라 빠른 로그인이 없고, 저장된 발표 모드 · AI 속도가 있어도 막대 · 설정 표시가 나오지 않는다.
-      act(() => useDemoStore.setState({ presentMode: true, aiSpeed: 'slow' }));
-      expect(p.queryByRole('list', { name: '시연 설정' })).toBeNull();
-      expect(p.queryByText('AI 느리게')).toBeNull();
-      expect(p.queryByText('목업')).toBeNull();
+      expect(screen.queryByRole('region', { name: '시연 패널' })).toBeNull();
+      expect(screen.queryByRole('button', { name: '시연 패널' })).toBeNull();
+      expect(screen.queryByText('역할 전환')).toBeNull();
+      expect(screen.queryByText('고교생 화면')).toBeNull();
     } finally {
       env.mockApi = before;
     }
